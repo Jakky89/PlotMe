@@ -48,15 +48,15 @@ public class PlotListener implements Listener
 	{	
 		Block b = event.getBlock();
 		
-		if(PlotManager.isPlotWorld(b))
+		if (PlotManager.isPlotWorld(b))
 		{
 			Player p = event.getPlayer();
 			boolean canbuild = PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere");
-			String id = PlotManager.getPlotId(b.getLocation());
+			int id = PlotManager.getPlotId(b);
 			
-			if(id.equalsIgnoreCase(""))
+			if (id.equalsIgnoreCase(""))
 			{
-				if(!canbuild)
+				if (!canbuild)
 				{
 					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 					event.setCancelled(true);
@@ -68,15 +68,15 @@ public class PlotListener implements Listener
 				
 				if (plot == null)
 				{
-					if(!canbuild)
+					if (!canbuild)
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);
 					}
 				}
-				else if(!plot.isAllowed(p.getName()))
+				else if (!plot.isAllowed(p.getName()))
 				{
-					if(!canbuild)
+					if (!canbuild)
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);
@@ -96,15 +96,15 @@ public class PlotListener implements Listener
 	{
 		Block b = event.getBlock();
 		
-		if(PlotManager.isPlotWorld(b))
+		if (PlotManager.isPlotWorld(b))
 		{
 			Player p = event.getPlayer();
 			boolean canbuild = PlotMe.cPerms(p, "plotme.admin.buildanywhere");
 			String id = PlotManager.getPlotId(b.getLocation());
 			
-			if(id.equalsIgnoreCase(""))
+			if (id.isEmpty())
 			{
-				if(!canbuild)
+				if (!canbuild)
 				{
 					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 					event.setCancelled(true);
@@ -112,19 +112,19 @@ public class PlotListener implements Listener
 			}
 			else
 			{
-				Plot plot = PlotManager.getPlotById(p,id);
+				Plot plot = PlotManager.getPlotById(p, id);
 				
 				if (plot == null)
 				{
-					if(!canbuild)
+					if (!canbuild)
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);
 					}
 				}
-				else if(!plot.isAllowed(p.getName()))
+				else if (!plot.isAllowed(p.getName()))
 				{
-					if(!canbuild)
+					if (!canbuild)
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);
@@ -143,30 +143,30 @@ public class PlotListener implements Listener
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onPlayerBucketEmpty(final PlayerBucketEmptyEvent event)
 	{
-		if(!PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere"))
+		if (!PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere"))
 		{
 			BlockFace bf = event.getBlockFace();
-			Block b = event.getBlockClicked().getLocation().add(bf.getModX(), bf.getModY(), bf.getModZ()).getBlock();
-			if(PlotManager.isPlotWorld(b))
+			BlockState b = event.getBlockClicked().getLocation().add(bf.getModX(), bf.getModY(), bf.getModZ()).getBlock().getState();
+			if (PlotManager.isPlotWorld(b))
 			{
 				String id = PlotManager.getPlotId(b.getLocation());
 				Player p = event.getPlayer();
 				
-				if(id.equalsIgnoreCase(""))
+				if (id.equalsIgnoreCase(""))
 				{
 					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 					event.setCancelled(true);
 				}
 				else
 				{
-					Plot plot = PlotManager.getPlotById(p,id);
+					Plot plot = PlotManager.getPlotById(p, id);
 					
 					if (plot == null)
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);
 					}
-					else if(!plot.isAllowed(p.getName()))
+					else if (!plot.isAllowed(p.getName()))
 					{
 						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
 						event.setCancelled(true);

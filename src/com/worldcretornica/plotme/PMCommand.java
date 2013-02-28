@@ -20,6 +20,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.MinecraftFontWidthCalculator;
+import com.worldcretornica.plotme.utils.PlotFinishedComparator;
 
 public class PMCommand implements CommandExecutor
 {

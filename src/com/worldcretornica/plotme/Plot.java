@@ -1,139 +1,101 @@
 package com.worldcretornica.plotme;
 
-import java.sql.Date;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.block.Biome;
+import org.bukkit.entity.Player;
 
-public class Plot implements Comparable<Plot> {
+import com.worldcretornica.plotme.utils.Pair;
+import com.worldcretornica.plotme.utils.PlotPosition;
+
+
+public class Plot implements Comparable<Plot>
+{
+	public int id;
+	
+	public PlotPosition plotpos;
+	public Plot[] plotneighbours;
 
 	public String owner;
-	public String world;
-	private HashSet<String> allowed;
-	private HashSet<String> denied;
 	public Biome biome;
-	public Date expireddate;
-	public boolean finished;
+	
+	public Map<String, Object> properties; // Flexible plot properties
+	public Set<String> playersinplot; // Names of players that are currently in that plot
+	
+	public long expireddate;
 	public List<String[]> comments;
-	public String id;
 	public double customprice;
-	public boolean forsale;
-	public String finisheddate;
-	public boolean protect;
-	public boolean auctionned;
-	public String currentbidder;
-	public double currentbid;
-
+	public boolean isforsale;
+	public long finisheddate;
+	public boolean isprotected;
+	public boolean isauctionned;
+	public List<Pair<String, Double>> bids;
+	
+	public void setPlotPosition(int tX, int tZ)
+	{
+		plotpos = new PlotPosition(tX, tZ);
+	}
+	
+	public void setPlotPosition(PlotWorld tW, int tX, int tZ)
+	{
+		plotpos = new PlotPosition(tW, tX, tZ);
+	}
+	
 	public Plot()
 	{
-		owner = "";
-		world = "";
-		id = "";
-		allowed = new HashSet<String>();
-		denied = new HashSet<String>();
+		id = 0;
+		owner = null;
+		properties = new HashMap<String, Object>();
+		playersinplot = new HashSet<String>();
 		biome = Biome.PLAINS;
-		
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_YEAR, 7);
-		java.util.Date utlDate = cal.getTime();
-		expireddate = new java.sql.Date(utlDate.getTime());
-		
+		expireddate = Math.round(System.currentTimeMillis()/1000) + 604800; // 604800 = 7 days
 		comments = new ArrayList<String[]>();
 		customprice = 0;
-		forsale = false;
-		finisheddate = "";
-		protect = false;
-		auctionned = false;
-		currentbidder = "";
-		currentbid = 0;
+		isforsale = false;
+		finisheddate = 0;
+		isprotected = false;
+		isauctionned = false;
 	}
 	
-	public Plot(String o, Location t, Location b, String tid, int days)
+	public Plot(int mid, PlotWorld mW, int mX, int mZ, String mowner, String mbiome, long mexpireddate, double mcustomprice, boolean misforsale,
+				long mfinisheddate, boolean misprotected, boolean misauctionned)
 	{
-		owner = o;
-		world = t.getWorld().getName();
-		allowed = new HashSet<String>();
-		denied = new HashSet<String>();
-		biome = Biome.PLAINS;
-		id = tid;
-		
-		if(days == 0)
-		{
-			expireddate = null;
-		}else{
-			Calendar cal = Calendar.getInstance();
-			cal.add(Calendar.DAY_OF_YEAR, days);
-			java.util.Date utlDate = cal.getTime();
-			expireddate = new java.sql.Date(utlDate.getTime());
-		}
-		
-		comments = new ArrayList<String[]>();
-		customprice = 0;
-		forsale = false;
-		finisheddate = "";
-		protect = false;
-		auctionned = false;
-		currentbidder = "";
-		currentbid = 0;
+		id = mid;
+		owner = mowner;
+		setPlotPosition(mW, mX, mZ);
+		biome = Biome.valueOf(mbiome);
+		expireddate = Math.round(System.currentTimeMillis()/1000) + mexpireddate;
+		customprice = mcustomprice;
+		isforsale = misforsale;
+		finisheddate = mfinisheddate;
+		isprotected = misprotected;
+		isauctionned = misauctionned;
 	}
-	
-	public Plot(String o, String w, int tX, int bX, int tZ, int bZ, String bio, Date exp, boolean fini, HashSet<String> al,
-			List<String[]> comm, String tid, double custprice, boolean sale, String finishdt, boolean prot, String bidder, 
-			Double bid, boolean isauctionned, HashSet<String> den)
+
+	public void setExpire(int days)
 	{
-		owner = o;
-		world = w;
-		biome = Biome.valueOf(bio);
-		expireddate = exp;
-		finished = fini;
-		allowed = al;
-		comments = comm;
-		id = tid;
-		customprice = custprice;
-		forsale = sale;
-		finisheddate = finishdt;
-		protect = prot;
-		auctionned = isauctionned;
-		currentbidder = "";
-		currentbid = 0;
-		denied = den;
-	}
-			
-	public void setExpire(Date date)
-	{
-		if(!expireddate.equals(date))
+		if (days >= 0)
 		{
-			expireddate = date;
-			updateField("expireddate", expireddate);
+			updateField("expireddate", Math.round(System.currentTimeMillis()/1000) + (days*86400));
 		}
 	}
 	
 	public void resetExpire(int days)
 	{
-		if(days == 0)
+		if (days <= 0)
 		{
-			if(expireddate != null)
-			{
-				expireddate = null;
-				updateField("expireddate", expireddate);
-			}
-		}else{
-			Calendar cal = Calendar.getInstance();
-			cal.add(Calendar.DAY_OF_YEAR, days);
-			java.util.Date utlDate = cal.getTime();
-			java.sql.Date temp = new java.sql.Date(utlDate.getTime());
-			if(expireddate == null || !temp.toString().equalsIgnoreCase(expireddate.toString()))
-			{
-				expireddate = temp;
-				updateField("expireddate", expireddate);
-			}
+			setExpire(Math.round(System.currentTimeMillis()/1000));
+		}
+		else
+		{
+			setExpire(days);
 		}
 	}
 	
@@ -144,18 +106,14 @@ public class Plot implements Comparable<Plot> {
 	
 	public void setFinished()
 	{
-		finisheddate = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(Calendar.getInstance().getTime());
-		finished = true;
-		
-		updateFinished(finisheddate, finished);
+		finisheddate = Math.round(System.currentTimeMillis()/1000);
+		SqlManager.updatePlot(id, "finisheddate", finisheddate);
 	}
 	
 	public void setUnfinished()
 	{
-		finisheddate = "";
-		finished = false;
-		
-		updateFinished(finisheddate, finished);
+		finisheddate = 0;
+		SqlManager.updatePlot(id, "finisheddate", null);
 	}
 	
 	public Biome getBiome()
@@ -168,36 +126,6 @@ public class Plot implements Comparable<Plot> {
 		return owner;
 	}
 	
-	public String getAllowed()
-	{
-		String list = "";
-		
-		for(String s : allowed)
-		{
-			list = list + s + ", ";
-		}
-		if(list.length() > 1)
-		{
-			list = list.substring(0, list.length()-2);
-		}
-		return list;
-	}
-	
-	public String getDenied()
-	{
-		String list = "";
-		
-		for(String s : denied)
-		{
-			list = list + s + ", ";
-		}
-		if(list.length() > 1)
-		{
-			list = list.substring(0, list.length()-2);
-		}
-		return list;
-	}
-	
 	public int getCommentsCount()
 	{
 		return comments.size();
@@ -208,162 +136,143 @@ public class Plot implements Comparable<Plot> {
 		return comments.get(i);
 	}
 	
-	public void addAllowed(String name)
+	public void setProperty(String property, Object value)
 	{
-		if(!isAllowed(name))
+		if (property == null || property.isEmpty())
 		{
-			allowed.add(name);
-			SqlManager.addPlotAllowed(name, PlotManager.getIdX(id), PlotManager.getIdZ(id), world);
+			return;
 		}
-	}
-	
-	public void addDenied(String name)
-	{
-		if(!isDenied(name))
-		{
-			denied.add(name);
-			SqlManager.addPlotDenied(name, PlotManager.getIdX(id), PlotManager.getIdZ(id), world);
-		}
-	}
-	
-	public void removeAllowed(String name)
-	{
-		String found = "";
+
+		property = property.toLowerCase();
 		
-		for(String n : allowed)
+		if (value != null)
 		{
-			if(n.equalsIgnoreCase(name))
+			if (properties == null)
 			{
-				found = n;
-				break;
+				properties = new HashMap<String, Object>();
+			}
+			if (properties.put(property, value) != value)
+			{
+				properties.put(property, value);
+				SqlManager.savePlotProperties(this);
 			}
 		}
-		
-		if(!found.equals(""))
+		else
 		{
-			allowed.remove(found);
-			SqlManager.deletePlotAllowed(PlotManager.getIdX(id), PlotManager.getIdZ(id), found, world);
-		}
-	}
-	
-	public void removeDenied(String name)
-	{
-		String found = "";
-		
-		for(String n : denied)
-		{
-			if(n.equalsIgnoreCase(name))
+			if (properties != null)
 			{
-				found = n;
-				break;
+				if (properties.remove(property) != null)
+				{
+					SqlManager.savePlotProperties(this);
+				}
 			}
 		}
+	}
+	
+	public Object getProperty(String property)
+	{
+		return properties.get(property.toLowerCase());
+	}
+	
+	public Boolean getBooleanProperty(String property)
+	{
+		Boolean tmpprop = (Boolean)getProperty(property);
+		if (tmpprop != null)
+		{
+			return tmpprop;
+		}
+		return false;
+	}
+
+	public boolean isAllowed(String name, boolean includeStar, boolean includeGroup)
+	{
+		if (name == null || name.isEmpty())
+		{
+			return false;
+		}
 		
-		if(!found.equals(""))
+		if (getBooleanProperty("allowall")==true)
 		{
-			denied.remove(found);
-			SqlManager.deletePlotDenied(PlotManager.getIdX(id), PlotManager.getIdZ(id), found, world);
+			return true;
 		}
-	}
-	
-	public void removeAllAllowed()
-	{
-		for(String n : allowed)
-		{
-			SqlManager.deletePlotAllowed(PlotManager.getIdX(id), PlotManager.getIdZ(id), n, world);
-		}
-		allowed = new HashSet<String>();
-	}
-	
-	public void removeAllDenied()
-	{
-		for(String n : denied)
-		{
-			SqlManager.deletePlotDenied(PlotManager.getIdX(id), PlotManager.getIdZ(id), n, world);
-		}
-		denied = new HashSet<String>();
-	}
-	
-	public boolean isAllowed(String name)
-	{
-		return isAllowed(name, true, true);
-	}
-	
-	public boolean isAllowed(String name, boolean IncludeStar, boolean IncludeGroup)
-	{
-		if(owner.equalsIgnoreCase(name) || (IncludeStar && owner.equals("*"))) return true;
 		
-		if(IncludeGroup && owner.toLowerCase().startsWith("group:") && Bukkit.getServer().getPlayerExact(name) != null)
-			if(Bukkit.getServer().getPlayerExact(name).hasPermission("plotme.group." + owner.replace("Group:", "")))
+		Player plr = Bukkit.getServer().getPlayerExact(name);
+		if (plr != null)
+		{
+			if (owner != null && owner.equalsIgnoreCase(plr.getName()) || (includeStar && owner.equals("*")))
+			{
 				return true;
-		
-		for(String str : allowed)
-		{
-			if(str.equalsIgnoreCase(name) || (IncludeStar && str.equals("*")))
-				return true;
+			}
 			
-			if(IncludeGroup && str.toLowerCase().startsWith("group:") && Bukkit.getServer().getPlayerExact(name) != null)
-				if(Bukkit.getServer().getPlayerExact(name).hasPermission("plotme.group." + str.replace("Group:", "")))
+			if (includeStar && getBooleanProperty("rights:all:allowed"))
+			{
+				return true;
+			}
+			
+			if (getBooleanProperty("rights:player:" + plr.getName() + ":allowed"))
+			{
+				return true;
+			}
+			
+			if (includeGroup && owner.toLowerCase().startsWith("group:"))
+			{
+				if (plr.hasPermission("plotme.group." + owner.substring(6)))
+				{
 					return true;
+				}
+			}
 		}
-		
 		return false;
 	}
 	
 	public boolean isDenied(String name)
 	{
-		if(isAllowed(name, false, false)) return false;
-				
-		for(String str : denied)
+		if (name == null || name.isEmpty())
 		{
-			if(str.equalsIgnoreCase(name) || str.equals("*"))
-				return true;
-			
-			if(str.toLowerCase().startsWith("group:") && Bukkit.getServer().getPlayerExact(name) != null)
-				if(Bukkit.getServer().getPlayerExact(name).hasPermission("plotme.group." + str.replace("Group:", "")))
-					return true;
+			return true;
 		}
 		
-		return false;
-	}
-	
-	public HashSet<String> allowed()
-	{
-		return allowed;
-	}
-	
-	public HashSet<String> denied()
-	{
-		return denied;
-	}
-	
-	public int allowedcount()
-	{
-		return allowed.size();
-	}
-	
-	public int deniedcount()
-	{
-		return denied.size();
+		Player plr = Bukkit.getServer().getPlayerExact(name);
+		if (plr != null)
+		{
+			if (owner != null && owner.equalsIgnoreCase(plr.getName()))
+			{
+				return false;
+			}
+		}
+		
+		if (getBooleanProperty("denyall")==false)
+		{
+			return false;
+		}
+
+		if (isAllowed(name, false, false))
+		{
+			return false;
+		}
+		
+		if (getBooleanProperty("rights.*.denied")==true)
+		{
+			return true;
+		}
+		
+		if (getBooleanProperty("rights." + name + ".denied")==true)
+		{
+			return true;
+		}
+
+		return true;
 	}
 
-	public int compareTo(Plot plot)
-	{
-		if(expireddate.compareTo(plot.expireddate) == 0)
-			return owner.compareTo(plot.owner);
-		else
-			return expireddate.compareTo(plot.expireddate);
-	}
-	
-	private void updateFinished(String finishtime, boolean isfinished)
-	{
-		updateField("finisheddate", finishtime);
-		updateField("finished", isfinished);
-	}
-	
 	public void updateField(String field, Object value)
 	{
-		SqlManager.updatePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), world, field, value);
+		SqlManager.updatePlot(id, field, value);
+	}
+
+	@Override
+	public int compareTo(Plot plot2)
+	{
+		return this.id-plot2.id;
 	}
 	
 	/*private static Map<String, Double> sortByValues(final Map<String, Double> map) 
