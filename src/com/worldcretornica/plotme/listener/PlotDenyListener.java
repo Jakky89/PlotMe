@@ -1,5 +1,7 @@
 package com.worldcretornica.plotme.listener;
 
+import java.util.HashMap;
+
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -12,28 +14,44 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
 import com.worldcretornica.plotme.PlotMe;
+import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotDenyListener implements Listener
 {
+	
+	public static HashMap<String, Location> previousPlayerLocations;
+	
+	
+	public PlotDenyListener()
+	{
+		previousPlayerLocations = new HashMap<String, Location>();
+	}
+	
 
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onPlayerMove(final PlayerMoveEvent event)
 	{
-		Player p = event.getPlayer();
-		
-		if(PlotManager.isPlotWorld(p) && !PlotMe.cPerms(p, "plotme.admin.bypassdeny"))
+		Player player = event.getPlayer();
+		if (player == null)
 		{
-			Location to = event.getTo();
-			
-			String idTo = PlotManager.getPlotId(to);
-			
-			if(!idTo.equalsIgnoreCase(""))
+			event.setCancelled(true);
+			return;
+		}
+		
+		Location fromloc = event.getFrom();
+		Location toloc = event.getTo();
+		
+		if (fromloc == null || toloc == null || fromloc.getWorld() != toloc.getWorld() || fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ())
+		{
+			if (PlotManager.isPlotWorld(toloc.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
 			{
-				Plot plot = PlotManager.getPlotById(p, idTo);
-				
-				if(plot != null && plot.isDenied(p.getName()))
+				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
+				if (plot != null)
 				{
-					event.setCancelled(true);
+					if (plot.isDenied(player.getName(), true, true))
+					{
+						event.setCancelled(true);
+					}
 				}
 			}
 		}
@@ -42,21 +60,24 @@ public class PlotDenyListener implements Listener
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onPlayerTeleport(final PlayerTeleportEvent event)
 	{
-		Player p = event.getPlayer();
-		
-		if(PlotManager.isPlotWorld(p) && !PlotMe.cPerms(p, "plotme.admin.bypassdeny"))
+		Player player = event.getPlayer();
+		if (player == null)
 		{
-			Location to = event.getTo();
-			
-			String idTo = PlotManager.getPlotId(to);
-			
-			if(!idTo.equalsIgnoreCase(""))
+			event.setCancelled(true);
+			return;
+		}
+		
+		Location fromloc = event.getFrom();
+		Location toloc = event.getTo();
+		
+		if (fromloc == null || toloc == null || fromloc.getWorld() != toloc.getWorld() || fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ())
+		{
+			if (PlotManager.isPlotWorld(toloc.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
 			{
-				Plot plot = PlotManager.getPlotById(p, idTo);
-				
-				if(plot != null && plot.isDenied(p.getName()))
+				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
+				if (plot != null && plot.isDenied(player.getName(), true, true))
 				{
-					event.setTo(PlotManager.getPlotHome(p.getWorld(), plot));
+					event.setTo(PlotManager.getPlotHome(player.getWorld(), plot));
 				}
 			}
 		}

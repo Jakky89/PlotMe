@@ -87,7 +87,7 @@ public class PlotMe extends JavaPlugin
     public static WorldEditPlugin worldedit = null;
     public static Economy economy = null;
     public static Boolean usinglwc = false;
-    //public static Boolean usingvoxelsniper = false;
+    public static Boolean usingvoxelsniper = false;
     
     private static HashSet<String> playersignoringwelimit = null;
     private static HashMap<String, String> captions;
@@ -144,7 +144,6 @@ public class PlotMe extends JavaPlugin
 		doMetric();
 		
 		PluginManager pm = getServer().getPluginManager();
-		
 		pm.registerEvents(new PlotListener(), this);
 		
 		if (pm.getPlugin("Vault") != null)
@@ -154,13 +153,18 @@ public class PlotMe extends JavaPlugin
 		
 		if (pm.getPlugin("WorldEdit") != null)
 		{
-			worldedit = (WorldEditPlugin) pm.getPlugin("WorldEdit");
+			worldedit = (WorldEditPlugin)pm.getPlugin("WorldEdit");
 			pm.registerEvents(new PlotWorldEditListener(), this);			
 		}
 		
 		if (pm.getPlugin("LWC") != null)
 		{
 			usinglwc = true;
+		}
+		
+		if (pm.getPlugin("VoxelSniper") != null)
+		{
+			usingvoxelsniper = true;
 		}
 		
 		if (allowToDeny)
@@ -255,14 +259,15 @@ public class PlotMe extends JavaPlugin
 		{
 			return null;
 		}
-		String pwn = chunk.getWorld().getName();
-		if (PlotManager.isPlotWorld(pwn))
+
+		if (PlotManager.isPlotWorld(chunk.getWorld().getName()))
 		{
-			return new PlotGen(PlotManager.plotWorlds.get(pwn));
+			return new PlotGen(PlotManager.plotWorlds.get(chunk.getWorld()).MinecraftWorld);
 		}
+		
 		else
 		{
-			logger.warning(PREFIX + "Configuration not found for PlotMe world \"" + pwn + "\"! Using defaults.");
+			logger.warning(PREFIX + "Configuration not found for PlotMe world \"" + chunk.getWorld().getName() + "\"! Using defaults.");
 			return new PlotGen();
 		}
 	}
@@ -421,7 +426,7 @@ public class PlotMe extends JavaPlugin
 					}
 				}
 			}
-			PlotWorld tmpPlotWorld = new PlotWorld(bukkitWorld);
+			PlotWorld tmpPlotWorld = new PlotWorld(0, bukkitWorld);
 			tmpPlotWorld.PlotAutoLimit			= cfgCurrWorld.getInt("PlotAutoLimit",	DEFAULT_PLOT_AUTO_LIMIT);
 			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PathWidth",		DEFAULT_PATH_WIDTH);
 			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PlotSize",		DEFAULT_PLOT_SIZE);
@@ -558,7 +563,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorlds.set(cfgWorldName, cfgCurrWorld);
 
 			
-			tmpPlotWorld.plotPositions = SqlManager.loadPlots(cfgWorldName, tmpPlotWorld.MinecraftWorld.getSpawnLocation(), 16);
+			SqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.MinecraftWorld.getSpawnLocation(), 16);
 			
 			PlotManager.plotWorlds.put(bukkitWorld.getName(), tmpPlotWorld);
 		}
@@ -599,21 +604,25 @@ public class PlotMe extends JavaPlugin
 	
 	public static void addIgnoreWELimit(Player p)
 	{
-		if(!playersignoringwelimit.contains(p.getName()))
+		if (!playersignoringwelimit.contains(p.getName()))
 		{
 			playersignoringwelimit.add(p.getName());
-			if(we != null)
+			if (worldedit != null)
+			{
 				PlotWorldEdit.removeMask(p);
+			}
 		}
 	}
 	
 	public static void removeIgnoreWELimit(Player p)
 	{
-		if(playersignoringwelimit.contains(p.getName()))
+		if (playersignoringwelimit.contains(p.getName()))
 		{
 			playersignoringwelimit.remove(p.getName());
-			if(we != null)
+			if (worldedit != null)
+			{
 				PlotWorldEdit.setMask(p);
+			}
 		}
 	}
 	
@@ -1152,17 +1161,34 @@ public class PlotMe extends JavaPlugin
 	
 	public void scheduleProtectionRemoval(final Plot plot)
 	{
-		for (final int x = plot.pXmin; x <= plot.pXmax; x++)
+		if (plot == null || plot.plotpos == null || plot.plotpos.w == null || plot.plotpos.w.MinecraftWorld == null)
+		{
+			return;
+		}
+		
+		int ptbbmulti = plot.plotpos.w.getBottomPlotToBlockPositionMultiplier();
+		int ptbtmulti = plot.plotpos.w.getTopPlotToBlockPositionMultiplier();
+		
+		int bottomX = plot.plotpos.x * ptbbmulti;
+		int bottomZ = plot.plotpos.z * ptbbmulti;
+		int topX    = plot.plotpos.x * ptbtmulti;
+		int topZ    = plot.plotpos.z * ptbtmulti;
+		
+		final int lx;
+		final int ly;
+		final int lz;
+		
+		for (lx = bottomX; lx <= topX; lx++)
     	{
-    		for (final int z = plot.pZmin; z <= plot.pZmax; z++)
+    		for (lz = bottomZ; lz <= topZ; lz++)
     		{
-    			for (final int y = plot.pYmin; y <= plot.pYmax; y++)
+    			for (ly = 1; ly <= plot.plotpos.w.MinecraftWorld.getMaxHeight(); ly++)
     			{
 					Bukkit.getScheduler().runTask(this, new Runnable() 
 					{
 					    public void run()
 					    {
-					    	Protection protection = com.griefcraft.lwc.LWC.getInstance().findProtection(plot.pwi.MinecraftWorld, x, y, z);
+					    	Protection protection = com.griefcraft.lwc.LWC.getInstance().findProtection(plot.plotpos.w.MinecraftWorld, lx, ly, lz);
 							if (protection != null)
 							{
 								protection.remove();

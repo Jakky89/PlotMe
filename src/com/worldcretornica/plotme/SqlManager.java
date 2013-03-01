@@ -1,32 +1,19 @@
 package com.worldcretornica.plotme;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.InputStream;
+import java.io.ObjectInputStream;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
-import org.bukkit.Chunk;
 import org.bukkit.Location;
-import org.bukkit.World;
-import org.bukkit.block.Biome;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 
 import com.worldcretornica.plotme.utils.PlotDatabaseUpdater;
-import com.worldcretornica.plotme.utils.PlotPosition;
+
 
 public class SqlManager {
 
@@ -212,52 +199,54 @@ public class SqlManager {
 		return false;
     }
     
-    public static void loadPlots(PlotWorld pw, Integer pX, Integer pZ, Integer range)
+    public static void loadPlots(PlotWorld plotWorld, Integer centerX, Integer centerZ, Integer range)
     {
     	Connection conn = getConnection();
     	Statement st;
 		try {
 			st = conn.createStatement();
-			ResultSet setPlots = st.executeQuery("SELECT * FROM plotme_plots WHERE world=" + String.valueOf(pw.id) + " AND (xpos BETWEEN "+String.valueOf(pX-range)+" AND "+String.valueOf(pX+range)+") AND (zpos BETWEEN "+String.valueOf(pZ-range)+" AND "+String.valueOf(pZ+range)+")");
-
-			int size = 0;
-
+			ResultSet setPlots = st.executeQuery("SELECT id, xpos, zpos, owner, playername, biome," +
+												 		"expireddate, finisheddate, customprice," +
+												 		"isforsale, isprotected, isauctionned, properties " +
+												 "FROM plotme_plots " +
+												 "INNER JOIN plotme_players " +
+												 "ON plotme_players.id=plotme_plots.owner " +
+												 "INNER JOIN plotme_worlds " +
+												 "ON plotme_worlds.id=plotme_plots.world " +
+												 "WHERE world=" + String.valueOf(plotWorld.id) + " " +
+												 		"AND (xpos BETWEEN "+String.valueOf(centerX-range)+" AND "+String.valueOf(centerX+range)+") " +
+												 		"AND (zpos BETWEEN "+String.valueOf(centerZ-range)+" AND "+String.valueOf(centerZ+range)+")");
 			while (setPlots.next()) 
 			{
-				size++;
-				int id = setPlots.getInt("id");
-				PlotWorld pwi = PlotManager.getCreatePlotWorld(setPlots.getInt("world"));
-				int tX = setPlots.getInt("xpos");
-				int tZ = setPlots.getInt("zpos");
+				int id = setPlots.getInt(1);
+				int tX = setPlots.getInt(2);
+				int tZ = setPlots.getInt(3);
+				PlotOwner owner = new PlotOwner(setPlots.getInt(4), setPlots.getString(5));
+				String biome = setPlots.getString(6);
+				long expireddate = setPlots.getLong(7);
+				long finisheddate = setPlots.getLong(8);
+				double customprice = setPlots.getDouble(9);
+				boolean isforsale = setPlots.getBoolean(10);
+				boolean isprotected = setPlots.getBoolean(11);
+				boolean isauctionned = setPlots.getBoolean(12);
 				
-				String owner = setPlots.getString("owner");
-				String biome = setPlots.getString("biome");
-				long expireddate = setPlots.getLong("expireddate");
-				HashMap<String, Map<String, Object>> plprops = new HashMap<String, Map<String, Object>>();
-				double customprice = setPlots.getDouble("customprice");
-				double rentprice = setPlots.getDouble("rentprice");
-				long rentlastpaid = setPlots.getLong("rentlastpaid");
-				boolean isforsale = setPlots.getBoolean("forsale");
-				long finisheddate = setPlots.getLong("finisheddate");
-				boolean isprotected = setPlots.getBoolean("isprotected");
-				boolean isauctionned = setPlots.getBoolean("isauctionned");
-				String properties = setPlots.getString("properties");
-	
 				Plot plot = new Plot(
 	    				id,
-	    				pwi,
+	    				plotWorld,
 	    				tX, tZ,
 	    				owner,
 	    				biome,
 	    				expireddate,
+	    				finisheddate,
 	    				customprice,
 	    				isforsale,
-	    				finisheddate,
 	    				isprotected,
 	    				isauctionned
 	    		);
 	
 				PlotManager.registerPlot(plot);
+				
+				SqlManager.loadPlotProperties(plot);
 			}
 		} catch (SQLException ex) {
 			PlotMe.logger.severe(PlotMe.PREFIX + "ERROR while loading plots from database :");
@@ -269,80 +258,65 @@ public class SqlManager {
     {
     	loadPlots(pw, loc.getBlockX(), loc.getBlockZ(), bRange);
     }
-    
-    private static void savePlotProperty(String type, String property, String value)
-    {
-    	
-    }
 
     private static void createTable()
     {
-    	Statement st = null;
-    	try
-    	{
-    		//PlotMe.logger.info(PlotMe.PREFIX + " Creating database tables when needed ...");
+		//PlotMe.logger.info(PlotMe.PREFIX + " Creating database tables when needed ...");
     		
-   			PlotDatabaseUpdater pdu = new PlotDatabaseUpdater();
+   		PlotDatabaseUpdater pdu = new PlotDatabaseUpdater();
+  
    			// UPDATE TABLES
-   			pdu.UpdateTables();
-   			
-    		if (PlotMe.usemySQL)
-    		{ 
-    			//PlotMe.logger.info(PlotMe.PREFIX + " Modifying database for MySQL support ...");
-    			File sqlitefile = new File(PlotMe.configpath + sqlitedb);
-    			if (sqlitefile.exists())
-    			{
-    				PlotMe.logger.info(PlotMe.PREFIX + " Trying to import plots from plots.db ...");
-	        		Class.forName("org.sqlite.JDBC");
-	        		Connection sqliteconn = DriverManager.getConnection("jdbc:sqlite:" + PlotMe.configpath + sqlitedb);
-	        		sqliteconn.setAutoCommit(false);
+		pdu.UpdateTables();
+		
+		if (PlotMe.usemySQL)
+		{
+			//PlotMe.logger.info(PlotMe.PREFIX + "Modifying database for MySQL support ...");
+			File sqliteFile = new File(PlotMe.configpath + sqlitedb);
+			if (sqliteFile.exists())
+			{
+				PlotMe.logger.info(PlotMe.PREFIX + "Trying to import plots from " + sqlitedb + " ...");
+				
+        		Connection sqliteCon = null;
+        		Statement stSqlite = null;
+            	try
+            	{
+            		sqliteCon = DriverManager.getConnection("jdbc:sqlite:" + PlotMe.configpath + sqlitedb);
+	        		sqliteCon.setAutoCommit(false);
 
-	        		Statement slstatement = sqliteconn.createStatement();
-	        		ResultSet setPlots = slstatement.executeQuery("SELECT * FROM plotmePlots");
+	        		stSqlite = sqliteCon.createStatement();
 
-	        		PlotMe.logger.info(PlotMe.PREFIX + " Imported " + size + " plots from " + sqlitedb);
+	        		PlotMe.logger.info(PlotMe.PREFIX + " Imported plots from " + sqlitedb);
 	        		PlotMe.logger.info(PlotMe.PREFIX + " Renaming " + sqlitedb + " to " + sqlitedb + ".old");
-	        		if (!sqlitefile.renameTo(new File(PlotMe.configpath, sqlitedb + ".old"))) 
+	        		if (!sqliteFile.renameTo(new File(PlotMe.configpath, sqlitedb + ".old"))) 
 	        		{
 	        			PlotMe.logger.warning(PlotMe.PREFIX + " Failed to rename " + sqlitedb + "! Please rename this manually!");
 	    			}
-	        		if (slstatement != null)
-        				slstatement.close();
-        			if (setPlots != null)
-        				setPlots.close();
-        			if (setComments != null)
-                    	setComments.close();
-                    if (setAllowed != null)
-                    	setAllowed.close();
-    				if (sqliteconn != null)
-        				sqliteconn.close();
-    			}
-    		}
-    	} 
-    	catch (SQLException ex) 
-    	{
-    		PlotMe.logger.severe(PlotMe.PREFIX + " Create Table Exception :");
-    		PlotMe.logger.severe("  " + ex.getMessage());
-    	} 
-    	catch (ClassNotFoundException ex) 
-    	{
-    		PlotMe.logger.severe(PlotMe.PREFIX + " You need the SQLite library :");
-    		PlotMe.logger.severe("  " + ex.getMessage());
-    	} 
-    	finally 
-    	{
-    		try {
-    			if (st != null) 
-    			{
-    				st.close();
-    			}
-    		} 
-    		catch (SQLException ex) 
-    		{
-    			PlotMe.logger.severe(PlotMe.PREFIX + " EXCEPTION occurred while closing statement :");
-    			PlotMe.logger.severe("  " + ex.getMessage());
-    		}
-    	}
+            	}
+            	catch (SQLException ex) 
+            	{
+            		PlotMe.logger.severe(PlotMe.PREFIX + " Create Table Exception :");
+            		PlotMe.logger.severe("  " + ex.getMessage());
+            	} 
+            	finally
+            	{
+            		try {
+	                    if (stSqlite != null)
+	                    {
+	                    	stSqlite.close();
+	                    }
+	    				if (sqliteCon != null)
+	    				{
+	        				sqliteCon.close();
+	    				}
+            		}
+	    	    	catch (SQLException ex) 
+	    	    	{
+	    	    		PlotMe.logger.severe(PlotMe.PREFIX + " EXCEPTION occurred while closing statement :");
+	    	    		PlotMe.logger.severe("  " + ex.getMessage());
+	    	    	}
+            	}
+			}
+		}
     }
     
     public static void insertPlot(Plot plot)
@@ -354,19 +328,21 @@ public class SqlManager {
         {
             conn = getConnection();
 
-            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, customprice, isforsale, isprotected, isauctionned, expireddate, finisheddate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, customprice, isforsale, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            
             ps.setInt(1, plot.id);
-            ps.setInt(2, plot.plotpos.getPlotWorld().WorldId);
-            ps.setInt(3, plot.plotpos.getPlotX());
-            ps.setInt(4, plot.plotpos.getPlotZ());
-            ps.setString(5, plot.biome.toString());
-            ps.setDouble(6, plot.customprice);
-            ps.setBoolean(7, plot.isforsale);
-            ps.setBoolean(8, plot.isprotected);
-            ps.setBoolean(9, plot.isauctionned);
-            ps.setLong(10, plot.expireddate);
-            ps.setLong(11, plot.finisheddate);
-
+            ps.setInt(2, plot.plotpos.w.id);
+            ps.setInt(3, plot.plotpos.x);
+            ps.setInt(4, plot.plotpos.z);
+            ps.setInt(5, plot.owner.id);
+            ps.setString(6, plot.biome.toString());
+            ps.setLong(7, plot.expireddate);
+            ps.setLong(8, plot.finisheddate);
+            ps.setDouble(9, plot.customprice);
+            ps.setBoolean(10, plot.isforsale);
+            ps.setBoolean(11, plot.isprotected);
+            ps.setBoolean(12, plot.isauctionned);
+            
             ps.executeUpdate();
             conn.commit();
         } 
@@ -392,7 +368,7 @@ public class SqlManager {
         }
     }
     
-    public static void updatePlot(int id, String field, Object value)
+    public static void updatePlotData(Plot plot, String colName, Object cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -402,10 +378,10 @@ public class SqlManager {
         {
             conn = getConnection();
 
-            ps = conn.prepareStatement("UPDATE plotme_plots SET " + field + "=? WHERE id=?");
+            ps = conn.prepareStatement("UPDATE plotme_plots SET " + colName + "=? WHERE id=? LIMIT 1");
             
-            ps.setObject(1, value);
-            ps.setInt(2, id);
+            ps.setObject(1, cellValue);
+            ps.setInt(2, plot.id);
             
             ps.executeUpdate();
             conn.commit();
@@ -442,7 +418,7 @@ public class SqlManager {
         {
         	// properties blob
 	        conn = getConnection();
-		    ps = conn.prepareStatement("UPDATE plotme_plots SET properties=? WHERE id=?");
+		    ps = conn.prepareStatement("UPDATE plotme_plots SET properties=? WHERE id=? LIMIT 1");
 		         
 	        // just setting the class name
 		    ps.setInt(1, plot.id);
@@ -472,40 +448,58 @@ public class SqlManager {
         }
     }
     
-    public static PlotProperties loadPlotProperties(Plot plot)
+    public static void loadPlotProperties(Plot plot)
     {
-        Connection conn = null;
+        Connection con = null;
         PreparedStatement ps = null;
+        PlotProperties desero = null;
     	
         try
         {
         	// properties blob
-	        conn = getConnection();
-		    ps = conn.prepareStatement("SELECT FROM plotme_plots (properties) WHERE id=(?)");
-		         
-    	PreparedStatement ps = connection.prepareStatement(SQL_DESERIALIZE_OBJECT);
-    		    pstmt.setLong(1, serialized_id);
-    		    ResultSet rs = pstmt.executeQuery();
-    		    rs.next();
-    		 
-    		    // Object object = rs.getObject(1);
-    		 
+	        con = getConnection();
+	        
+		    ps = con.prepareStatement("SELECT properties FROM plotme_plots WHERE id=(?) LIMIT 1");
+		    
+		    ps.setInt(1, plot.id);
+		    
+		    ResultSet rs = ps.executeQuery();
+		    if (rs.next())
+		    {
     		    byte[] buf = rs.getBytes(1);
-    		    ObjectInputStream objectIn = null;
+    		    ObjectInputStream oin = null;
     		    if (buf != null)
-    		      objectIn = new ObjectInputStream(new ByteArrayInputStream(buf));
-    		 
-    		    Object deSerializedObject = objectIn.readObject();
-    		 
+    		    {
+    		    	oin = new ObjectInputStream(new ByteArrayInputStream(buf));
+    		    }
+				try {
+					desero = (PlotProperties)oin.readObject();
+				} catch (ClassNotFoundException ex) {
+		        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object!");
+					PlotMe.logger.severe("  " + ex.getMessage());
+				}
     		    rs.close();
-    		    pstmt.close();
-    		 
-    		    System.out.println("Java object de-serialized from database. Object: "
-    		        + deSerializedObject + " Classname: "
-    		        + deSerializedObject.getClass().getName());
-    		    return deSerializedObject;
-    		  }
-    		 
+    		    ps.close();
+    		    plot.properties = desero;
+		    }
+        }
+        catch (Exception ex)
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object!");
+			PlotMe.logger.severe("  " + ex.getMessage());
+		}
+        finally
+        {
+        	if (ps != null)
+        	{
+        		try {
+					ps.close();
+				} catch (SQLException ex) {
+		        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while closing prepared statement in properties loader!");
+					PlotMe.logger.severe("  " + ex.getMessage());
+				}
+        	}
+        }
     }
 
     public static void addPlotBid(String player, double bid, int idX, int idZ, String world)
@@ -861,160 +855,6 @@ public class SqlManager {
             	PlotMe.logger.severe("  " + ex.getMessage());
             }
         }
-    }
-    
-    public static HashMap<String, String> fetchPlotPlayerProperties(int plotId, String playerName)
-    {
-    	if (plotId > 0)
-    	{
-    		Map<String, String> ret = new HashMap<String, String>();
-    		try {
-	    		Connection conn = getConnection();
-	    		PreparedStatement ps = conn.prepareStatement("SELECT properties FROM plotme_plot_player_properties WHERE plotid=? AND player=?");
-	    		ps.setInt(0, plotId);
-	    		ps.setString(1, playerName);
-	    		ResultSet rs = ps.executeQuery();
-	    		if (rs.next()) {
-	    			JSONObject jsonobj = (JSONObject)new JSONParser().parse(rs.getString(0));
-	    			rs.getString(0);
-					rgts = EnumSet. setRights.getString("rights");
-					ret.put(setRights.getString("player"), setRights.getString("rights"));
-				}
-				if (ps != null) {
-					ps.close();
-				}
-    		}
-    		catch
-    		{
-    			
-    		}
-    	}
-    	return null;
-    }
-    
-    public static List<Plot> getChunkPlots(Chunk cnk)
-    {
-    	List<Plot> ret = new ArrayList<Plot>();
-    	if (cnk != null && PlotMe.plotWorlds.containsKey(cnk.getWorld().getName()))
-    	{
-
-    	}
-    	return ret;
-    }
-    
-    public static HashMap<String, Plot> getWorldPlots(String worldName)
-    {
-    	HashMap<String, Plot> ret = new HashMap<String, Plot>();
-    	if (worldName != null && PlotMe.plotWorlds.containsKey(cnk.getWorld().getName())) {
-	        Statement statementPlot = null;
-	        Statement statementComment = null;
-	        ResultSet setPlots = null;
-			ResultSet setComments = null;
-	        try {
-	            Connection conn = getConnection();
-	            statementPlot = conn.createStatement();
-	            setPlots = statementPlot.executeQuery("SELECT * FROM plotmePlots WHERE LOWER(world)='" + worldName + "'");
-	            int size = 0;
-	            while (setPlots.next()) {
-	            	size++;
-	            	int id = setPlots.getInt("id");
-	    			int pX = setPlots.getInt("idX");
-	    			int pZ = setPlots.getInt("idZ");
-	    			String owner = setPlots.getString("owner");
-	    			int topX = setPlots.getInt("topX");
-	    			int bottomX = setPlots.getInt("bottomX");
-	    			int topZ = setPlots.getInt("topZ");
-	    			int bottomZ = setPlots.getInt("bottomZ");
-	    			String biome = setPlots.getString("biome");
-	    			long expireddate = setPlots.getLong("expireddate");
-	    			boolean finished = setPlots.getBoolean("finished");
-	    			HashMap<String, EnumSet<PlayerRights>> rights;
-	    			List<String[]> comments = new ArrayList<String[]>();
-	    			double customprice = setPlots.getDouble("customprice");
-	    			boolean forsale = setPlots.getBoolean("forsale");
-	    			String finisheddate = setPlots.getString("finisheddate");
-	    			boolean protect = setPlots.getBoolean("protected");
-	    			String currentbidder = setPlots.getString("currentbidder");
-	    			double currentbid = setPlots.getDouble("currentbid");
-	    			boolean auctionned = setPlots.getBoolean("auctionned");
-
-	    			statementComment = conn.createStatement();
-	    			setComments = statementComment.executeQuery("SELECT * FROM plotmeComments WHERE plotid=" + id);
-	    			
-	    			while (setComments.next())
-	    			{
-	    				String[] comment = new String[2];
-	    				comment[0] = setComments.getString("player");
-	    				comment[1] = setComments.getString("comment");
-	    				comments.add(comment);
-	    			}
-	    			
-	    			Plot plot = new Plot
-	    				(
-	    					id,
-	    					owner,
-	    					world,
-	    					topX, bottomX,
-	    					topZ, bottomZ,
-	    					biome,
-	    					expireddate,
-	    					finished,
-	    					allowed,
-	    					comments,
-	    					customprice,
-	    					forsale,
-	    					finisheddate,
-	    					protect,
-	    					currentbidder, currentbid,
-	    					auctionned,
-	    					denied
-	    				);
-	                ret.put("" + idX + ";" + idZ, plot);
-	            }
-	            PlotMe.logger.info(PlotMe.PREFIX + " " + size + " plots loaded");
-	        } 
-	        catch (SQLException ex) 
-	        {
-	        	PlotMe.logger.severe(PlotMe.PREFIX + " Load Exception :");
-	        	PlotMe.logger.severe("  " + ex.getMessage());
-	        } 
-	        finally 
-	        {
-	            try 
-	            {
-	                if (statementPlot != null)
-	                {
-	                	statementPlot.close();
-	                }
-	                if (statementAllowed != null)
-	                {
-	                	statementAllowed.close();
-	                }
-	                if (statementComment != null)
-	                {
-	                	statementComment.close();
-	                }
-	                if (setPlots != null)
-	                {
-	                	setPlots.close();
-	                }
-	                if (setComments != null)
-	                {
-	                	setComments.close();
-	                }
-	                if (setAllowed != null)
-	                {
-	                	setAllowed.close();
-	                }
-	            } 
-	            catch (SQLException ex) 
-	            {
-	            	PlotMe.logger.severe(PlotMe.PREFIX + " Exception occurred while closing plot statements :");
-	            	PlotMe.logger.severe("  " + ex.getMessage());
-	            }
-	        }
-    	}
-        return ret;
     }
  
 }

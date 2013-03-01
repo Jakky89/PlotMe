@@ -13,69 +13,132 @@ import com.worldcretornica.plotme.SqlManager;
 
 public class PlotDatabaseUpdater
 {
-	
-	public static ArrayList<Pair<String, String>> updateConditions;
 
-
-	public static void PlotDatabaseUpdater()
+	public PlotDatabaseUpdater()
 	{
-		updateConditions = new ArrayList<Pair<String, String>>();
+		
 	}
 	
-	public static void buildMySQLConditions()
+	public void createTables()
 	{
-		updateConditions.clear();
+        final String WORLD_TABLE = "CREATE TABLE IF NOT EXISTS `plotme_worlds` ("
+    		    + "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+    		    + "`worldname` VARCHAR(64) NOT NULL UNIQUE"
+    	        + ");";
+        final String PLAYERS_TABLE = "CREATE TABLE IF NOT EXISTS `plotme_players` ("
+    		    + "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+    		    + "`playername` VARCHAR(32) NOT NULL UNIQUE"
+    	        + ");";
+        final String PLOT_TABLE = "CREATE TABLE IF NOT EXISTS `plotme_plots` ("
+    		    + "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+    		    + "`world` UNSIGNED INTEGER,"
+        		+ "`xpos` INTEGER,"
+    		    + "`zpos` INTEGER,"
+    		    + "`owner` VARCHAR(32) DEFAULT NULL,"
+    	        + "`biome` VARCHAR(16) NOT NULL DEFAULT 'PLAINS',"
+    	        + "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
+    	        + "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
+    	        + "`customprice` UNSIGNED DOUBLE DEFAULT NULL,"
+    	        + "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+    	        + "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
+    	        + "`isauctionned` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+    	        + "UNIQUE (world, xpos, zpos)"
+    	        + ");";
+        final String COMMENT_TABLE = "CREATE TABLE IF NOT EXISTS `plotme_plot_comments` ("
+    	    	+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+        		+ "`plot` UNSIGNED INTEGER NOT NULL INDEX,"
+    		    + "`player` UNSIGNED INTEGER NOT NULL,"
+        		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+    		    + "`comment` TEXT"
+    	    	+ ");";
+        final String INFO_TABLE = "CREATE TABLE IF NOT EXISTS `plotme_info` ("
+        		+ "`key` VARCHAR(32) NOT NULL PRIMARY KEY,"
+        		+ "`value`"
+        		+ ");";
+        
+        Connection con = null;
+        Statement st = null;
+        ResultSet infoset = null;
+        
+        try
+        {
+        	
+	        con = SqlManager.getConnection();
+	        if (con == null)
+	        {
+   				PlotMe.logger.severe(PlotMe.PREFIX + "Could not get database connection! Needed database tables could not be created!");
+   				return;
+	        }
+	        con.setAutoCommit(false);
 
-    	/*** START Version 0.8 changes ***/
-        updateConditions.add(
-			new Pair
-			(
-				"TABLE_NAME='plotmePlots' AND column_name='customprice'",
-				"ALTER TABLE plotmePlots ADD customprice DOUBLE NOT NULL DEFAULT '0';"
-			)
-		);
-		updateConditions.add(
-				new Pair
-				(
-	       			"TABLE_NAME='plotmePlots' AND column_name='forsale'",
-	       			"ALTER TABLE plotmePlots ADD forsale BOOLEAN NOT NULL DEFAULT '0';"
-				)
-		);
-		updateConditions.add(
-				new Pair
-				(
-					"TABLE_NAME='plotmePlots' AND column_name='finisheddate'",
-					"ALTER TABLE plotmePlots ADD finisheddate VARCHAR(16) NULL;"
-				)
-		);
-        updateConditions.add(
-			new Pair
-			(
-				"TABLE_NAME='plotmePlots' AND column_name='protected'",
-				"ALTER TABLE plotmePlots ADD protected BOOLEAN NOT NULL DEFAULT '0';"
-			)
-		);
-        updateConditions.add(
-			new Pair
-			(
-				"TABLE_NAME='plotmePlots' AND column_name='auctionned'",
-				"ALTER TABLE plotmePlots ADD auctionned BOOLEAN NOT NULL DEFAULT '0';"
-			)
-		);
-
-	}
-	
-	public static void buildSQLiteConditions()
-	{
-		updateConditions.clear();
-		
-		/*** START Version 0.8 changes ***/
-		
+	        st = con.createStatement();
+	        if (st == null)
+	        {
+   				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create database statement! Needed database tables could not be created!");
+   				return;
+	        }
+    		st.addBatch(WORLD_TABLE);
+    		st.addBatch(PLAYERS_TABLE);
+    		st.addBatch(PLOT_TABLE);
+   			st.addBatch(COMMENT_TABLE);
+   			st.addBatch(INFO_TABLE);
+   			if (!SqlManager.batchExecuteCommitOrRollback(st))
+   			{
+   				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create needed database tables!");
+   				return;
+   			}
+   			if (!st.isClosed())
+   			{
+   				st.close();
+   			}
+        }
+        catch (SQLException ex) 
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception :");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+        } 
+        finally 
+        {
+            try 
+            {
+                if (st != null && !st.isClosed())
+                {
+                	st.close();
+                }
+                if (infoset != null && !infoset.isClosed())
+                {
+                	infoset.close();
+                }
+            } 
+            catch (SQLException ex) 
+            {
+            	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception (on close) :");
+            	PlotMe.logger.severe("  " + ex.getMessage());
+            }
+        }
 	}
 	
     public void UpdateTables()
     {
-    	Iterator<Pair<String, String>> conditionIterator;
+        Connection con = null;
+        Statement st = null;
+        ResultSet infoset = null;
+    	
+		int fromVersion = 8;
+		int toVersion = PlotMe.VERSION_NUMBER;
+		
+   		
+		st = con.createStatement();
+    	infoset = st.executeQuery("SELECT value FROM plotme_info WHERE key='VERSION'");
+    	if (infoset != null)
+    	{
+    		if (infoset.next()) {
+    			infoset.getInt(1);
+    		}
+    	}
+       	st.close();
+    	
+    	
     	String schema = SqlManager.getSchema();
         Statement statement = null;
         ResultSet set = null;

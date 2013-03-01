@@ -3,8 +3,10 @@ package com.worldcretornica.plotme;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -17,14 +19,14 @@ public class PlotRunnableDeleteExpire implements Runnable {
 		{
 			World w = PlotMe.worldcurrentlyprocessingexpired;
 			List<Plot> expiredplots = new LinkedList<Plot>();
-			HashMap<String, Plot> plots = PlotManager.getPlots(w);
 			Plot expiredplot;
 			
-			for(String id : plots.keySet())
+			Iterator<Entry<Integer, Plot>> expireIterator = PlotManager.allPlots.entrySet().iterator();
+			while (expireIterator.hasNext())
 			{
 				Plot plot = plots.get(id);
 				
-				if(!plot.protect && !plot.finished && plot.expireddate != null && PlotMe. plot.expireddate).compareTo(System.currentTimeMillis()) < 0)
+				if (!plot.isprotected && !plot.isfinished && plot.expireddate != null && plot.expireddate<System.currentTimeMillis())
 				{
 					expiredplots.add(plot);
 				}

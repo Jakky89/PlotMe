@@ -33,11 +33,31 @@ public class PlotManager {
 	public static Map<String, PlotWorld> plotWorlds = null;
 	public static Map<Integer, Plot> allPlots = null;
 	
+	public static long nextPlotExpirationCheck = 0;
+	
 	
 	public PlotManager()
 	{
 		plotWorlds = new HashMap<String, PlotWorld>();
 		allPlots = new HashMap<Integer, Plot>();
+	}
+	
+	public void resetNeighbourPlots(Plot plot)
+	{
+		if (plot == null)
+		{
+			return;
+		}
+		plot.resetNeighbourPlots();
+	}
+	
+	public void notifyNeighbourPlots(Plot plot)
+	{
+		if (plot == null)
+		{
+			return;
+		}
+		plot.notifyNeighbourPlots();
 	}
 	
 	public static void registerPlot(Plot plot)
@@ -46,25 +66,27 @@ public class PlotManager {
 		{
 			return;
 		}
-		PlotWorld pw = plot.plotpos.getPlotWorld();
+		PlotWorld pw = plot.plotpos.w;
 		if (pw == null)
 		{
 			return;
 		}
 		allPlots.put(plot.id, plot);
 		pw.registerPlot(plot);
+		plot.notifyNeighbourPlots();
 	}
 	
-	public static PlotWorld getCreatePlotWorld(String s)
+	public static PlotWorld getCreatePlotWorld(int id, String worldName)
 	{
-		if (s != null && !s.isEmpty())
+		if (worldName != null && !worldName.isEmpty())
 		{
-			PlotWorld pw = plotWorlds.get(s);
+			PlotWorld pw = plotWorlds.get(worldName);
 			if (pw == null)
 			{
-				World mw = PlotMe.self.getServer().getWorld(s);
-				pw = new PlotWorld(mw);
+				World mw = PlotMe.self.getServer().getWorld(worldName);
+				pw = new PlotWorld(id, mw);
 			}
+			plotWorlds.put(worldName, pw);
 			return pw;
 		}
 		return null;
@@ -97,6 +119,15 @@ public class PlotManager {
 		return null;
 	}
 	
+	public static PlotWorld getPlotWorld(Block b)
+	{
+		if (b != null)
+		{
+			return getPlotWorld(b.getLocation());
+		}
+		return null;
+	}
+	
 	public static Plot getPlotAtBlockPosition(Location loc)
 	{
 		if (loc == null) {
@@ -118,71 +149,80 @@ public class PlotManager {
 		return getPlotAtBlockPosition(player.getLocation());
 	}
 	
+	public static Plot getPlotAtBlockPosition(Block block) 
+	{
+		return getPlotAtBlockPosition(block.getLocation());
+	}
+	
+	public static Plot getPlotAtBlockPosition(BlockState block) 
+	{
+		return getPlotAtBlockPosition(block.getLocation());
+	}
+	
 	public static void adjustLinkedPlots(Plot plot)
 	{
 		if (plot == null)
 		{
 			return;
 		}
-		PlotWorld pw = plot.plotpos.getPlotWorld();
-		
-		Plot p0 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() - 1, plot.plotpos.getPlotX() - 1);
-		Plot p1 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() - 1, plot.plotpos.getPlotZ());
-		Plot p2 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX(),     plot.plotpos.getPlotZ() - 1);
-		Plot p3 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX(),     plot.plotpos.getPlotZ() + 1);
-		Plot p4 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() + 1, plot.plotpos.getPlotZ());
-		Plot p5 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() - 1, plot.plotpos.getPlotX() + 1);
-		Plot p6 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() + 1, plot.plotpos.getPlotX() - 1);
-		Plot p7 = pw.getPlotAtPlotPosition(plot.plotpos.getPlotX() + 1, plot.plotpos.getPlotX() + 1);
+
+		Plot p0 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x - 1, plot.plotpos.z - 1);
+		Plot p1 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x - 1, plot.plotpos.z);
+		Plot p2 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x,     plot.plotpos.z - 1);
+		Plot p3 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x,     plot.plotpos.z + 1);
+		Plot p4 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x + 1, plot.plotpos.z);
+		Plot p5 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x - 1, plot.plotpos.z + 1);
+		Plot p6 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x + 1, plot.plotpos.z - 1);
+		Plot p7 = plot.plotpos.w.getPlotAtPlotPosition(plot.plotpos.x + 1, plot.plotpos.z + 1);
 				
-		if (p1 != null && p1.owner.equalsIgnoreCase(plot.owner))
+		if (p1 != null && p1.owner.playername.equals(plot.owner.playername))
 		{
 			fillroad(p1, plot);
 		}
 				
-		if (p2 != null && p2.owner.equalsIgnoreCase(plot.owner))
+		if (p2 != null && p2.owner.playername.equals(plot.owner.playername))
 		{
 			fillroad(p2, plot);
 		}
 
-		if (p3 != null && p3.owner.equalsIgnoreCase(plot.owner))
+		if (p3 != null && p3.owner.playername.equals(plot.owner.playername))
 		{
 			fillroad(p3, plot);
 		}
 
-		if (p4 != null && p4.owner.equalsIgnoreCase(plot.owner))
+		if (p4 != null && p4.owner.playername.equals(plot.owner.playername))
 		{
 			fillroad(p4, plot);
 		}
 				
 		if (p0 != null && p1 != null  && p2 != null && 
-				p0.owner.equalsIgnoreCase(plot.owner)   &&
-				plot.owner.equalsIgnoreCase(p2.owner) &&
-				p2.owner.equalsIgnoreCase(p1.owner))
+				p0.owner.playername.equals(plot.owner)   &&
+				plot.owner.playername.equals(p2.owner) &&
+				p2.owner.playername.equals(p1.owner))
 		{
 			fillmiddleroad(p0, plot);
 		}
 				
 		if (p2 != null && p6 != null && p4 != null &&
-				p2.owner.equalsIgnoreCase(plot.owner)  &&
-				plot.owner.equalsIgnoreCase(p6.owner)  &&
-				p6.owner.equalsIgnoreCase(p4.owner))
+				p2.owner.playername.equals(plot.owner)  &&
+				plot.owner.playername.equals(p6.owner)  &&
+				p6.owner.playername.equals(p4.owner))
 		{
 			fillmiddleroad(p6, plot);
 		}
 				
 		if (p1 != null && p5 != null && p3 != null &&
-				p1.owner.equalsIgnoreCase(plot.owner)  &&
-				plot.owner.equalsIgnoreCase(p5.owner)  &&
-				p5.owner.equalsIgnoreCase(p3.owner))
+				p1.owner.playername.equals(plot.owner)  &&
+				plot.owner.playername.equals(p5.owner)  &&
+				p5.owner.playername.equals(p3.owner))
 		{
 			fillmiddleroad(p5, plot);
 		}
 				
 		if (p3 != null && p4 != null && p7 != null &&
-				p3.owner.equalsIgnoreCase(plot.owner)  &&
-				plot.owner.equalsIgnoreCase(p4.owner)  &&
-				p4.owner.equalsIgnoreCase(p7.owner))
+				p3.owner.playername.equals(plot.owner)  &&
+				plot.owner.playername.equals(p4.owner)  &&
+				p4.owner.playername.equals(p7.owner))
 		{
 			fillmiddleroad(p7, plot);
 		}
@@ -191,7 +231,7 @@ public class PlotManager {
 	private static void fillroad(Plot plot1, Plot plot2)
 	{
 		
-		if (plot1.pW != plot2.pW)
+		if (plot1.plotpos.w.id != plot2.plotpos.w.id)
 		{
 			return;
 		}
@@ -207,27 +247,27 @@ public class PlotManager {
 		int maxZ;
 		boolean isWallX;
 		
-		int h = plot1.pW.RoadHeight;
-		int wallId = plot1.pW.WallBlockId;
-		byte wallValue = plot1.pW.WallBlockValue;
-		int fillId = plot1.pW.PlotFloorBlockId;
-		byte fillValue = plot1.pW.PlotFloorBlockValue;
+		int h = plot1.plotpos.w.RoadHeight;
+		int wallId = plot1.plotpos.w.WallBlockId;
+		byte wallValue = plot1.plotpos.w.WallBlockValue;
+		int fillId = plot1.plotpos.w.PlotFloorBlockId;
+		byte fillValue = plot1.plotpos.w.PlotFloorBlockValue;
 				
 		if (bottomPlot1.getBlockX() == bottomPlot2.getBlockX())
 		{
 			minX = bottomPlot1.getBlockX();
 			maxX = topPlot1.getBlockX();
 			
-			minZ = Math.min(bottomPlot1.getBlockZ(), bottomPlot2.getBlockZ()) + plot1.pW.PlotSize;
-			maxZ = Math.max(topPlot1.getBlockZ(), topPlot2.getBlockZ()) - plot1.pW.PlotSize;
+			minZ = Math.min(bottomPlot1.getBlockZ(), bottomPlot2.getBlockZ()) + plot1.plotpos.w.PlotSize;
+			maxZ = Math.max(topPlot1.getBlockZ(), topPlot2.getBlockZ()) - plot1.plotpos.w.PlotSize;
 		}
 		else
 		{
 			minZ = bottomPlot1.getBlockZ();
 			maxZ = topPlot1.getBlockZ();
 			
-			minX = Math.min(bottomPlot1.getBlockX(), bottomPlot2.getBlockX()) + plot1.pW.PlotSize;
-			maxX = Math.max(topPlot1.getBlockX(), topPlot2.getBlockX()) - plot1.pW.PlotSize;
+			minX = Math.min(bottomPlot1.getBlockX(), bottomPlot2.getBlockX()) + plot1.plotpos.w.PlotSize;
+			maxX = Math.max(topPlot1.getBlockX(), topPlot2.getBlockX()) - plot1.plotpos.w.PlotSize;
 		}
 		
 		isWallX = (maxX - minX) > (maxZ - minZ);
@@ -247,7 +287,7 @@ public class PlotManager {
 		{
 			for (int z = minZ; z <= maxZ; z++)
 			{
-				for (int y = h; y < plot1.pW.MinecraftWorld.getMaxHeight(); y++)
+				for (int y = h; y < plot1.plotpos.w.MinecraftWorld.getMaxHeight(); y++)
 				{
 					if (y >= (h + 2))
 					{
@@ -482,20 +522,23 @@ public class PlotManager {
 		bsign.setType(Material.AIR);
 	}
 	
-	public static Location getPlotBottomLoc(Plot pt)
+	public static Location getPlotBottomLoc(Plot plot)
 	{
-		long x = (long)(pt.pX * (pt.pW.PlotSize + pt.pW.PathWidth) - (pt.pW.PlotSize) - (Math.floor(pt.pW.PathWidth/2)));
-		long z = (long)(pt.pZ * (pt.pW.PlotSize + pt.pW.PathWidth) - (pt.pW.PlotSize) - (Math.floor(pt.pW.PathWidth/2)));
+		int multi = (int)((plot.plotpos.w.PlotSize + plot.plotpos.w.PathWidth) - (plot.plotpos.w.PlotSize) - (Math.floor(plot.plotpos.w.PathWidth/2)));
 		
-		return new Location(pt.pW.MinecraftWorld, x, 1, z);
+		long x = plot.plotpos.x * multi;
+		long z = plot.plotpos.z * multi;
+		
+		return new Location(plot.plotpos.w.MinecraftWorld, x, 1, z);
 	}
 	
-	public static Location getPlotTopLoc(Plot pt)
+	public static Location getPlotTopLoc(Plot plot)
 	{
-		long x = pt.pX * (pt.pW.PlotSize + pt.pW.PathWidth) - ((int)Math.floor(pt.pW.PathWidth/2)) - 1;
-		long z = pt.pZ * (pt.pW.PlotSize + pt.pW.PathWidth) - ((int)Math.floor(pt.pW.PathWidth/2)) - 1;
+		int multi = (int)(plot.plotpos.w.PlotSize + plot.plotpos.w.PathWidth) - (int)(Math.floor(plot.plotpos.w.PathWidth/2)) - 1;
+		long x = plot.x * multi;
+		long z = plot.z * multi;
 		
-		return new Location(pt.pW.MinecraftWorld, x, 255, z);
+		return new Location(plot.plotpos.w.MinecraftWorld, x, plot.plotpos.w.MinecraftWorld, z);
 	}
 	
 	public static void setBiome(Plot plot, Biome b)
@@ -967,31 +1010,11 @@ public class PlotManager {
 		return nbfound;
 	}
 		
-	public static int bottomX(String id, World w)
+	public static boolean isPlotWorld(String worldName)
 	{
-		return getPlotBottomLoc(w, id).getBlockX();
-	}
-	
-	public static int bottomZ(String id, World w)
-	{
-		return getPlotBottomLoc(w, id).getBlockZ();
-	}
-
-	public static int topX(String id, World w)
-	{
-		return getPlotTopLoc(w, id).getBlockX();
-	}
-	
-	public static int topZ(String id, World w)
-	{
-		return getPlotTopLoc(w, id).getBlockZ();
-	}
-	
-	public static boolean isPlotWorld(String name)
-	{
-		if (name != null)
+		if (worldName != null)
 		{
-			return PlotMe.plotWorlds.containsKey(name.toLowerCase());
+			return PlotManager.plotWorlds.containsKey(worldName);
 		}
 		return false;
 	}
@@ -1500,9 +1523,9 @@ public class PlotManager {
 	
 	public static Location getPlotHome(Plot plot)
 	{
-		if (plot.pW != null)
+		if (plot.plotpos.w != null)
 		{
-			return new Location(plot.pW.MinecraftWorld, bottomX(plot) + (topX(plot) - 
+			return new Location(plot.plotpos.w.MinecraftWorld, plot.plotpos.w.getBottomPlotToBlockPositionMultiplier()*plot.plotpos.x + (topX(plot) - 
 					   PlotManager.bottomX(plot))/2, plot.pW.RoadHeight + 2, bottomZ(plot) - 2);
 		}
 		else

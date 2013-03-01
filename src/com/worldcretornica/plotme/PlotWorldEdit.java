@@ -18,55 +18,47 @@ public class PlotWorldEdit {
 		setMask(p, p.getLocation());
 	}
 	
-	public static void setMask(Player p, Location l)
+	public static void setMask(Player player, Location location)
 	{
-		World w = p.getWorld();
+		Plot plot = PlotManager.getPlotAtBlockPosition(location);
 		
-		String id = PlotManager.getPlotId(l);
-				
-		Location bottom = null;
-		Location top = null;
+		int ptbbmulti = plot.plotpos.w.getBottomPlotToBlockPositionMultiplier();
+		int ptbtmulti = plot.plotpos.w.getTopPlotToBlockPositionMultiplier();
 		
-		LocalSession session = PlotMe.we.getSession(p);
-				
-		if (!id.isEmpty())
-		{		
-			Plot plot = PlotManager.getPlotById(p, id);
-			
-			if (plot != null && plot.isAllowed(p.getName()))
-			{			
-				bottom = PlotManager.getPlotBottomLoc(w, id);
-				top = PlotManager.getPlotTopLoc(w, id);
-				
-				BukkitPlayer player = PlotMe.we.wrapPlayer(p);
-				LocalWorld world = player.getWorld();
+		int bottomX = plot.plotpos.x * ptbbmulti;
+		int bottomZ = plot.plotpos.z * ptbbmulti;
+		int topX    = plot.plotpos.x * ptbtmulti;
+		int topZ    = plot.plotpos.z * ptbtmulti;
+		
+		int maxHeight = plot.plotpos.w.MinecraftWorld.getMaxHeight();
+		
+		LocalSession session = PlotMe.worldedit.getSession(player);
+
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{			
+			BukkitPlayer bukkitplayer = PlotMe.worldedit.wrapPlayer(player);
+			LocalWorld localworld = bukkitplayer.getWorld();
+
+			Vector pos1 = new Vector(bottomX, 1,         bottomZ);
+			Vector pos2 = new Vector(topX,    maxHeight, topZ);
 						
-				Vector pos1 = new Vector(bottom.getBlockX(), bottom.getBlockY(), bottom.getBlockZ());
-				Vector pos2 = new Vector(top.getBlockX(), top.getBlockY(), top.getBlockZ());
-						
-				CuboidRegion cr = new CuboidRegion(world, pos1, pos2);
+			CuboidRegion cr = new CuboidRegion(localworld, pos1, pos2);
 				
-				RegionMask rm = new RegionMask(cr);
+			RegionMask rm = new RegionMask(cr);
 				
-				session.setMask(rm);
-				return;
-			}
+			session.setMask(rm);
+			return;
 		}
-		
-		if (bottom == null || top == null){
-			bottom = new Location(w, 0, 0, 0);
-			top = new Location(w, 0, 0, 0);
-		}
-		
+
 		if (session.getMask() == null)
 		{
-			BukkitPlayer player = PlotMe.we.wrapPlayer(p);
-			LocalWorld world = player.getWorld();
+			BukkitPlayer bukkitplayer = PlotMe.worldedit.wrapPlayer(player);
+			LocalWorld localworld = bukkitplayer.getWorld();
 					
-			Vector pos1 = new Vector(bottom.getBlockX(), bottom.getBlockY(), bottom.getBlockZ());
-			Vector pos2 = new Vector(top.getBlockX(), top.getBlockY(), top.getBlockZ());
+			Vector pos1 = new Vector(bottomX, 1,         bottomZ);
+			Vector pos2 = new Vector(topX,    maxHeight, topZ);
 					
-			CuboidRegion cr = new CuboidRegion(world, pos1, pos2);
+			CuboidRegion cr = new CuboidRegion(localworld, pos1, pos2);
 			
 			RegionMask rm = new RegionMask(cr);
 			
@@ -76,7 +68,7 @@ public class PlotWorldEdit {
 
 	public static void removeMask(Player p)
 	{
-		LocalSession session = PlotMe.we.getSession(p);
+		LocalSession session = PlotMe.worldedit.getSession(p);
 		session.setMask(null);
 	}	
 }

@@ -1,5 +1,6 @@
 package com.worldcretornica.plotme.listener;
 
+import java.util.HashMap;
 import java.util.List;
 
 import org.bukkit.Location;
@@ -7,6 +8,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Dispenser;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -14,7 +16,9 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockFormEvent;
 import org.bukkit.event.block.BlockFromToEvent;
@@ -23,7 +27,9 @@ import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
+import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
@@ -33,60 +39,57 @@ import org.bukkit.event.player.PlayerEggThrowEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
 import com.worldcretornica.plotme.PlotMapInfo;
 import com.worldcretornica.plotme.PlotMe;
+import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotListener implements Listener 
 {
 	
-	@EventHandler(priority = EventPriority.HIGH) //, ignoreCancelled = true
+	public static HashMap<Block, Pair<Long, Integer>> redstoneChanges;
+
+	
+	@EventHandler(priority = EventPriority.HIGH)
 	public void onBlockBreak(final BlockBreakEvent event) 
 	{	
-		Block b = event.getBlock();
-		
-		if (PlotManager.isPlotWorld(b))
+		Block block = event.getBlock();
+		if (block == null)
 		{
-			Player p = event.getPlayer();
-			boolean canbuild = PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere");
-			int id = PlotManager.getPlotId(b);
-			
-			if (id.equalsIgnoreCase(""))
-			{
-				if (!canbuild)
-				{
-					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-					event.setCancelled(true);
-				}
-			}
-			else
-			{
-				Plot plot = PlotManager.getMap(p).plots.get(id);
-				
-				if (plot == null)
-				{
-					if (!canbuild)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-				else if (!plot.isAllowed(p.getName()))
-				{
-					if (!canbuild)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-				else
-				{
-					plot.resetExpire(PlotManager.getMap(b).DaysToExpiration);
-				}
-			}
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (!PlotManager.isPlotWorld(block))
+		{
+			return;
+		}
+		
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (PlotMe.cPerms(player, "plotme.admin.buildanywhere"))
+		{
+			return;
+		}
+		
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{
+			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+		}
+		else
+		{
+			player.sendMessage(PlotMe.caption("ErrCannotBuild"));
+			event.setCancelled(true);
 		}
 	}
 	
@@ -94,120 +97,191 @@ public class PlotListener implements Listener
 	@EventHandler(priority = EventPriority.HIGH) //, ignoreCancelled = true
 	public void onBlockPlace(final BlockPlaceEvent event)
 	{
-		Block b = event.getBlock();
-		
-		if (PlotManager.isPlotWorld(b))
+		Block block = event.getBlock();
+		if (block == null)
 		{
-			Player p = event.getPlayer();
-			boolean canbuild = PlotMe.cPerms(p, "plotme.admin.buildanywhere");
-			String id = PlotManager.getPlotId(b.getLocation());
-			
-			if (id.isEmpty())
-			{
-				if (!canbuild)
-				{
-					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-					event.setCancelled(true);
-				}
-			}
-			else
-			{
-				Plot plot = PlotManager.getPlotById(p, id);
-				
-				if (plot == null)
-				{
-					if (!canbuild)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-				else if (!plot.isAllowed(p.getName()))
-				{
-					if (!canbuild)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-				else
-				{
-					plot.resetExpire(PlotManager.getMap(b).DaysToExpiration);
-				}
-			}
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (!PlotManager.isPlotWorld(block))
+		{
+			return;
+		}
+		
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (PlotMe.cPerms(player, "plotme.admin.buildanywhere"))
+		{
+			return;
+		}
+
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{
+			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+		}
+		else
+		{
+			player.sendMessage(PlotMe.caption("ErrCannotBuild"));
+			event.setCancelled(true);
 		}
 	}
+
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSignChange(SignChangeEvent event)
+	{
+        Block block = event.getBlock();
+        if (block == null) {
+        	event.setCancelled(true);
+            return;
+        }
+        
+        if (!PlotManager.isPlotWorld(block))
+		{
+			return;
+		}
+        
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (PlotMe.cPerms(player, "plotme.admin.buildanywhere"))
+		{
+			return;
+		}
+
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{
+			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+		}
+		else
+		{
+			player.sendMessage(PlotMe.caption("ErrCannotBuild"));
+			event.setCancelled(true);
+		}
+    }
 	
+	/**
+	 * TODO: check for to fast redstone circuits
+	 */
 	
+	/*@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockRedstoneChange(BlockRedstoneEvent event)
+	{
+		Block block = event.getBlock();
+        if (block == null) {
+            return;
+        }
+    }*/
+	
+	/*@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBlockDispense(BlockDispenseEvent event)
+	{
+        Block block = event.getBlock();
+        if (block == null) {
+        	event.setCancelled(true);
+            return;
+        }
+        
+        if ((block.getType() != Material.DISPENSER) || !(block.getState() instanceof InventoryHolder)){
+        	return;
+        }
+        Dispenser disp = (Dispenser)event.getBlock().getState().getData();
+        Block target = block.getRelative(disp.getFacing());
+        
+        ItemStack dispensed = event.
+    }*/
+	
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onBlockBurn(BlockBurnEvent event)
+	{
+        if (PlotManager.isPlotWorld(event.getBlock()))
+		{
+        	event.setCancelled(true);
+			return;
+		}
+	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onPlayerBucketEmpty(final PlayerBucketEmptyEvent event)
 	{
-		if (!PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere"))
+		BlockFace bf = event.getBlockFace();
+		BlockState block = event.getBlockClicked().getLocation().add(bf.getModX(), bf.getModY(), bf.getModZ()).getBlock().getState();
+
+        if (!PlotManager.isPlotWorld(block))
 		{
-			BlockFace bf = event.getBlockFace();
-			BlockState b = event.getBlockClicked().getLocation().add(bf.getModX(), bf.getModY(), bf.getModZ()).getBlock().getState();
-			if (PlotManager.isPlotWorld(b))
-			{
-				String id = PlotManager.getPlotId(b.getLocation());
-				Player p = event.getPlayer();
-				
-				if (id.equalsIgnoreCase(""))
-				{
-					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-					event.setCancelled(true);
-				}
-				else
-				{
-					Plot plot = PlotManager.getPlotById(p, id);
-					
-					if (plot == null)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-					else if (!plot.isAllowed(p.getName()))
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-			}
+			return;
+		}
+		
+		if (PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere"))
+		{
+			return;
+		}
+
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{
+			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+		}
+		else
+		{
+			player.sendMessage(PlotMe.caption("ErrCannotBuild"));
+			event.setCancelled(true);
 		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onPlayerBucketFill(final PlayerBucketFillEvent event)
 	{
-		if(!PlotMe.cPerms(event.getPlayer(), "plotme.admin.buildanywhere"))
+        Block block = event.getBlockClicked();
+        if (block == null) {
+        	event.setCancelled(true);
+            return;
+        }
+        
+        if (!PlotManager.isPlotWorld(block))
 		{
-			Block b = event.getBlockClicked();
-			if(PlotManager.isPlotWorld(b))
-			{
-				String id = PlotManager.getPlotId(b.getLocation());
-				Player p = event.getPlayer();
-				
-				if(id.equalsIgnoreCase(""))
-				{
-					p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-					event.setCancelled(true);
-				}
-				else
-				{
-					Plot plot = PlotManager.getPlotById(p,id);
-					
-					if (plot == null)
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-					else if(!plot.isAllowed(p.getName()))
-					{
-						p.sendMessage(PlotMe.caption("ErrCannotBuild"));
-						event.setCancelled(true);
-					}
-				}
-			}
+			return;
+		}
+        
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		if (PlotMe.cPerms(player, "plotme.admin.buildanywhere"))
+		{
+			return;
+		}
+
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		if (plot != null && plot.isAllowed(player.getName(), true, true))
+		{
+			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+		}
+		else
+		{
+			player.sendMessage(PlotMe.caption("ErrCannotBuild"));
+			event.setCancelled(true);
 		}
 	}
 	
@@ -217,8 +291,10 @@ public class PlotListener implements Listener
 	{
 		Block b = event.getClickedBlock();
 		
-		if(PlotManager.isPlotWorld(b))
+		if (!PlotManager.isPlotWorld(b))
 		{
+			return
+		}
 			PlotMapInfo pmi = PlotManager.getMap(b);
 			boolean blocked = false;
 			Player player = event.getPlayer();
@@ -350,7 +426,6 @@ public class PlotListener implements Listener
 					}
 				}
 			}
-		}
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -438,12 +513,10 @@ public class PlotListener implements Listener
 	public void onBlockGrow(final BlockGrowEvent event)
 	{
 		Block b = event.getBlock();
-		
-		if(PlotManager.isPlotWorld(b))
+		if (PlotManager.isPlotWorld(b))
 		{
-			String id = PlotManager.getPlotId(b.getLocation());
-									
-			if(id.equalsIgnoreCase(""))
+			Plot p = PlotManager.getPlotAtBlockPosition(b);
+			if (p == null)
 			{
 				event.setCancelled(true);
 			}
@@ -453,18 +526,16 @@ public class PlotListener implements Listener
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onBlockPistonExtend(final BlockPistonExtendEvent event)
 	{
-		if(PlotManager.isPlotWorld(event.getBlock()))
+		if (PlotManager.isPlotWorld(event.getBlock()))
 		{
 			BlockFace face = event.getDirection();
-			
-			for(Block b : event.getBlocks())
+			for (Block b : event.getBlocks())
 			{
-				String id = PlotManager.getPlotId(b.getLocation().add(face.getModX(), face.getModY(), face.getModZ()));
-										
-				if(id.equalsIgnoreCase(""))
+				Plot p = PlotManager.getPlotAtBlockPosition(b.getLocation().add(face.getModX(), face.getModY(), face.getModZ()));
+				if (p == null)
 				{
 					event.setCancelled(true);
-					return;
+					break;
 				}
 			}
 		}
@@ -474,12 +545,10 @@ public class PlotListener implements Listener
 	public void onBlockPistonRetract(final BlockPistonRetractEvent event)
 	{
 		Block b = event.getRetractLocation().getBlock();
-		
-		if(PlotManager.isPlotWorld(b) && event.getBlock().getType() == Material.PISTON_STICKY_BASE)
+		if (PlotManager.isPlotWorld(b) && event.getBlock().getType() == Material.PISTON_STICKY_BASE)
 		{
-			String id = PlotManager.getPlotId(b.getLocation());
-									
-			if(id.equalsIgnoreCase(""))
+			Plot p = PlotManager.getPlotAtBlockPosition(b);			
+			if (p == null)
 			{
 				event.setCancelled(true);
 			}
@@ -490,20 +559,23 @@ public class PlotListener implements Listener
 	public void onStructureGrow(final StructureGrowEvent event)
 	{
 		List<BlockState> blocks = event.getBlocks();
-		boolean found = false;
 
-		for(int i = 0 ; i < blocks.size(); i++)
+		int i = 0;
+		while (i < blocks.size())
 		{
-			if(found || PlotManager.isPlotWorld(blocks.get(i)))
+			if (!PlotManager.isPlotWorld(blocks.get(i)))
 			{
-				found = true;
-				String id = PlotManager.getPlotId(blocks.get(i).getLocation());
-										
-				if(id.equalsIgnoreCase(""))
-				{
-					event.getBlocks().remove(i);
-					i--;
-				}
+				i++;
+				continue;
+			}
+			Plot p = PlotManager.getPlotAtBlockPosition(blocks.get(i));
+			if (p == null)
+			{
+				event.getBlocks().remove(i);
+			}
+			else
+			{
+				i++;
 			}
 		}
 	}

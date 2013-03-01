@@ -4,9 +4,9 @@ import com.worldcretornica.plotme.PlotWorld;
 
 public class PlotPosition {
 
-	private final PlotWorld w;
-	private final Integer x;
-	private final Integer z;
+	public final PlotWorld w;
+	public final Integer x;
+	public final Integer z;
 
 	public PlotPosition(Integer pX, Integer pZ)
 	{
@@ -20,21 +20,6 @@ public class PlotPosition {
 		this.w = pW;
 		this.x = pX;
 		this.z = pZ;
-	}
-	
-	public final PlotWorld getPlotWorld()
-	{
-		return this.w;
-	}
-
-	public final Integer getPlotX()
-	{
-		return this.x;
-	}
-
-	public final Integer getPlotZ()
-	{
-		return this.z;
 	}
 
 	@Override
@@ -64,7 +49,7 @@ public class PlotPosition {
 				return false;
 			}
 		}
-		return this.x.equals(pp.getPlotX()) && this.z.equals(pp.getPlotZ());
+		return this.x.equals(pp.x) && this.z.equals(pp.z);
 	}
 
 }

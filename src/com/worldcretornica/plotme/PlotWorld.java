@@ -11,10 +11,11 @@ import org.bukkit.block.Block;
 import com.worldcretornica.plotme.utils.PlotPosition;
 
 
-public class PlotWorld
+public class PlotWorld implements Comparable<PlotWorld>
 {
 	
 	public int id;
+	
 	public World MinecraftWorld;
 
 	public int PlotSize;
@@ -73,60 +74,19 @@ public class PlotWorld
 	public Map<PlotPosition, Plot> plotPositions;
 	
 
-	public PlotWorld(World w)
+	public PlotWorld(int id, World world)
 	{
-		this.MinecraftWorld = w;
+		this.MinecraftWorld = world;
 		this.plotPositions = new HashMap<PlotPosition, Plot>();
 	}
 	
-	public void resetNeighbours(Plot plot)
+	public int getId()
 	{
-		if (plot == null)
-		{
-			return;
-		}
-		if (plot.plotneighbours == null)
-		{
-			plot.plotneighbours = new Plot[8];
-		}
-		else
-		{
-			for (byte i=0; i<8; i++)
-			{
-				if (plot.plotneighbours[i] != null)
-				{
-					if (plot.plotneighbours[i].plotneighbours != null)
-					{
-						plot.plotneighbours[i].plotneighbours[(i+4)%8] = null;
-					}
-					plot.plotneighbours[i] = null;
-				}
-			}
-		}
-	}
-	
-	public void notifyNeighbours(Plot plot)
-	{
-		if (plot == null)
-		{
-			return;
-		}
-		for (byte i=0; i<8; i++)
-		{
-			if (plot.plotneighbours[i] != null)
-			{
-				if (plot.plotneighbours[i].plotneighbours == null)
-				{
-					plot.plotneighbours[i].plotneighbours = new Plot[8];
-				}
-				plot.plotneighbours[i].plotneighbours[(i+4)%8] = plot;
-			}
-		}
+		return this.id;
 	}
 	
 	public void refreshNeighbours(Plot plot)
 	{
-		resetNeighbours(plot);
 		/**
 		 * +++++++++++++++++++++++++
 		 * +  #7   +  #0   +  #1   +
@@ -140,19 +100,19 @@ public class PlotWorld
 		 * +++++++++++++++++++++++++
 		 */
 		
-		Integer px = plot.plotpos.getPlotX();
-		Integer pz = plot.plotpos.getPlotZ();
+		Integer px = plot.getPlotX();
+		Integer pz = plot.getPlotZ();
 		
-		plot.plotneighbours[0] = getPlotAtPlotPosition( px    , pz - 1 );
-		plot.plotneighbours[1] = getPlotAtPlotPosition( px + 1, pz - 1 );
-		plot.plotneighbours[2] = getPlotAtPlotPosition( px + 1, pz     );
-		plot.plotneighbours[3] = getPlotAtPlotPosition( px + 1, pz + 1 );
-		plot.plotneighbours[4] = getPlotAtPlotPosition( px    , pz + 1 );
-		plot.plotneighbours[5] = getPlotAtPlotPosition( px - 1, pz + 1 );
-		plot.plotneighbours[6] = getPlotAtPlotPosition( px - 1, pz     );
-		plot.plotneighbours[7] = getPlotAtPlotPosition( px - 1, pz - 1 );
+		plot.neighbourplots[0] = getPlotAtPlotPosition( px    , pz - 1 );
+		plot.neighbourplots[1] = getPlotAtPlotPosition( px + 1, pz - 1 );
+		plot.neighbourplots[2] = getPlotAtPlotPosition( px + 1, pz     );
+		plot.neighbourplots[3] = getPlotAtPlotPosition( px + 1, pz + 1 );
+		plot.neighbourplots[4] = getPlotAtPlotPosition( px    , pz + 1 );
+		plot.neighbourplots[5] = getPlotAtPlotPosition( px - 1, pz + 1 );
+		plot.neighbourplots[6] = getPlotAtPlotPosition( px - 1, pz     );
+		plot.neighbourplots[7] = getPlotAtPlotPosition( px - 1, pz - 1 );
 		
-		notifyNeighbours(plot);
+		plot.notifyNeighbourPlots();
 	}
 	
 	public void registerPlot(Plot plot) {
@@ -161,24 +121,21 @@ public class PlotWorld
 			return;
 		}
 		plotPositions.put(plot.plotpos, plot);
+		refreshNeighbours(plot);
 	}
-	
-	public void unregisterPlot(PlotPosition plotpos)
-	{
-		if (plotpos == null)
-		{
-			return;
-		}
-		plotPositions.remove(plotpos);
-	}
-	
+
 	public void unregisterPlot(Plot plot)
 	{
 		if (plot == null)
 		{
 			return;
 		}
-		unregisterPlot(plot.plotpos);
+		plot.resetNeighbourPlots();
+		if (plot.plotpos == null)
+		{
+			return;
+		}
+		plotPositions.remove(plot.plotpos);
 	}
 
 	public Plot getPlotAtPlotPosition(int pX, int pZ)
@@ -314,6 +271,16 @@ public class PlotWorld
 		
 	}
 	
+	public int getBottomPlotToBlockPositionMultiplier()
+	{
+		return (PlotSize + PathWidth) - (PlotSize) - ((int)Math.floor(PathWidth/2));
+	}
+	
+	public int getTopPlotToBlockPositionMultiplier()
+	{
+		return (PlotSize + PathWidth) - ((int)Math.floor(PathWidth/2)) - 1;
+	}
+	
 	public Plot getPlotAtBlockPosition(Location loc)
 	{
 		if (loc.getWorld() == MinecraftWorld)
@@ -345,6 +312,11 @@ public class PlotWorld
 	    	return false;
 	    }
 		return this.MinecraftWorld.equals(((PlotWorld)o).MinecraftWorld.getName());
+	}
+
+	@Override
+	public int compareTo(PlotWorld plotWorld2) {
+		return this.id-plotWorld2.id;
 	}
 	
 }
