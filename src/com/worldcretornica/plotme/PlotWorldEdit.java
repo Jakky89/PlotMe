@@ -29,11 +29,11 @@ public class PlotWorldEdit {
 		
 		LocalSession session = PlotMe.we.getSession(p);
 				
-		if(!id.equalsIgnoreCase(""))
+		if (!id.isEmpty())
 		{		
 			Plot plot = PlotManager.getPlotById(p, id);
 			
-			if(plot != null && plot.isAllowed(p.getName()))
+			if (plot != null && plot.isAllowed(p.getName()))
 			{			
 				bottom = PlotManager.getPlotBottomLoc(w, id);
 				top = PlotManager.getPlotTopLoc(w, id);
@@ -53,12 +53,12 @@ public class PlotWorldEdit {
 			}
 		}
 		
-		if(bottom == null || top == null){
+		if (bottom == null || top == null){
 			bottom = new Location(w, 0, 0, 0);
 			top = new Location(w, 0, 0, 0);
 		}
 		
-		if(session.getMask() == null)
+		if (session.getMask() == null)
 		{
 			BukkitPlayer player = PlotMe.we.wrapPlayer(p);
 			LocalWorld world = player.getWorld();
