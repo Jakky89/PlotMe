@@ -12,10 +12,11 @@ import java.sql.Statement;
 
 import org.bukkit.Location;
 
+import com.worldcretornica.plotme.utils.PlotOwner;
 import com.worldcretornica.plotme.utils.PlotDatabaseUpdater;
 
 
-public class SqlManager {
+public class PlotMeSqlManager {
 
 	private static Connection conn = null;
 	
@@ -246,7 +247,7 @@ public class SqlManager {
 	
 				PlotManager.registerPlot(plot);
 				
-				SqlManager.loadPlotProperties(plot);
+				PlotMeSqlManager.loadPlotProperties(plot);
 			}
 		} catch (SQLException ex) {
 			PlotMe.logger.severe(PlotMe.PREFIX + "ERROR while loading plots from database :");
@@ -263,10 +264,7 @@ public class SqlManager {
     {
 		//PlotMe.logger.info(PlotMe.PREFIX + " Creating database tables when needed ...");
     		
-   		PlotDatabaseUpdater pdu = new PlotDatabaseUpdater();
-  
-   			// UPDATE TABLES
-		pdu.UpdateTables();
+   		PlotDatabaseUpdater.updateTables();
 		
 		if (PlotMe.usemySQL)
 		{

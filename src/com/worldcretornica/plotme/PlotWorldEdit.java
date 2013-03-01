@@ -1,7 +1,6 @@
 package com.worldcretornica.plotme;
 
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import com.sk89q.worldedit.LocalSession;
@@ -22,13 +21,12 @@ public class PlotWorldEdit {
 	{
 		Plot plot = PlotManager.getPlotAtBlockPosition(location);
 		
-		int ptbbmulti = plot.plotpos.w.getBottomPlotToBlockPositionMultiplier();
-		int ptbtmulti = plot.plotpos.w.getTopPlotToBlockPositionMultiplier();
+		double ptbbmulti = plot.plotpos.w.getPlotBlockPositionMultiplier();
 		
-		int bottomX = plot.plotpos.x * ptbbmulti;
-		int bottomZ = plot.plotpos.z * ptbbmulti;
-		int topX    = plot.plotpos.x * ptbtmulti;
-		int topZ    = plot.plotpos.z * ptbtmulti;
+		final int bottomX	= (int)Math.ceil(plot.plotpos.x        * ptbbmulti);
+		final int bottomZ	= (int)Math.ceil(plot.plotpos.z        * ptbbmulti);
+		final int topX		= (int)Math.floor((plot.plotpos.x - 1) * ptbbmulti);
+		final int topZ		= (int)Math.floor((plot.plotpos.z - 1) * ptbbmulti);
 		
 		int maxHeight = plot.plotpos.w.MinecraftWorld.getMaxHeight();
 		

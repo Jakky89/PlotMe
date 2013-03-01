@@ -1,4 +1,4 @@
-package com.worldcretornica.plotme;
+package com.worldcretornica.plotme.utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,7 +11,12 @@ import java.util.Map.Entry;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
 
-public class PlotRunnableDeleteExpire implements Runnable {
+import com.worldcretornica.plotme.Plot;
+import com.worldcretornica.plotme.PlotManager;
+import com.worldcretornica.plotme.PlotMe;
+import com.worldcretornica.plotme.PlotMeSqlManager;
+
+public class RunnableExpiredPlotsRemover implements Runnable {
 
 	public void run()
 	{
@@ -65,7 +70,7 @@ public class PlotRunnableDeleteExpire implements Runnable {
 					PlotManager.removeOwnerSign(w, id);
 					PlotManager.removeSellSign(w, id);
 										
-					SqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
+					PlotMeSqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
 					
 					PlotMe.counterexpired--;
 				}

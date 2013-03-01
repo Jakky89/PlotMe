@@ -8,27 +8,22 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
+
 import net.milkbowl.vault.economy.Economy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -42,7 +37,6 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.yaml.snakeyaml.Yaml;
 
-import com.griefcraft.model.Protection;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.worldcretornica.plotme.Metrics.Graph;
 import com.worldcretornica.plotme.listener.PlotDenyListener;
@@ -63,9 +57,11 @@ public class PlotMe extends JavaPlugin
     public static String mySQLuname;
     public static String mySQLpass;
     public static String mySQLconn;
+    public static String databasePrefix;
     public static String configpath;
     public static Boolean globalUseEconomy;
     public static Boolean advancedlogging;
+    public static Boolean opPermissions;
     public static String language;
     public static Boolean allowWorldTeleport;
     public static Boolean autoUpdate;
@@ -104,7 +100,8 @@ public class PlotMe extends JavaPlugin
 	
 	public void onDisable()
 	{	
-		SqlManager.closeConnection();
+		PlotMeSqlManager.closeConnection();
+		PlotProtectionRemover.forceRun();
 		NAME = null;
 		PREFIX = null;
 		VERSION = null;
@@ -116,6 +113,7 @@ public class PlotMe extends JavaPlugin
 		mySQLuname = null;
 		mySQLpass = null;
 		mySQLconn = null;
+		databasePrefix = null;
 		globalUseEconomy = null;
 		advancedlogging = null;
 		language = null;
@@ -135,6 +133,8 @@ public class PlotMe extends JavaPlugin
 		defaultWEAnywhere = null;
 		self = null;
 		allowToDeny = null;
+		
+		
 	}
 	
 	public void onEnable()
@@ -172,7 +172,7 @@ public class PlotMe extends JavaPlugin
 			pm.registerEvents(new PlotDenyListener(), this);
 		}
 				
-		getCommand("plotme").setExecutor(new PMCommand(this));
+		getCommand("plotme").setExecutor(new PlotMeCommands(this));
 				
 		setupUpdater();
 				
@@ -317,9 +317,11 @@ public class PlotMe extends JavaPlugin
 		mySQLconn = config.getString("mySQLconn", "jdbc:mysql://localhost:3306/minecraft");
 		mySQLuname = config.getString("mySQLuname", "root");
 		mySQLpass = config.getString("mySQLpass", "password");
+		databasePrefix = config.getString("databasePrefix", "");
 		globalUseEconomy = config.getBoolean("globalUseEconomy", false);
 		advancedlogging = config.getBoolean("AdvancedLogging", false);
 		language = config.getString("Language", "english");
+		opPermissions = config.getBoolean("OpPermissions", true);
 		allowWorldTeleport = config.getBoolean("allowWorldTeleport", true);
 		defaultWEAnywhere = config.getBoolean("defaultWEAnywhere", false);
 		autoUpdate = config.getBoolean("auto-update", false);
@@ -563,7 +565,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorlds.set(cfgWorldName, cfgCurrWorld);
 
 			
-			SqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.MinecraftWorld.getSpawnLocation(), 16);
+			PlotMeSqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.MinecraftWorld.getSpawnLocation(), 16);
 			
 			PlotManager.plotWorlds.put(bukkitWorld.getName(), tmpPlotWorld);
 		}
@@ -756,6 +758,7 @@ public class PlotMe extends JavaPlugin
 		properties.put("MsgAlreadyProcessingPlots", "is already processing expired plots");
 		properties.put("MsgDoesNotExistOrNotLoaded","does not exist or is not loaded.");
 		properties.put("MsgNotPlotWorld", "This is not a plot world.");
+		properties.put("MsgInvalidPageNumber", "Invalid page number!");
 		properties.put("MsgPermissionDenied", "Permission denied");
 		properties.put("MsgNoPlotFound", "No plot found");
 		properties.put("MsgCannotBidOwnPlot", "You cannot bid on your own plot.");
@@ -1145,10 +1148,12 @@ public class PlotMe extends JavaPlugin
 	
 	public static String caption(String s)
 	{
-		if(captions.containsKey(s))
+		if (captions.containsKey(s))
 		{
 			return addColor(captions.get(s));
-		}else{
+		}
+		else
+		{
 			logger.warning("[" + NAME + "] Missing caption: " + s);
 			return "ERROR:Missing caption '" + s + "'";
 		}
@@ -1159,45 +1164,9 @@ public class PlotMe extends JavaPlugin
 		return ChatColor.translateAlternateColorCodes('&', string);
     }
 	
-	public void scheduleProtectionRemoval(final Plot plot)
+	public void scheduleProtectionRemoval(Plot plot)
 	{
-		if (plot == null || plot.plotpos == null || plot.plotpos.w == null || plot.plotpos.w.MinecraftWorld == null)
-		{
-			return;
-		}
-		
-		int ptbbmulti = plot.plotpos.w.getBottomPlotToBlockPositionMultiplier();
-		int ptbtmulti = plot.plotpos.w.getTopPlotToBlockPositionMultiplier();
-		
-		int bottomX = plot.plotpos.x * ptbbmulti;
-		int bottomZ = plot.plotpos.z * ptbbmulti;
-		int topX    = plot.plotpos.x * ptbtmulti;
-		int topZ    = plot.plotpos.z * ptbtmulti;
-		
-		final int lx;
-		final int ly;
-		final int lz;
-		
-		for (lx = bottomX; lx <= topX; lx++)
-    	{
-    		for (lz = bottomZ; lz <= topZ; lz++)
-    		{
-    			for (ly = 1; ly <= plot.plotpos.w.MinecraftWorld.getMaxHeight(); ly++)
-    			{
-					Bukkit.getScheduler().runTask(this, new Runnable() 
-					{
-					    public void run()
-					    {
-					    	Protection protection = com.griefcraft.lwc.LWC.getInstance().findProtection(plot.plotpos.w.MinecraftWorld, lx, ly, lz);
-							if (protection != null)
-							{
-								protection.remove();
-							}
-					    }
-					});
-	    		}
-	    	}
-	    }
+		PlotProtectionRemover.addPlotToQueue(plot);
 	}
 	
 	private short getBlockId(ConfigurationSection cs, String section, String def)

@@ -272,7 +272,7 @@ public class PlotManager {
 		
 		isWallX = (maxX - minX) > (maxZ - minZ);
 		
-		if(isWallX)
+		if (isWallX)
 		{
 			minX--;
 			maxX++;
@@ -291,26 +291,26 @@ public class PlotManager {
 				{
 					if (y >= (h + 2))
 					{
-						plot1.pW.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
+						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
 					}
 					else if(y == (h + 1))
 					{
 						if (isWallX && (x == minX || x == maxX))
 						{
-							plot1.pW.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(wallId, wallValue, true);
+							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(wallId, wallValue, true);
 						}
 						else if(!isWallX && (z == minZ || z == maxZ))
 						{
-							plot1.pW.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(wallId, wallValue, true);
+							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(wallId, wallValue, true);
 						}
 						else
 						{
-							plot1.pW.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
+							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
 						}
 					}
 					else
 					{
-						plot1.pW.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(fillId, fillValue, true);
+						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(fillId, fillValue, true);
 					}
 				}
 			}
@@ -319,8 +319,7 @@ public class PlotManager {
 	
 	private static void fillmiddleroad(Plot plot1, Plot plot2)
 	{
-		
-		if (!plot1.pW.equals(plot2.pW)) {
+		if (!plot1.plotpos.w.equals(plot2.plotpos.w)) {
 			return;
 		}
 		
@@ -334,8 +333,8 @@ public class PlotManager {
 		int minZ;
 		int maxZ;
 
-		int h = pmi.RoadHeight;
-		int fillId = pmi.PlotFloorBlockId;
+		int h = plot1.plotpos.w.RoadHeight;
+		int fillId = plot1.plotpos.w.PlotFloorBlockId;
 				
 		
 		minX = Math.min(topPlot1.getBlockX(), topPlot2.getBlockX());
@@ -348,40 +347,89 @@ public class PlotManager {
 		{
 			for(int z = minZ; z <= maxZ; z++)
 			{
-				for(int y = h; y < w.getMaxHeight(); y++)
+				for(int y = h; y < plot1.plotpos.w.MinecraftWorld.getMaxHeight(); y++)
 				{
 					if(y >= (h + 1))
 					{
-						w.getBlockAt(x, y, z).setType(Material.AIR);
+						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
 					}
 					else
 					{
-						w.getBlockAt(x, y, z).setTypeId(fillId);
+						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeId(fillId);
 					}
 				}
 			}
 		}
 	}
 	
-	public static boolean isPlotAvailable(String id, World world)
+	public static boolean isPlotAvailable(PlotPosition plotPosition)
 	{
-		return isPlotAvailable(id, world.getName().toLowerCase());
-	}
-	
-	public static boolean isPlotAvailable(String id, Player p)
-	{
-		return isPlotAvailable(id, p.getWorld().getName().toLowerCase());
-	}
-	
-	public static boolean isPlotAvailable(int pX, int pZ, String world)
-	{
-		if (isPlotWorld(world))
+		if (plotPosition == null)
 		{
-			return !getPlots(world).containsKey(pX + ";" + pZ);
+			return false;
+		}
+		
+		if (!isPlotWorld(plotPosition.w.MinecraftWorld.getName()))
+		{
+			return false;
+		}
+			
+		PlotWorld pwi = plotWorlds.get(plotPosition.w.MinecraftWorld.getName());
+		if (pwi == null)
+		{
+			return false;
+		}
+		
+		Plot plp = pwi.getPlotAtPlotPosition(plotPosition);
+		if (plp == null)
+		{
+			return true;
 		}
 
 		return false;
 	}
+	
+	public static boolean isPlotAvailable(World world, int plotX, int plotZ)
+	{
+		if (!isPlotWorld(world))
+		{
+			return false;
+		}
+		
+		PlotWorld pwi = plotWorlds.get(world.getName());
+		if (pwi == null)
+		{
+			return false;
+		}
+			
+		PlotPosition plp = new PlotPosition(pwi, plotX, plotZ);
+		
+		Plot tst = pwi.getPlotAtPlotPosition(plp);
+		if (tst == null)
+		{
+			return true;
+		}
+
+		return false;
+	}
+	
+	public static boolean isPlotAvailable(Player player)
+	{
+		if (player == null)
+		{
+			return false;
+		}
+		
+		PlotWorld pwi = plotWorlds.get(player.getWorld().getName());
+		if (pwi == null)
+		{
+			return false;
+		}
+		
+		return (pwi.getPlotAtBlockPosition(player.getLocation()) == null);
+	}
+	
+
 	
 	public static Plot createPlot(int id, int pX, int pZ, String world, String owner)
 	{
@@ -610,7 +658,7 @@ public class PlotManager {
 	
 	public static void clear(Location bottom, Location top)
 	{
-		PlotMapInfo pmi = getMap(bottom);
+		PlotMapInfo plot1.plotpos.w = getMap(bottom);
 		
 		int bottomX = bottom.getBlockX();
 		int topX = top.getBlockX();
@@ -680,20 +728,20 @@ public class PlotManager {
 					
 										
 					if (y == 0)
-						block.setTypeId(pmi.BottomBlockId);
-					else if(y < pmi.RoadHeight)
-						block.setTypeId(pmi.PlotFillingBlockId);
-					else if(y == pmi.RoadHeight)
-						block.setTypeId(pmi.PlotFloorBlockId);
+						block.setTypeId(plot1.plotpos.w.BottomBlockId);
+					else if(y < plot1.plotpos.w.RoadHeight)
+						block.setTypeId(plot1.plotpos.w.PlotFillingBlockId);
+					else if(y == plot1.plotpos.w.RoadHeight)
+						block.setTypeId(plot1.plotpos.w.PlotFloorBlockId);
 					else
 					{
-						if(y == (pmi.RoadHeight + 1) && 
+						if(y == (plot1.plotpos.w.RoadHeight + 1) && 
 								(x == bottomX - 1 || 
 								 x == topX + 1 ||
 								 z == bottomZ - 1 || 
 								 z == topZ + 1))
 						{
-							//block.setTypeId(pmi.WallBlockId);
+							//block.setTypeId(plot1.plotpos.w.WallBlockId);
 						}
 						else
 						{
@@ -711,18 +759,18 @@ public class PlotManager {
 	{
 		Plot plot = getPlotById(l);
 		World w = l.getWorld();
-		PlotMapInfo pmi = getMap(w);
+		PlotMapInfo plot1.plotpos.w = getMap(w);
 		
 		List<String> wallids = new ArrayList<String>();
 		
-		String auctionwallid = pmi.AuctionWallBlockId;
-		String forsalewallid = pmi.ForSaleWallBlockId;
+		String auctionwallid = plot1.plotpos.w.AuctionWallBlockId;
+		String forsalewallid = plot1.plotpos.w.ForSaleWallBlockId;
 		
-		if(plot.protect) wallids.add(pmi.ProtectedWallBlockId);
+		if(plot.protect) wallids.add(plot1.plotpos.w.ProtectedWallBlockId);
 		if(plot.auctionned && !wallids.contains(auctionwallid)) wallids.add(auctionwallid);
 		if(plot.forsale && !wallids.contains(forsalewallid)) wallids.add(forsalewallid);
 		
-		if(wallids.size() == 0) wallids.add("" + pmi.WallBlockId + ":" + pmi.WallBlockValue);
+		if(wallids.size() == 0) wallids.add("" + plot1.plotpos.w.WallBlockId + ":" + plot1.plotpos.w.WallBlockValue);
 		
 		int ctr = 0;
 			
@@ -740,7 +788,7 @@ public class PlotManager {
 			z = bottom.getBlockZ() - 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pmi.RoadHeight + 1, z);
+			block = w.getBlockAt(x, plot1.plotpos.w.RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -749,7 +797,7 @@ public class PlotManager {
 			x = top.getBlockX() + 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pmi.RoadHeight + 1, z);
+			block = w.getBlockAt(x, plot1.plotpos.w.RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -758,7 +806,7 @@ public class PlotManager {
 			z = top.getBlockZ() + 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pmi.RoadHeight + 1, z);
+			block = w.getBlockAt(x, plot1.plotpos.w.RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -767,7 +815,7 @@ public class PlotManager {
 			x = bottom.getBlockX() - 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pmi.RoadHeight + 1, z);
+			block = w.getBlockAt(x, plot1.plotpos.w.RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 	}
@@ -778,7 +826,7 @@ public class PlotManager {
 		
 		int blockId;
 		byte blockData = 0;
-		PlotMapInfo pmi = getMap(block);
+		PlotMapInfo plot1.plotpos.w = getMap(block);
 		
 		if(currentblockid.contains(":"))
 		{
@@ -789,8 +837,8 @@ public class PlotManager {
 			}
 			catch(NumberFormatException e)
 			{
-				blockId = pmi.WallBlockId;
-				blockData = pmi.WallBlockValue;
+				blockId = plot1.plotpos.w.WallBlockId;
+				blockData = plot1.plotpos.w.WallBlockValue;
 			}
 		}
 		else
@@ -801,7 +849,7 @@ public class PlotManager {
 			}
 			catch(NumberFormatException e)
 			{
-				blockId = pmi.WallBlockId;
+				blockId = plot1.plotpos.w.WallBlockId;
 			}
 		}
 		
@@ -1158,50 +1206,50 @@ public class PlotManager {
 	
 	public static HashMap<String, Plot> getPlots(World w)
 	{
-		PlotMapInfo pmi = getMap(w);
-		if (pmi != null)
+		PlotMapInfo plot1.plotpos.w = getMap(w);
+		if (plot1.plotpos.w != null)
 		{
-			return pmi.plots;
+			return plot1.plotpos.w.plots;
 		}
 		return null;
 	}
 	
 	public static HashMap<String, Plot> getPlots(String name)
 	{		
-		PlotMapInfo pmi = getMap(name);
-		if(pmi != null)
+		PlotMapInfo plot1.plotpos.w = getMap(name);
+		if(plot1.plotpos.w != null)
 		{
-			return pmi.plots;
+			return plot1.plotpos.w.plots;
 		}
 		return null;
 	}
 	
 	public static HashMap<String, Plot> getPlots(Player p)
 	{		
-		PlotMapInfo pmi = getMap(p);
-		if (pmi != null)
+		PlotMapInfo plot1.plotpos.w = getMap(p);
+		if (plot1.plotpos.w != null)
 		{
-			return pmi.plots;
+			return plot1.plotpos.w.plots;
 		}
 		return null;
 	}
 	
 	public static HashMap<String, Plot> getPlots(Block b)
 	{	
-		PlotMapInfo pmi = getMap(b);
-		if (pmi != null)
+		PlotMapInfo plot1.plotpos.w = getMap(b);
+		if (plot1.plotpos.w != null)
 		{
-			return pmi.plots;
+			return plot1.plotpos.w.plots;
 		}
 		return null;
 	}
 	
 	public static HashMap<String, Plot> getPlots(Location l)
 	{
-		PlotMapInfo pmi = getMap(l);
-		if (pmi != null)
+		PlotMapInfo plot1.plotpos.w = getMap(l);
+		if (plot1.plotpos.w != null)
 		{
-			return pmi.plots;
+			return plot1.plotpos.w.plots;
 		}
 		return null;
 	}

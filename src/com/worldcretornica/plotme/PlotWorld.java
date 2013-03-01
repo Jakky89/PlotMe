@@ -137,11 +137,6 @@ public class PlotWorld implements Comparable<PlotWorld>
 		}
 		plotPositions.remove(plot.plotpos);
 	}
-
-	public Plot getPlotAtPlotPosition(int pX, int pZ)
-	{
-		return plotPositions.get(new PlotPosition(Integer.valueOf(pX), Integer.valueOf(pZ)));
-	}
 	
 	public Plot getPlotAtPlotPosition(PlotPosition ppos)
 	{
@@ -151,143 +146,135 @@ public class PlotWorld implements Comparable<PlotWorld>
 		}
 		return null;		
 	}
-	
-	public PlotPosition blockToPlotPosition(double bX, double bZ)
+
+	public Plot getPlotAtPlotPosition(int plotX, int plotZ)
 	{
-		int size = PlotSize + PathWidth;
-			
-		double n3;
-		int mod2 = 0;
-		int mod1 = 1;
-			
-		int x = (int) Math.ceil((double)bX / size);
-		int z = (int) Math.ceil((double)bZ / size);
-			
-		//int x2 = (int) Math.ceil((double)bX / size);
-		//int z2 = (int) Math.ceil((double)bZ / size);
-			
-		if (PathWidth % 2 == 1)
-		{
-			n3 = Math.ceil(((double)PathWidth)/2); //3 7
-			mod2 = -1;
-		}
-		else
-		{
-			n3 = Math.floor(((double)PathWidth)/2); //3 7
-		}
-						
-		for (double i = n3; i >= 0; i--)
-		{
-			if ((bX - i + mod1) % size == 0 ||
-			    (bX + i + mod2) % size == 0)
-			{
-				x = (int) Math.ceil((double)(bX - n3) / size);
-				//x2 = (int) Math.ceil((double)(bX + n3) / size);
-			}
-			if ((bZ - i + mod1) % size == 0 ||
-				(bZ + i + mod2) % size == 0)
-			{
-				z = (int) Math.ceil((double)(bZ - n3) / size);
-				//z2 = (int) Math.ceil((double)(bZ + n3) / size);
-			}
-		}
-		
-		return new PlotPosition(this, x, z);
+		return plotPositions.get(new PlotPosition(this, Integer.valueOf(plotX), Integer.valueOf(plotZ)));
 	}
 	
-	public Plot getPlotAtBlockPosition(double bX, double bZ)
+	public double getPlotBlockPositionMultiplier()
 	{
-			
-		int size = PlotSize + PathWidth;
-		boolean road = false;
-			
-		double n3;
-		int mod2 = 0;
-		int mod1 = 1;
-			
-		int x = (int) Math.ceil((double)bX / size);
-		int z = (int) Math.ceil((double)bZ / size);
-			
-		//int x2 = (int) Math.ceil((double)bX / size);
-		//int z2 = (int) Math.ceil((double)bZ / size);
-			
-		if (PathWidth % 2 == 1)
-		{
-			n3 = Math.ceil(((double)PathWidth)/2); //3 7
-			mod2 = -1;
-		}
-		else
-		{
-			n3 = Math.floor(((double)PathWidth)/2); //3 7
-		}
-						
-		for (double i = n3; i >= 0; i--)
-		{
-			if ((bX - i + mod1) % size == 0 ||
-			    (bX + i + mod2) % size == 0)
-			{
-				road = true;
-				x = (int) Math.ceil((double)(bX - n3) / size);
-				//x2 = (int) Math.ceil((double)(bX + n3) / size);
-			}
-			if ((bZ - i + mod1) % size == 0 ||
-				(bZ + i + mod2) % size == 0)
-			{
-				road = true;
-				z = (int) Math.ceil((double)(bZ - n3) / size);
-				//z2 = (int) Math.ceil((double)(bZ + n3) / size);
-			}
-		}
-			
-		if (road)
-		{
-			/*if(AutoLinkPlots)
-			{
-				Plot pt1 = getPlotAtPlotPosition(x,  z);
-				Plot pt2 = getPlotAtPlotPosition(x2, z2);
-				Plot pt3 = getPlotAtPlotPosition(x,  z2);
-				Plot pt4 = getPlotAtPlotPosition(x2, z);
-				
-				if (pt1 == null || pt2 == null || pt3 == null || pt4 == null || 
-					!pt1.owner.equalsIgnoreCase(pt2.owner) ||
-					!pt2.owner.equalsIgnoreCase(pt3.owner) ||
-					!pt3.owner.equalsIgnoreCase(pt4.owner))
-				{						
-					return null;
-				}
-				else
-				{
-					return id1;
-				}
-			}*/
-		}
-		else
-		{
-			return getPlotAtPlotPosition(x, z);
-		}
-		
-		// Fallback
-		return null;
-		
+		return (double)(PlotSize + (PathWidth/2));
 	}
 	
-	public int getBottomPlotToBlockPositionMultiplier()
+	public PlotPosition blockToPlotPosition(double blockX, double blockZ)
 	{
-		return (PlotSize + PathWidth) - (PlotSize) - ((int)Math.floor(PathWidth/2));
-	}
-	
-	public int getTopPlotToBlockPositionMultiplier()
-	{
-		return (PlotSize + PathWidth) - ((int)Math.floor(PathWidth/2)) - 1;
+		double multi = getPlotBlockPositionMultiplier();
+		
+		int roundplotx = (int)Math.round((double)(blockX / multi));
+		int roundplotz = (int)Math.round((double)(blockZ / multi));
+			
+		return new PlotPosition(this, roundplotx, roundplotz);
 	}
 	
 	public Plot getPlotAtBlockPosition(Location loc)
 	{
-		if (loc.getWorld() == MinecraftWorld)
+		if (loc.getWorld().getName() == this.MinecraftWorld.getName())
 		{
 			return getPlotAtBlockPosition(loc.getBlockX(), loc.getBlockZ());
 		}
 		
+		return null;
+	}
+	
+	/**
+	 * TODO: NEEDS TESTING !!!
+	 */
+	public Block plotToCenterBlock(int plotX, int plotZ)
+	{
+		double multi = getPlotBlockPositionMultiplier();
+		
+		int blockx = (int)Math.round((double)(plotX * multi) - (double)(PlotSize / 2));
+		int blockz = (int)Math.round((double)(plotZ * multi) - (double)(PlotSize / 2));
+		
+		PlotMe.logger.info(PlotMe.PREFIX + "DEBUG: centerBlockX " + String.valueOf(blockx) + "  centerBlockZ " + String.valueOf(blockz));
+		
+		return MinecraftWorld.getBlockAt(blockx, RoadHeight, blockz);
+	}
+	
+	/**
+	 * TODO: NEEDS TESTING!!!
+	 */
+	public Plot getPlotAtBlockPosition(double blockX, double blockZ)
+	{
+		boolean road = false;
+
+		double divi = getPlotBlockPositionMultiplier();
+		
+		double realpsh = (double)((PlotSize  / 2) / divi);
+		
+		double realplotx = (double)(blockX / divi);
+		double realplotz = (double)(blockZ / divi);
+		
+		int roundplotx = (int)Math.ceil(realplotx);
+		int roundplotz = (int)Math.ceil(realplotz);
+		
+		PlotMe.logger.info(PlotMe.PREFIX + "DEBUG: roundPlotX " + String.valueOf(roundplotx) + "  roundPlotZ " + String.valueOf(roundplotz));
+		
+		int dir = -1;
+		
+		if (realplotx < (roundplotx - realpsh))
+		{
+			road = true;
+			if (realplotz < (roundplotz - realpsh))
+			{
+				dir = 7;
+			}
+			else if (realplotz > (roundplotz + realpsh))
+			{
+				dir = 5;
+			}
+			else
+			{
+				dir = 6;
+			}
+		}
+		else if (realplotx > (roundplotx + realpsh))
+		{
+			road = true;
+			if (realplotz < (roundplotz - realpsh))
+			{
+				dir = 1;
+			}
+			else if (realplotz > (roundplotz + realpsh))
+			{
+				dir = 3;
+			}
+			else
+			{
+				dir = 2;
+			}
+		}
+		
+
+		
+		// Get nearest plot
+		Plot plot = getPlotAtPlotPosition(roundplotx, roundplotz);
+		if (plot == null)
+		{
+			return null;
+		}
+
+		if (!road)
+		{
+			return plot;
+		}
+
+		if (AutoLinkPlots)
+		{
+			if (plot.neighbourplots == null)
+			{
+				return null;
+			}
+			if (dir >= 0)
+			{
+				if (plot.neighbourplots[dir].owner != null && plot.neighbourplots[dir].owner == plot.owner)
+				{
+					return plot;
+				}
+			}
+		}
+		// FALLBACK
 		return null;
 	}
 	

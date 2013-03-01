@@ -1,7 +1,7 @@
 name: PlotMe
 main: com.worldcretornica.plotme.PlotMe
 version: '0.16'
-author: ZachBora
+authors: [ZachBora, Jakky89]
 load: startup
 website: http://dev.bukkit.org/server-mods/plotme/
 loadbefore: [bPermissions, Multiverse-Core]

@@ -7,19 +7,12 @@ public class PlotPosition {
 	public final PlotWorld w;
 	public final Integer x;
 	public final Integer z;
-
-	public PlotPosition(Integer pX, Integer pZ)
-	{
-		this.w = null;
-		this.x = pX;
-		this.z = pZ;
-	}
 	
-	public PlotPosition(PlotWorld pW, Integer pX, Integer pZ)
+	public PlotPosition(PlotWorld world, Integer xpos, Integer zpos)
 	{
-		this.w = pW;
-		this.x = pX;
-		this.z = pZ;
+		this.w = world;
+		this.x = xpos;
+		this.z = zpos;
 	}
 
 	@Override
@@ -27,9 +20,9 @@ public class PlotPosition {
 	{
 		if (this.w == null)
 		{
-			return x.hashCode() ^ z.hashCode();
+			return (Integer.valueOf(x).hashCode() >> 7) ^ Integer.valueOf(z).hashCode();
 		}
-		return w.hashCode() ^ x.hashCode() ^ z.hashCode();
+		return (w.hashCode() >> 13) ^ (Integer.valueOf(x).hashCode() >> 7) ^ Integer.valueOf(z).hashCode();
 	}
 
 	@Override

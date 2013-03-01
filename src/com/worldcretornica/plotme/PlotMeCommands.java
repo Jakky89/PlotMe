@@ -21,8 +21,9 @@ import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.MinecraftFontWidthCalculator;
 import com.worldcretornica.plotme.utils.PlotFinishedComparator;
+import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
-public class PMCommand implements CommandExecutor
+public class PlotMeCommands implements CommandExecutor
 {
 	private PlotMe plugin;
 	private final ChatColor BLUE = ChatColor.BLUE;
@@ -35,7 +36,7 @@ public class PMCommand implements CommandExecutor
 	private final String LOG = "[" + PlotMe.NAME + " Event] ";
 	private final boolean isAdv = PlotMe.advancedlogging;
 	
-	public PMCommand(PlotMe instance)
+	public PlotMeCommands(PlotMe instance)
 	{
 		plugin = instance;
 	}
@@ -45,115 +46,218 @@ public class PMCommand implements CommandExecutor
 		return PlotMe.caption(caption);
 	}
 	
-	public boolean onCommand(CommandSender s, Command c, String l, String[] args)
+	public boolean onCommand(CommandSender sender, Command command, String start, String[] args)
 	{
-		if(l.equalsIgnoreCase("plotme") || l.equalsIgnoreCase("plot") || l.equalsIgnoreCase("p"))
+		String cmd = start.toLowerCase();
+		if (cmd.equals("plotme") || cmd.equals("plot") || cmd.equals("p"))
 		{
-			if(!(s instanceof Player))
+			if (sender instanceof Player)
 			{
-				if(args.length == 0 || args[0].equalsIgnoreCase("1"))
+				Player player = (Player)sender;
+				
+				if (args.length == 0)
 				{
-					s.sendMessage(C("ConsoleHelpMain")); 
-					s.sendMessage(" - /plotme reload");
-					s.sendMessage(C("ConsoleHelpReload"));
-					return true;
+					return showhelp(player, 1);
 				}
 				else
 				{
-					String a0 = args[0].toString();
-					if(!(s instanceof Player))
+					String arg0 = args[0].toString().toLowerCase();
+					int ipage = -1;
+					
+					try  
+					{  
+						ipage = Integer.parseInt( arg0 );  
+					}  
+					catch (NumberFormatException ex) {
+						player.sendMessage(C("MsgInvalidPageNumber"));
+					}
+
+					if (ipage != -1)
 					{
-						if (a0.equalsIgnoreCase("reload")) { return reload(s, args);}
-						if (a0.equalsIgnoreCase(C("CommandResetExpired"))) { return resetexpired(s, args); }
+						return showhelp(player, ipage);
+					}
+					else
+					{
+						if (arg0.equals(C("CommandHelp")))
+						{
+							ipage = -1;
+							
+							if (args.length > 1)
+							{
+								String arg1 = args[1].toString().toLowerCase();
+								ipage = -1;
+								
+								try  
+								{  
+									ipage = Integer.parseInt( arg1 );  
+								}  
+								catch (NumberFormatException ex) {
+									player.sendMessage(C("MsgInvalidPageNumber"));
+								}
+							}
+							
+							if (ipage != -1)
+							{
+								return showhelp(player, ipage);
+							}
+							else
+							{
+								return showhelp(player, 1);
+							}
+						}
+						if (arg0.equals(C("CommandClaim")))
+						{
+							return claim(player, args);
+						}
+						if (arg0.equals(C("CommandAuto")))
+						{
+							return auto(player, args);
+						}
+						if (arg0.equals(C("CommandInfo")) || arg0.equals("i"))
+						{
+							return info(player, args);
+						}
+						if (arg0.equals(C("CommandComment")))
+						{
+							return comment(player, args);
+						}
+						if (arg0.equals(C("CommandComments")) || arg0.equals("c"))
+						{
+							return comments(player, args);
+						}
+						if (arg0.equals(C("CommandBiome")) || arg0.equals("b"))
+						{
+							return biome(player, args);
+						}
+						if (arg0.equals(C("CommandBiomelist")))
+						{
+							return biomelist(player, args);
+						}
+						if (arg0.equals(C("CommandId")))
+						{
+							return id(player, args);
+						}
+						if (arg0.equals(C("CommandTp")))
+						{
+							return tp(player, args);
+						}
+						if (arg0.equals(C("CommandClear")))
+						{
+							return clear(player, args);
+						}
+						if (arg0.equals(C("CommandReset")))
+						{
+							return reset(player, args);
+						}
+						if (arg0.equals(C("CommandAdd")) || arg0.equals("+"))
+						{
+							return add(player, args);
+						}
+						if (PlotMe.allowToDeny)
+						{
+							if (arg0.equals(C("CommandDeny")))
+							{
+								return deny(player, args);
+							}
+							if (arg0.equals(C("CommandUndeny")))
+							{
+								return undeny(player, args);
+							}
+						}
+						if (arg0.equals(C("CommandRemove")) || arg0.equals("-"))
+						{
+							return remove(player, args);
+						}
+						if (arg0.equals(C("CommandSetowner")) || arg0.equals("o"))
+						{
+							return setowner(player, args);
+						}
+						if (arg0.equals(C("CommandMove")) || arg0.equals("m"))
+						{
+							return move(player, args);
+						}
+						if (arg0.equals("reload"))
+						{
+							return reload(sender, args);
+						}
+						if (arg0.equals(C("CommandWEAnywhere")))
+						{
+							return weanywhere(player, args);
+						}
+						if (arg0.equals(C("CommandList")))
+						{
+							return plotlist(player, args);
+						}
+						if (arg0.equals(C("CommandExpired")))
+						{
+							return expired(player, args);
+						}
+						if (arg0.equals(C("CommandAddtime")))
+						{
+							return addtime(player, args);
+						}
+						if (arg0.equals(C("CommandDone")))
+						{
+							return done(player, args);
+						}
+						if (arg0.equals(C("CommandDoneList")))
+						{
+							return donelist(player, args);
+						}
+						if (arg0.equals(C("CommandProtect")))
+						{
+							return protect(player, args);
+						}
+						if (arg0.equals(C("CommandSell")))
+						{
+							return sell(player, args);
+						}
+						if (arg0.equals(C("CommandDispose")))
+						{
+							return dispose(player, args);
+						}
+						if (arg0.equals(C("CommandAuction")))
+						{
+							return auction(player, args);
+						}
+						if (arg0.equals(C("CommandBuy")))
+						{
+							return buy(player, args);
+						}
+						if (arg0.equals(C("CommandBid")))
+						{
+							return bid(player, args);
+						}
+						if (arg0.startsWith(C("CommandHome")) || arg0.startsWith("h"))
+						{
+							return home(player, args);
+						}
+						if (arg0.equals(C("CommandResetExpired")))
+						{
+							return resetexpired(player, args);
+						}
 					}
 				}
 			}
 			else
 			{
-				Player p = (Player)s;
-				
-				if(args.length == 0)
+				if (args.length == 0 || args[0].equalsIgnoreCase("1"))
 				{
-					return showhelp(p, 1);
+					sender.sendMessage(C("ConsoleHelpMain")); 
+					sender.sendMessage(" - /plotme reload");
+					sender.sendMessage(C("ConsoleHelpReload"));
+					return true;
 				}
 				else
 				{
-					String a0 = args[0].toString();
-					int ipage = -1;
-					
-					try  
-					{  
-						ipage = Integer.parseInt( a0 );  
-					}  
-					catch( Exception e) {}
-									
-					if(ipage != -1)
+					String arg0 = args[0].toString().toLowerCase();
+					if (arg0.equals("reload"))
 					{
-						return showhelp(p, ipage);
+						return reload(sender, args);
 					}
-					else
+					if (arg0.equals(C("CommandResetExpired")))
 					{
-						if (a0.equalsIgnoreCase(C("CommandHelp")))
-						{
-							ipage = -1;
-							
-							if(args.length > 1)
-							{
-								String a1 = args[1].toString();
-								ipage = -1;
-								
-								try  
-								{  
-									ipage = Integer.parseInt( a1 );  
-								}  
-								catch( Exception e) {}
-							}
-							
-							if(ipage != -1)
-							{
-								return showhelp(p, ipage);
-							}
-							else
-							{
-								return showhelp(p, 1);
-							}
-						}
-						if (a0.equalsIgnoreCase(C("CommandClaim"))) { return claim(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandAuto"))) { return auto(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandInfo")) || a0.equalsIgnoreCase("i")) { return info(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandComment"))) { return comment(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandComments")) || a0.equalsIgnoreCase("c")) { return comments(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandBiome")) || a0.equalsIgnoreCase("b")) { return biome(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandBiomelist"))) { return biomelist(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandId"))) { return id(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandTp"))) { return tp(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandClear"))) { return clear(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandReset"))) { return reset(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandAdd")) || a0.equalsIgnoreCase("+")) { return add(p, args);}
-						if(PlotMe.allowToDeny)
-						{
-							if (a0.equalsIgnoreCase(C("CommandDeny"))) { return deny(p, args);}
-							if (a0.equalsIgnoreCase(C("CommandUndeny"))) { return undeny(p, args);}
-						}
-						if (a0.equalsIgnoreCase(C("CommandRemove")) || a0.equalsIgnoreCase("-")) { return remove(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandSetowner")) || a0.equalsIgnoreCase("o")) { return setowner(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandMove")) || a0.equalsIgnoreCase("m")) { return move(p, args);}
-						if (a0.equalsIgnoreCase("reload")) { return reload(s, args);}
-						if (a0.equalsIgnoreCase(C("CommandWEAnywhere"))) { return weanywhere(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandList"))) { return plotlist(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandExpired"))) { return expired(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandAddtime"))) { return addtime(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandDone"))) { return done(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandDoneList"))) { return donelist(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandProtect"))) { return protect(p, args);}
-						
-						if (a0.equalsIgnoreCase(C("CommandSell"))) { return sell(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandDispose"))) { return dispose(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandAuction"))) { return auction(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandBuy"))) { return buy(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandBid"))) { return bid(p, args);}
-						if (a0.startsWith(C("CommandHome")) || a0.startsWith("h")) { return home(p, args);}
-						if (a0.equalsIgnoreCase(C("CommandResetExpired"))) { return resetexpired(p, args); }
+						return resetexpired(sender, args);
 					}
 				}
 			}
@@ -161,9 +265,9 @@ public class PMCommand implements CommandExecutor
 		return false;
 	}
 	
-	private boolean resetexpired(CommandSender s, String[] args)
+	private boolean resetexpired(CommandSender sender, String[] args)
 	{
-		if(PlotMe.cPerms(s, "PlotMe.admin.resetexpired"))
+		if (PlotMe.cPerms(sender, "plotme.admin.resetexpired") || (PlotMe.OpPermissions && sender.isOp()))
 		{
 			if(args.length <= 1)
 			{
@@ -198,7 +302,7 @@ public class PMCommand implements CommandExecutor
 							PlotMe.counterexpired = 50;
 							PlotMe.nbperdeletionprocessingexpired = 5;
 							
-							plugin.scheduleTask(new PlotRunnableDeleteExpire(), 5, 50);
+							plugin.scheduleTask(new RunnableExpiredPlotsRemover(), 5, 50);
 						}
 					}
 				}
@@ -699,7 +803,7 @@ public class PMCommand implements CommandExecutor
 								PlotManager.removeOwnerSign(w, id);
 								PlotManager.removeSellSign(w, id);
 								
-								SqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
+								PlotMeSqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
 								
 								Send(p, C("MsgPlotDisposedAnyoneClaim"));
 								
@@ -2366,7 +2470,7 @@ public class PMCommand implements CommandExecutor
 							comment[1] = text;
 							
 							plot.comments.add(comment);
-							SqlManager.addPlotComment(comment, plot.comments.size(), PlotManager.getIdX(id), PlotManager.getIdZ(id), plot.world);
+							PlotMeSqlManager.addPlotComment(comment, plot.comments.size(), PlotManager.getIdX(id), PlotManager.getIdZ(id), plot.world);
 							
 							Send(p, C("MsgCommentAdded") + " " + f(-price));
 							
@@ -2739,7 +2843,7 @@ public class PMCommand implements CommandExecutor
 						PlotManager.removeOwnerSign(w, id);
 						PlotManager.removeSellSign(w, id);
 						
-						SqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
+						PlotMeSqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
 						
 						Send(p, C("MsgPlotReset"));
 						

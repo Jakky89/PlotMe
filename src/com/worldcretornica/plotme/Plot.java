@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.Pair;
 import com.worldcretornica.plotme.utils.PlotPosition;
+import com.worldcretornica.plotme.utils.PlotOwner;
 
 
 public class Plot implements Comparable<Plot>
@@ -34,11 +35,6 @@ public class Plot implements Comparable<Plot>
 	public boolean isprotected;
 	public boolean isauctionned;
 	public List<Pair<String, Double>> bids;
-	
-	public void setPlotPosition(int tX, int tZ)
-	{
-		plotpos = new PlotPosition(tX, tZ);
-	}
 	
 	public void setPlotPosition(PlotWorld tW, int tX, int tZ)
 	{
@@ -200,7 +196,7 @@ public class Plot implements Comparable<Plot>
 		if (isforsale != true)
 		{
 			isforsale = true;
-			SqlManager.updatePlotData(this, "isforsale", 1);
+			PlotMeSqlManager.updatePlotData(this, "isforsale", 1);
 		}
 	}
 	
@@ -209,7 +205,7 @@ public class Plot implements Comparable<Plot>
 		if (isforsale != false)
 		{
 			isforsale = false;
-			SqlManager.updatePlotData(this, "isforsale", 0);
+			PlotMeSqlManager.updatePlotData(this, "isforsale", 0);
 		}
 	}
 	
@@ -231,12 +227,12 @@ public class Plot implements Comparable<Plot>
 			if (newDate != expireddate)
 			{
 				expireddate = newDate;
-				SqlManager.updatePlotData(this, "expireddate", newDate);
+				PlotMeSqlManager.updatePlotData(this, "expireddate", newDate);
 			}
 		}
 	}
 	
-	public void resetExpire(int days)
+	public void resetExpiration(int days)
 	{
 		if (days <= 0)
 		{
@@ -251,10 +247,10 @@ public class Plot implements Comparable<Plot>
 	public void disableExpiration()
 	{
 		expireddate = 0;
-		SqlManager.updatePlotData(this, "expireddate", null);
+		PlotMeSqlManager.updatePlotData(this, "expireddate", null);
 	}
 	
-	public long getExpire()
+	public long getExpiration()
 	{
 		return expireddate;
 	}
@@ -274,7 +270,7 @@ public class Plot implements Comparable<Plot>
 		if (newDate != finisheddate)
 		{
 			finisheddate = newDate;
-			SqlManager.updatePlotData(this, "finisheddate", newDate);
+			PlotMeSqlManager.updatePlotData(this, "finisheddate", newDate);
 		}
 	}
 	
@@ -283,7 +279,7 @@ public class Plot implements Comparable<Plot>
 		if (finisheddate != 0)
 		{
 			finisheddate = 0;
-			SqlManager.updatePlotData(this, "finisheddate", null);
+			PlotMeSqlManager.updatePlotData(this, "finisheddate", null);
 		}
 	}
 	
@@ -311,7 +307,7 @@ public class Plot implements Comparable<Plot>
 		if (bio != null && bio != biome)
 		{
 			biome = bio;
-			SqlManager.updatePlotData(this, "biome", bio.toString());
+			PlotMeSqlManager.updatePlotData(this, "biome", bio.toString());
 		}
 	}
 	
@@ -337,19 +333,19 @@ public class Plot implements Comparable<Plot>
 			if (newPrice < 0)
 			{
 				isforsale = false;
-				SqlManager.updatePlotData(this, "isforsale", 0);
+				PlotMeSqlManager.updatePlotData(this, "isforsale", 0);
 				return;
 			}
 			customprice = newPrice;
 			
 			if (newPrice > 0)
 			{
-				SqlManager.updatePlotData(this, "customprice", newPrice);
+				PlotMeSqlManager.updatePlotData(this, "customprice", newPrice);
 				
 			}
 			else
 			{
-				SqlManager.updatePlotData(this, "customprice", null);
+				PlotMeSqlManager.updatePlotData(this, "customprice", null);
 			}
 		}
 	}
@@ -396,7 +392,7 @@ public class Plot implements Comparable<Plot>
 		property = property.toLowerCase();
 		if (properties.setValue(property, value))
 		{
-			SqlManager.savePlotProperties(this);
+			PlotMeSqlManager.savePlotProperties(this);
 		}
 	}
 
@@ -552,7 +548,24 @@ public class Plot implements Comparable<Plot>
 
 	public void updatePlotData(String field, Object value)
 	{
-		SqlManager.updatePlotData(this, field, value);
+		PlotMeSqlManager.updatePlotData(this, field, value);
+	}
+	
+	@Override
+	public boolean equals(Object o)
+	{
+	    if (o == null)
+	    {
+	    	return false;
+	    }
+	    if (o instanceof Plot)
+	    {
+			if (this.id == ((Plot)o).id)
+			{
+				return true;
+			}
+	    }
+		return false;
 	}
 
 	@Override
