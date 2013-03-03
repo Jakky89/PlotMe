@@ -4,7 +4,7 @@ import java.util.Comparator;
 
 import com.worldcretornica.plotme.Plot;
 
-public class PlotFinishedComparator implements Comparator<Plot>
+public class FinishedPlotsComparator implements Comparator<Plot>
 {
 	public int compare(Plot plot1, Plot plot2)
 	{

@@ -7,6 +7,7 @@ import java.util.Set;
 import org.bukkit.entity.Player;
 
 
+
 public class PlotOwner implements Comparable<PlotOwner>
 {
 	
@@ -22,25 +23,33 @@ public class PlotOwner implements Comparable<PlotOwner>
 		this.id = id;
 		this.playername = ownerName;
 		this.displayname = ownerName;
-		this.ownedplots = new LinkedList<Plot>();
+		this.ownedplots = null;
 	}
 	
 	public PlotOwner(int id, Player minecraftPlayer)
 	{
-		this.id = id;
-		this.minecraftplayer = minecraftPlayer;
-		this.playername = minecraftPlayer.getName();
-		this.displayname = minecraftPlayer.getDisplayName();
-		this.ownedplots = new LinkedList<Plot>();
+		id = id;
+		minecraftplayer = minecraftPlayer;
+		playername = minecraftPlayer.getName();
+		displayname = minecraftPlayer.getDisplayName();
+		ownedplots = null;
 	}
 	
 	public void addOwnedPlot(Plot plot)
 	{
+		if (ownedplots == null)
+		{
+			ownedplots = new LinkedList<Plot>();
+		}
 		this.ownedplots.add(plot);
 	}
 	
 	public void removeOwnedPlot(Plot plot)
 	{
+		if (ownedplots == null || ownedplots.isEmpty())
+		{
+			return;
+		}
 		this.ownedplots.remove(plot);
 	}
 	
@@ -50,16 +59,13 @@ public class PlotOwner implements Comparable<PlotOwner>
 	    if (o == null) {
 	    	return false;
 	    }
-	    
 	    if (!(o instanceof PlotOwner)) {
 	    	return false;
 	    }
-	    
 		if (this.id == ((PlotOwner)o).id)
 		{
 			return true;
 		}
-
 		return false;
 	}
 	

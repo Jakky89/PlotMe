@@ -21,6 +21,7 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -41,6 +42,7 @@ import com.worldcretornica.plotme.Metrics.Graph;
 import com.worldcretornica.plotme.listener.PlotDenyListener;
 import com.worldcretornica.plotme.listener.PlotListener;
 import com.worldcretornica.plotme.listener.PlotWorldEditListener;
+import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotMe extends JavaPlugin
 {
@@ -81,6 +83,8 @@ public class PlotMe extends JavaPlugin
     
     public static final int DEFAULT_DAYS_EXPIRATION = 7;
     
+    public static final int MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR = 100;
+    
     public static WorldEditPlugin worldedit = null;
     public static Economy economy = null;
     public static Boolean usinglwc = false;
@@ -91,14 +95,11 @@ public class PlotMe extends JavaPlugin
     
     private static Boolean update = false;
     
-    public static World worldcurrentlyprocessingexpired;
-    public static CommandSender cscurrentlyprocessingexpired;
-    public static Integer counterexpired;
-    public static Integer nbperdeletionprocessingexpired;
     public static Boolean defaultWEAnywhere;
     
     protected static PlotMe self = null;
-	
+
+    
 	public void onDisable()
 	{	
 		PlotMeSqlManager.closeConnection();
@@ -130,10 +131,6 @@ public class PlotMe extends JavaPlugin
 		playersignoringwelimit = null;
 		captions = null;
 		update = null;
-		worldcurrentlyprocessingexpired = null;
-		cscurrentlyprocessingexpired = null;
-		counterexpired = null;
-		nbperdeletionprocessingexpired = null;
 		defaultWEAnywhere = null;
 		self = null;
 		allowToDeny = null;
@@ -266,7 +263,7 @@ public class PlotMe extends JavaPlugin
 
 		if (PlotManager.isPlotWorld(chunk.getWorld().getName()))
 		{
-			return new PlotGen(PlotManager.plotWorlds.get(chunk.getWorld()).MinecraftWorld);
+			return new PlotGen(chunk.getWorld());
 		}
 		
 		else
@@ -274,6 +271,19 @@ public class PlotMe extends JavaPlugin
 			logger.warning(PREFIX + "Configuration not found for PlotMe world \"" + chunk.getWorld().getName() + "\"! Using defaults.");
 			return new PlotGen();
 		}
+	}
+	
+	public static Pair<Short, Byte> getItemIdValue(String itemstr)
+	{
+		 int dpp = itemstr.indexOf(':');
+		 if (dpp > 0)
+		 {
+			 return new Pair<Short, Byte>(Short.valueOf(itemstr.substring(0, dpp)), Byte.valueOf(itemstr.substring(dpp)));
+		 }
+		 else
+		 {
+			 return new Pair<Short, Byte>(Short.valueOf(itemstr.substring(0, dpp)), null);
+		 }
 	}
 	
 	public static boolean cPerms(CommandSender sender, String node)
@@ -434,7 +444,9 @@ public class PlotMe extends JavaPlugin
 					}
 				}
 			}
-			PlotWorld tmpPlotWorld = new PlotWorld(0, bukkitWorld);
+			
+			PlotWorld tmpPlotWorld = new PlotWorld(bukkitWorld);
+			
 			tmpPlotWorld.PlotAutoLimit			= cfgCurrWorld.getInt("PlotAutoLimit",	DEFAULT_PLOT_AUTO_LIMIT);
 			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PathWidth",		DEFAULT_PATH_WIDTH);
 			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PlotSize",		DEFAULT_PLOT_SIZE);
@@ -443,6 +455,12 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.BottomBlockValue 		= getBlockValue(cfgCurrWorld,			"BottomBlockId",		"7:0");
 			tmpPlotWorld.WallBlockId 			= getBlockId(cfgCurrWorld,				"WallBlockId",			"44:0");
 			tmpPlotWorld.WallBlockValue			= getBlockValue(cfgCurrWorld,			"WallBlockId",			"44:0");
+			tmpPlotWorld.ProtectedWallBlockId   = getBlockId(cfgCurrWorld,				"ProtectedWallBlockId",	"44:4");
+			tmpPlotWorld.ProtectedWallBlockValue= getBlockValue(cfgCurrWorld,			"ProtectedWallBlockId",	"44:4");
+			tmpPlotWorld.ForSaleWallBlockId 	= getBlockId(cfgCurrWorld,				"ForSaleWallBlockId",	"44:1");
+			tmpPlotWorld.ForSaleWallBlockValue 	= getBlockValue(cfgCurrWorld,			"ForSaleWallBlockId",	"44:1");
+			tmpPlotWorld.AuctionWallBlockId		= getBlockId(cfgCurrWorld,				"AuctionWallBlockId",	"44:1");
+			tmpPlotWorld.AuctionWallBlockValue	= getBlockValue(cfgCurrWorld,			"AuctionWallBlockId",	"44:1");
 			tmpPlotWorld.PlotFloorBlockId 		= getBlockId(cfgCurrWorld,				"PlotFloorBlockId",		"2:0");
 			tmpPlotWorld.PlotFloorBlockValue 	= getBlockValue(cfgCurrWorld,			"PlotFloorBlockId",		"2:0");
 			tmpPlotWorld.PlotFillingBlockId		= getBlockId(cfgCurrWorld,				"PlotFillingBlockId", 	"3:0");
@@ -451,40 +469,64 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.RoadMainBlockValue		= getBlockValue(cfgCurrWorld,			"RoadMainBlockId",		"5:0");
 			tmpPlotWorld.RoadStripeBlockId		= getBlockId(cfgCurrWorld,				"RoadStripeBlockId",	"5:2");
 			tmpPlotWorld.RoadStripeBlockValue	= getBlockValue(cfgCurrWorld,			"RoadStripeBlockId",	"5:2");
+
+			tmpPlotWorld.AutoLinkPlots			= cfgCurrWorld.getBoolean("AutoLinkPlots",			true);
+			tmpPlotWorld.DisableExplosion 		= cfgCurrWorld.getBoolean("DisableExplosion",		true);
+			tmpPlotWorld.DisableIgnition 		= cfgCurrWorld.getBoolean("DisableIgnition",		true);
+			
 			
 			tmpPlotWorld.RoadHeight				= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
 			if (tmpPlotWorld.RoadHeight > 250)
 			{
-				logger.severe(PREFIX + "RoadHeight above 250 is unsafe. This is the height at which your road is located. Set down to 64.");
+				logger.severe(PREFIX + "RoadHeight above 250 is unsafe. This is the height at which your road is located. Normalized to 64.");
 				tmpPlotWorld.RoadHeight = 64;
 			}
-			
+			else if (tmpPlotWorld.RoadHeight < 1)
+			{
+				logger.severe(PREFIX + "RoadHeight below 1 is invalid. This is the height at which your road is located. Normalized to 64.");
+				tmpPlotWorld.RoadHeight = 64;
+			}
 			tmpPlotWorld.DaysToExpiration			= cfgCurrWorld.getInt("DaysToExpiration",	DEFAULT_DAYS_EXPIRATION);
 			
 			if (cfgCurrWorld.contains("ProtectedBlocks"))
 			{
-				tmpPlotWorld.ProtectedBlocks = new HashSet<Integer>(cfgCurrWorld.getIntegerList("ProtectedBlocks"));
+				tmpPlotWorld.addToProtectedBlocks(cfgCurrWorld.getStringList("ProtectedBlocks"));
 			}
 			else
 			{
-				tmpPlotWorld.ProtectedBlocks = getDefaultProtectedBlocks();
+				tmpPlotWorld.addToProtectedBlocks(Material.CHEST);
+				tmpPlotWorld.addToProtectedBlocks(Material.FURNACE);
+				tmpPlotWorld.addToProtectedBlocks(Material.BURNING_FURNACE);
+				tmpPlotWorld.addToProtectedBlocks(Material.ENDER_PORTAL_FRAME);
+				tmpPlotWorld.addToProtectedBlocks(Material.DIODE_BLOCK_ON);
+				tmpPlotWorld.addToProtectedBlocks(Material.DIODE_BLOCK_OFF);
+				tmpPlotWorld.addToProtectedBlocks(Material.JUKEBOX);
+				tmpPlotWorld.addToProtectedBlocks(Material.NOTE_BLOCK);
+				tmpPlotWorld.addToProtectedBlocks(Material.BED);
+				tmpPlotWorld.addToProtectedBlocks(Material.CAULDRON);
+				tmpPlotWorld.addToProtectedBlocks(Material.BREWING_STAND);
+				tmpPlotWorld.addToProtectedBlocks(Material.BEACON);
+				tmpPlotWorld.addToProtectedBlocks(Material.FLOWER_POT);
+				tmpPlotWorld.addToProtectedBlocks(Material.ANVIL);
+				tmpPlotWorld.addToProtectedBlocks(Material.SIGN_POST);
+				tmpPlotWorld.addToProtectedBlocks(Material.WALL_SIGN);
 			}
 			
 			if (cfgCurrWorld.contains("PreventedItems"))
 			{
-				tmpPlotWorld.PreventedItems = new HashSet<String>(cfgCurrWorld.getStringList("PreventedItems"));
+				tmpPlotWorld.addToPreventedItems(cfgCurrWorld.getStringList("PreventedItems"));
 			}
 			else
 			{
-				tmpPlotWorld.PreventedItems = getDefaultPreventedItems();
+				tmpPlotWorld.addToPreventedItems(Material.INK_SACK.getId(), (byte)15);
+				tmpPlotWorld.addToPreventedItems(Material.INK_SACK.getId(), (byte)15);
+				tmpPlotWorld.addToPreventedItems(Material.FLINT_AND_STEEL.getId());
+				tmpPlotWorld.addToPreventedItems(Material.MINECART.getId());
+				tmpPlotWorld.addToPreventedItems(Material.POWERED_MINECART.getId());
+				tmpPlotWorld.addToPreventedItems(Material.STORAGE_MINECART.getId());
+				tmpPlotWorld.addToPreventedItems(Material.BOAT.getId());
 			}
-			
-			tmpPlotWorld.ProtectedWallBlockId 	= cfgCurrWorld.getString("ProtectedWallBlockId",	"44:4");
-			tmpPlotWorld.ForSaleWallBlockId 	= cfgCurrWorld.getString("ForSaleWallBlockId",		"44:1");
-			tmpPlotWorld.AuctionWallBlockId		= cfgCurrWorld.getString("AuctionWallBlockId",		"44:1");
-			tmpPlotWorld.AutoLinkPlots			= cfgCurrWorld.getBoolean("AutoLinkPlots",			true);
-			tmpPlotWorld.DisableExplosion 		= cfgCurrWorld.getBoolean("DisableExplosion",		true);
-			tmpPlotWorld.DisableIgnition 		= cfgCurrWorld.getBoolean("DisableIgnition",		true);
+
 			
 			ConfigurationSection economysection;
 			
@@ -534,8 +576,8 @@ public class PlotMe extends JavaPlugin
 			cfgCurrWorld.set("RoadHeight", tmpPlotWorld.RoadHeight);
 			cfgCurrWorld.set("WorldHeight", null);
 			cfgCurrWorld.set("DaysToExpiration", tmpPlotWorld.DaysToExpiration);
-			cfgCurrWorld.set("ProtectedBlocks", tmpPlotWorld.ProtectedBlocks);
-			cfgCurrWorld.set("PreventedItems", tmpPlotWorld.PreventedItems);
+			cfgCurrWorld.set("ProtectedBlocks", tmpPlotWorld.getProtectedBlocksAsStringList());
+			cfgCurrWorld.set("PreventedItems", tmpPlotWorld.getPreventedItemsAsStringList());
 			cfgCurrWorld.set("ProtectedWallBlockId", tmpPlotWorld.ProtectedWallBlockId);
 			cfgCurrWorld.set("ForSaleWallBlockId", tmpPlotWorld.ForSaleWallBlockId);
 			cfgCurrWorld.set("AuctionWallBlockId", tmpPlotWorld.AuctionWallBlockId);
@@ -571,7 +613,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorlds.set(cfgWorldName, cfgCurrWorld);
 
 			
-			PlotMeSqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.MinecraftWorld.getSpawnLocation(), 16);
+			PlotMeSqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.getMinecraftWorld().getSpawnLocation(), 16);
 			
 			PlotManager.registerPlotWorld(tmpPlotWorld);
 		}
@@ -677,6 +719,22 @@ public class PlotMe extends JavaPlugin
 		return max;
 	}
 	
+	public static Location getAirSpawnPosition(Location loc)
+	{
+		while (loc.getWorld().getBlockTypeIdAt(loc) != 0)
+		{
+			if (loc.getBlockY() < loc.getWorld().getMaxHeight())
+			{
+				loc.add(0, 1, 0);
+			}
+			else
+			{
+				return null;
+			}
+		}
+		return loc;
+	}
+	
 	private HashSet<Integer> getDefaultProtectedBlocks()
 	{
 		HashSet<Integer> protections = new HashSet<Integer>();
@@ -712,17 +770,7 @@ public class PlotMe extends JavaPlugin
 		
 		return preventeditems;
 	}
-	
-	public void scheduleTask(Runnable task, int eachseconds, int howmanytimes)
-	{		 		 
-		PlotMe.cscurrentlyprocessingexpired.sendMessage("" + PlotMe.PREFIX + ChatColor.RESET + caption("MsgStartDeleteSession"));
-		
-		for(int ctr = 0; ctr < (howmanytimes / nbperdeletionprocessingexpired); ctr++)
-		{
-			Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(this, task, ctr * eachseconds * 20);
-		}
-	}
-	
+
 	private void loadCaptions()
 	{
 		File filelang = new File(this.getDataFolder(), "caption-english.yml");
@@ -1133,6 +1181,52 @@ public class PlotMe extends JavaPlugin
 			logger.warning("[" + NAME + "] Missing caption: " + s);
 			return "ERROR:Missing caption '" + s + "'";
 		}
+	}
+	
+	public static byte getDirection(double x1, double z1, double x2, double z2)
+	{
+		if (x2 < x1)
+		{
+			if (z2 < z1)
+			{
+				return 7;
+			}
+			else if (z2 > z1)
+			{
+				return 5;
+			}
+			else
+			{
+				return 6;
+			}
+		}
+		else if (x2 > x1)
+		{
+			if (z2 < z1)
+			{
+				return 1;
+			}
+			else if (z2 > z1)
+			{
+				return 3;
+			}
+			else
+			{
+				return 2;
+			}
+		}
+		else
+		{
+			if (z2 < z1)
+			{
+				return 0;
+			}
+			else if (z2 > z1)
+			{
+				return 4;
+			}
+		}
+		return -1;
 	}
 	
 	public static String addColor(String string) 

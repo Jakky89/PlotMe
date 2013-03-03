@@ -1,24 +1,26 @@
-package com.worldcretornica.plotme;
+package com.worldcretornica.plotme.utils;
 
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 
+import com.worldcretornica.plotme.Plot;
 
-public class PlotProperties {
+
+public class Jakky89Properties {
 	
 	public Plot plot;
-	public PlotProperties parent;
+	public Jakky89Properties parent;
 	public Map<String, Object> properties;
 
-	public PlotProperties(Plot forPlot)
+	public Jakky89Properties(Plot forPlot)
 	{
 		plot = forPlot;
 		parent = null;
 		properties = new HashMap<String, Object>();
 	}
 	
-	public PlotProperties(Plot forPlot, PlotProperties parent)
+	public Jakky89Properties(Plot forPlot, Jakky89Properties parent)
 	{
 		plot = forPlot;
 		properties = new HashMap<String, Object>();
@@ -82,23 +84,23 @@ public class PlotProperties {
 		return properties.get(pkey.toLowerCase());
 	}
 	
-	public PlotProperties getProperties(String pkey)
+	public Jakky89Properties getProperties(String pkey)
 	{
 		Object pval = getValue(pkey);
-		if (pval != null && (pval instanceof PlotProperties))
+		if (pval != null && (pval instanceof Jakky89Properties))
 		{
-			return (PlotProperties)pval;
+			return (Jakky89Properties)pval;
 		}
 
 		return null;
 	}
 	
-	public PlotProperties getCreateProperties(String pkey)
+	public Jakky89Properties getCreateProperties(String pkey)
 	{
-		PlotProperties props = getProperties(pkey);
+		Jakky89Properties props = getProperties(pkey);
 		if (props == null)
 		{
-			props = new PlotProperties(plot, this);
+			props = new Jakky89Properties(plot, this);
 			this.properties.put(pkey, props);
 		}
 		return props;

@@ -3,7 +3,7 @@ package com.worldcretornica.plotme.utils;
 import java.util.Comparator;
 import com.worldcretornica.plotme.Plot;
 
-public class PlotExpiredComparator implements Comparator<Plot> {
+public class ExpiredPlotsComparator implements Comparator<Plot> {
 
 	@Override
 	public int compare(Plot plot1, Plot plot2) {

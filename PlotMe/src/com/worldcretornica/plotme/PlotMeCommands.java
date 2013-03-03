@@ -17,10 +17,13 @@ import org.bukkit.block.Biome;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.MinecraftFontWidthCalculator;
-import com.worldcretornica.plotme.utils.PlotFinishedComparator;
+import com.worldcretornica.plotme.utils.FinishedPlotsComparator;
+import com.worldcretornica.plotme.utils.Pair;
 import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
 public class PlotMeCommands implements CommandExecutor
@@ -36,6 +39,9 @@ public class PlotMeCommands implements CommandExecutor
 	private final String LOG = "[" + PlotMe.NAME + " Event] ";
 	private final boolean isAdv = PlotMe.advancedlogging;
 	
+	public static HashMap<Player, Pair<Plot, Plot>> plotmovings;
+	
+	
 	public PlotMeCommands(PlotMe instance)
 	{
 		plugin = instance;
@@ -44,6 +50,15 @@ public class PlotMeCommands implements CommandExecutor
 	private String C(String caption)
 	{
 		return PlotMe.caption(caption);
+	}
+	
+	public boolean canExecuteAdminCommands(CommandSender sender)
+	{
+		if ((sender instanceof ConsoleCommandSender) || (sender instanceof RemoteConsoleCommandSender) || (PlotMe.opPermissions && sender.isOp()))
+		{
+			return true;
+		}
+		return false;
 	}
 	
 	public boolean onCommand(CommandSender sender, Command command, String start, String[] args)
@@ -323,7 +338,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -355,7 +370,7 @@ public class PlotMeCommands implements CommandExecutor
 									}  
 									catch( Exception e){}
 																		
-									if(bid < currentbid || (bid == currentbid && !currentbidder.equals("")))
+									if(bid < currentbid || (bid == currentbid && !currentbidder.isEmpty()))
 									{
 										Send(p, RED + C("MsgInvalidBidMustBeAbove") + " " + RESET + f(plot.currentbid, false));
 									}
@@ -374,7 +389,7 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(er.transactionSuccess())
 											{
-												if(!currentbidder.equals(""))
+												if(!currentbidder.isEmpty())
 												{
 													EconomyResponse er2 = PlotMe.economy.depositPlayer(currentbidder, currentbid);
 													
@@ -457,7 +472,7 @@ public class PlotMeCommands implements CommandExecutor
 				Location l = p.getLocation();
 				String id = PlotManager.getPlotId(l);
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -587,7 +602,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					String id = PlotManager.getPlotId(p.getLocation());
 					
-					if(id.equals(""))
+					if(id.isEmpty())
 					{
 						Send(p, RED + C("MsgNoPlotFound"));
 					}
@@ -605,13 +620,13 @@ public class PlotMeCommands implements CommandExecutor
 								
 								if(plot.auctionned)
 								{
-									if(!plot.currentbidder.equalsIgnoreCase("") && !PlotMe.cPerms(p, "PlotMe.admin.auction"))
+									if(!plot.currentbidder.isEmpty() && !PlotMe.cPerms(p, "PlotMe.admin.auction"))
 									{
 										Send(p, RED + C("MsgPlotHasBidsAskAdmin"));
 									}
 									else
 									{
-										if(!plot.currentbidder.equalsIgnoreCase(""))
+										if(!plot.currentbidder.isEmpty())
 										{
 											EconomyResponse er = PlotMe.economy.depositPlayer(plot.currentbidder, plot.currentbid);
 											
@@ -723,7 +738,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -768,7 +783,7 @@ public class PlotMeCommands implements CommandExecutor
 									{
 										String currentbidder = plot.currentbidder;
 										
-										if(!currentbidder.equals(""))
+										if(!currentbidder.isEmpty())
 										{
 											EconomyResponse er2 = PlotMe.economy.depositPlayer(currentbidder, plot.currentbid);
 											
@@ -843,7 +858,7 @@ public class PlotMeCommands implements CommandExecutor
 					Location l = p.getLocation();
 					String id = PlotManager.getPlotId(l);
 					
-					if(id.equals(""))
+					if(id.isEmpty())
 					{
 						Send(p, RED + C("MsgNoPlotFound"));
 					}
@@ -927,7 +942,7 @@ public class PlotMeCommands implements CommandExecutor
 											
 											String currentbidder = plot.currentbidder;
 											
-											if(!currentbidder.equals(""))
+											if(!currentbidder.isEmpty())
 											{
 												double bid = plot.currentbid;
 												
@@ -1054,7 +1069,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -1180,7 +1195,7 @@ public class PlotMeCommands implements CommandExecutor
 					}
 				}
 				
-				Collections.sort(finishedplots, new PlotFinishedComparator());
+				Collections.sort(finishedplots, new FinishedPlotsComparator());
 				
 				maxpage = (int) Math.ceil(((double)nbfinished/(double)pagesize));
 				
@@ -1227,7 +1242,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -1285,7 +1300,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -1435,7 +1450,7 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(plot.auctionned)
 					{
-						addition.append(" " + C("WordAuction") + ": " + GREEN + round(plot.currentbid) + RESET + ((!plot.currentbidder.equals("")) ? " " + plot.currentbidder : "") );
+						addition.append(" " + C("WordAuction") + ": " + GREEN + round(plot.currentbid) + RESET + ((!plot.currentbidder.isEmpty()) ? " " + plot.currentbidder : "") );
 					}
 					
 					if(plot.forsale)
@@ -2093,7 +2108,7 @@ public class PlotMeCommands implements CommandExecutor
 			{		
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgCannotClaimRoad"));
 				}
@@ -2206,7 +2221,7 @@ public class PlotMeCommands implements CommandExecutor
 				if(args[0].contains(":"))
 				{
 					try{
-						if(args[0].split(":").length == 1 || args[0].split(":")[1].equals(""))
+						if(args[0].split(":").length == 1 || args[0].split(":")[1].isEmpty())
 						{
 							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandHome") + ":# " + 
 									RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandHome") + ":1");
@@ -2346,7 +2361,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -2376,7 +2391,7 @@ public class PlotMeCommands implements CommandExecutor
 						
 						if(PlotManager.isEconomyEnabled(p))
 						{
-							if(plot.currentbidder.equalsIgnoreCase(""))
+							if(plot.currentbidder.isEmpty())
 							{
 								p.sendMessage(GREEN + "Auctionned: " + AQUA + ((plot.auctionned) ? C("WordYes") + 
 										GREEN + " Minimum bid: " + AQUA + round(plot.currentbid) : C("WordNo")) +
@@ -2423,7 +2438,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					String id = PlotManager.getPlotId(p.getLocation());
 					
-					if(id.equals(""))
+					if(id.isEmpty())
 					{
 						Send(p, RED + C("MsgNoPlotFound"));
 					}
@@ -2506,7 +2521,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					String id = PlotManager.getPlotId(p.getLocation());
 					
-					if(id.equals(""))
+					if(id.isEmpty())
 					{
 						Send(p, RED + C("MsgNoPlotFound"));
 					}
@@ -2566,7 +2581,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					p.sendMessage(BLUE + PREFIX + RED + C("MsgNoPlotFound"));
 				}
@@ -2784,7 +2799,7 @@ public class PlotMeCommands implements CommandExecutor
 							{
 								String currentbidder = plot.currentbidder;
 								
-								if(!currentbidder.equals(""))
+								if(!currentbidder.isEmpty())
 								{
 									EconomyResponse er = PlotMe.economy.depositPlayer(currentbidder, plot.currentbid);
 									
@@ -2871,7 +2886,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -2960,7 +2975,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -2968,7 +2983,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(!PlotManager.isPlotAvailable(id, p))
 					{
-						if(args.length < 2 || args[1].equalsIgnoreCase(""))
+						if(args.length < 2 || args[1].isEmpty())
 						{
 							Send(p, C("WordUsage") + " " + RED + "/plotme " + C("CommandAdd") + " <" + C("WordPlayer") + ">");
 						}
@@ -3055,7 +3070,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -3063,7 +3078,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(!PlotManager.isPlotAvailable(id, p))
 					{
-						if(args.length < 2 || args[1].equalsIgnoreCase(""))
+						if(args.length < 2 || args[1].isEmpty())
 						{
 							Send(p, C("WordUsage") + " " + RED + "/plotme " + C("CommandDeny") + " <" + C("WordPlayer") + ">");
 						}
@@ -3178,7 +3193,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -3186,7 +3201,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(!PlotManager.isPlotAvailable(id, p))
 					{
-						if(args.length < 2 || args[1].equalsIgnoreCase(""))
+						if(args.length < 2 || args[1].isEmpty())
 						{
 							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandRemove") + " <" + C("WordPlayer") + ">");
 						}
@@ -3273,7 +3288,7 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -3281,7 +3296,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(!PlotManager.isPlotAvailable(id, p))
 					{
-						if(args.length < 2 || args[1].equalsIgnoreCase(""))
+						if(args.length < 2 || args[1].isEmpty())
 						{
 							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandUndeny") + " <" + C("WordPlayer") + ">");
 						}
@@ -3368,13 +3383,13 @@ public class PlotMeCommands implements CommandExecutor
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
-				if(id.equals(""))
+				if(id.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
-					if(args.length < 2 || args[1].equals(""))
+					if(args.length < 2 || args[1].isEmpty())
 					{
 						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandSetowner") + " <" + C("WordPlayer") + ">");
 					}
@@ -3416,7 +3431,7 @@ public class PlotMeCommands implements CommandExecutor
 									}
 								}
 								
-								if(!plot.currentbidder.equals(""))
+								if(!plot.currentbidder.isEmpty())
 								{
 									EconomyResponse er = PlotMe.economy.depositPlayer(plot.currentbidder, plot.currentbid);
 									
@@ -3489,7 +3504,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				String plotid = PlotManager.getPlotId(p.getLocation());
 				
-				if(plotid.equals(""))
+				if(plotid.isEmpty())
 				{
 					Send(p, RED + C("MsgNoPlotFound"));
 				}
@@ -3512,19 +3527,19 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean move(Player p, String[] args)
+	private boolean move(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.move"))
+		if (PlotMe.cPerms(player, "plotme.admin.move"))
 		{
-			if(!PlotManager.isPlotWorld(p))
+			if (!PlotManager.isPlotWorld(player))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
-				if(args.length < 3 || args[1].equalsIgnoreCase("") || args[2].equalsIgnoreCase(""))
+				if (args.length < 3 || args[1].isEmpty() || args[2].isEmpty())
 				{
-					Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandMove") + " <" + C("WordIdFrom") + "> <" + C("WordIdTo") + "> " + 
+					Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandMove") + " <" + C("WordIdFrom") + "> <" + C("WordIdTo") + "> " + 
 							RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandMove") + " 0;1 2;-1");
 				}
 				else
@@ -3532,7 +3547,7 @@ public class PlotMeCommands implements CommandExecutor
 					String plot1 = args[1];
 					String plot2 = args[2];
 					
-					if(!PlotManager.isValidId(plot1) || !PlotManager.isValidId(plot2))
+					if (!PlotManager.isValidId(plot1) || !PlotManager.isValidId(plot2))
 					{
 						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandMove") + " <" + C("WordIdFrom") + "> <" + C("WordIdTo") + "> " + 
 								RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandMove") + " 0;1 2;-1");
@@ -3560,40 +3575,38 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean reload(CommandSender s, String[] args)
+	private boolean reload(CommandSender sender, String[] args)
 	{
-		if (!(s instanceof Player) || PlotMe.cPerms((Player) s, "PlotMe.admin.reload"))
+		if (canExecuteAdminCommands(sender) ||  PlotMe.cPerms((Player)sender, "plotme.admin.reload"))
 		{
 			plugin.initialize();
-			Send(s, C("MsgReloadedSuccess"));
-			
-			if(isAdv)
-				PlotMe.logger.info(LOG + s.getName() + " " + C("MsgReloadedConfigurations"));
+			Send(sender, C("MsgReloadedSuccess"));
+
+			if (isAdv)
+			{
+				PlotMe.logger.info(LOG + sender.getName() + " " + C("MsgReloadedConfigurations"));
+			}
 		}
 		else
 		{
-			Send(s, RED + C("MsgPermissionDenied"));
+			Send(sender, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private StringBuilder whitespace(int length) {
+	private StringBuilder whitespace(int length)
+	{
 		int spaceWidth = MinecraftFontWidthCalculator.getStringWidth(" ");
 		
 		StringBuilder ret = new StringBuilder();
-				
-		for(int i = 0; (i+spaceWidth) < length; i+=spaceWidth) {
+		
+		for (int i = 0; (i+spaceWidth) < length; i+=spaceWidth)
+		{
 			ret.append(" ");
 		}
-		
 		return ret;
 	}
-	
-	private String round(double money)
-	{
-		return (money % 1 == 0) ? "" + Math.round(money) : "" + money;
-	}
-	
+
 	private void warn(String msg)
 	{
 		PlotMe.logger.warning(LOG + msg);
@@ -3606,19 +3619,23 @@ public class PlotMeCommands implements CommandExecutor
 	
 	private String f(double price, boolean showsign)
 	{
-		if(price == 0) return "";
-		
-		String format = round(Math.abs(price));
-		
-		if(PlotMe.economy != null)
+		if (price == 0)
+		{
+			return "";
+		}
+		String format = String.valueOf(Math.round(Math.abs(price) * 100) / 100);
+		if (PlotMe.economy != null)
 		{
 			format = (price <= 1 && price >= -1) ? format + " " + PlotMe.economy.currencyNameSingular() : format + " " + PlotMe.economy.currencyNamePlural();
 		}
-		
-		if(showsign)	
+		if (showsign)
+		{
 			return GREEN + ((price > 0) ? "+" + format : "-" + format);
+		}
 		else
+		{
 			return GREEN + format;
+		}
 	}
 	
 	private void Send(CommandSender cs, String text)
@@ -3629,16 +3646,12 @@ public class PlotMeCommands implements CommandExecutor
 	private String FormatBiome(String biome)
 	{
 		biome = biome.toLowerCase();
-		
 		String[] tokens = biome.split("_");
-		
 		biome = "";
-		
-		for(String token : tokens)
+		for (String token : tokens)
 		{
 			token = token.substring(0, 1).toUpperCase() + token.substring(1);
-			
-			if(biome.equalsIgnoreCase(""))
+			if (biome.isEmpty())
 			{
 				biome = token;
 			}
@@ -3647,7 +3660,7 @@ public class PlotMeCommands implements CommandExecutor
 				biome = biome + "_" + token;
 			}
 		}
-
 		return biome;
 	}
+
 }

@@ -9,26 +9,39 @@ import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.Location;
 import org.bukkit.block.Biome;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
+
+import com.worldcretornica.plotme.rooms.PlotRoom;
+import com.worldcretornica.plotme.utils.Jakky89Properties;
+import com.worldcretornica.plotme.utils.Pair;
 
 
 public class Plot implements Comparable<Plot>
 {
 	public int id;
 	
-	public PlotPosition plotpos;
+	public PlotPosition position;
 	public Plot[] neighbourplots;
 
 	public PlotOwner owner;
 	public Biome biome;
 	
-	public PlotProperties properties; // Flexible plot properties
+	public Jakky89Properties properties; // Flexible plot properties
 	public Set<String> playersinplot; // Names of players that are currently standing in that plot
+	public Set<PlotRoom> plotRooms;
+	
+	public Sign ownersign;
+	public Sign sellsign;
 	
 	public long expireddate;
-	public double customprice;
+	public double buyprice;
+	public double sellprice;
+	public double rentprice;
 	public boolean isforsale;
+	public boolean isforrent;
 	public long finisheddate;
 	public boolean isprotected;
 	public boolean isauctionned;
@@ -36,71 +49,109 @@ public class Plot implements Comparable<Plot>
 	
 	public void setPlotPosition(PlotWorld tW, int tX, int tZ)
 	{
-		plotpos = new PlotPosition(tW, tX, tZ);
+		position = new PlotPosition(tW, tX, tZ);
 	}
 	
-	public Plot()
+	public Plot(int plotId, PlotPosition plotPosition)
 	{
 		id = 0;
 		owner = null;
-		properties = new PlotProperties(this);
+		properties = new Jakky89Properties(this);
 		playersinplot = new HashSet<String>();
 		biome = Biome.PLAINS;
-		setExpiration(7);
-		customprice = 0;
+		setDaysUntilExpiration(7);
+		sellprice = plotPosition.getPlotWorld().ClaimPrice;
+		rentprice = 0;
 		isforsale = false;
+		isforrent = false;
 		finisheddate = 0;
 		isprotected = false;
 		isauctionned = false;
 		neighbourplots = new Plot[8];
+		auctionbids = null;
 	}
 	
-	public Plot(int mid, PlotWorld mpw, int mx, int mz, PlotOwner mowner, String mbiome, long mexpireddate,
-				long mfinisheddate, double mcustomprice, boolean misforsale, boolean misprotected, boolean misauctionned)
+	public Plot(int plotId, PlotPosition plotPosition, PlotOwner plotOwner, Biome plotBiome, long plotExpiredDate,
+				long plotFinishedDate, double plotSellPrice, double plotRentPrice, boolean plotIsForSale, boolean plotIsForRent, boolean plotIsProtected, boolean plotIsAuctionned)
 	{
-		id = mid;
-		setPlotPosition(mpw, mx, mz);
-		owner = mowner;
-		biome = Biome.valueOf(mbiome);
-		expireddate = Math.round(System.currentTimeMillis()/1000) + mexpireddate;
-		finisheddate = mfinisheddate;
-		customprice = mcustomprice;
-		isforsale = misforsale;
-		isprotected = misprotected;
-		isauctionned = misauctionned;
+		id = plotId;
+		position = plotPosition;
+		owner = plotOwner;
+		biome = plotBiome;
+		expireddate = plotExpiredDate;
+		PlotManager.checkPlotExpiration(this);
+		finisheddate = plotFinishedDate;
+		sellprice = plotSellPrice;
+		isforsale = plotIsForSale;
+		rentprice = plotRentPrice;
+		isforrent = plotIsForRent;
+		isauctionned = plotIsAuctionned;
+		isprotected = plotIsProtected;
 		neighbourplots = new Plot[8];
+		auctionbids = null;
 	}
-	
+
 	public int getId()
 	{
 		return id;
 	}
 	
-	public PlotPosition getPosition()
+	public PlotPosition getPlotPosition()
 	{
-		return plotpos;
+		return position;
 	}
 	
 	public int getPlotX()
 	{
-		return plotpos.x;
+		return position.x;
 	}
 	
 	public int getPlotZ()
 	{
-		return plotpos.z;
+		return position.z;
 	}
 	
 	public PlotWorld getPlotWorld()
 	{
-		return plotpos.w;
+		if (this.position != null)
+		{
+			return position.w;
+		}
+		return null;
 	}
 	
 	public World getMinecraftWorld()
 	{
-		if (plotpos.w != null)
+		if (position != null && position.w != null)
 		{
-			return plotpos.w.MinecraftWorld;
+			return position.getMinecraftWorld();
+		}
+		return null;
+	}
+	
+	public Location getWorldMinBlockLocation()
+	{
+		if (position != null && position.w != null)
+		{
+			return position.getPlotWorld().getMinBlockLocation(this);
+		}
+		return null;
+	}
+	
+	public Location getWorldMaxBlockLocation()
+	{
+		if (position != null && position.w != null)
+		{
+			return position.getPlotWorld().getMaxBlockLocation(this);
+		}
+		return null;
+	}
+	
+	public Pair<Location, Location> getWorldMinMaxBlockLocations()
+	{
+		if (position != null && position.w != null)
+		{
+			return position.getPlotWorld().getMinMaxBlockLocation(this);
 		}
 		return null;
 	}
@@ -114,7 +165,7 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 	
-	public Plot getNeighbourPlot(byte dir)
+	public Plot getNeighbourPlot(int dir)
 	{
 		if (dir >= 0 && dir <= 7)
 		{
@@ -212,7 +263,7 @@ public class Plot implements Comparable<Plot>
 		
 		if (auctionbids.size()>0)
 		{
-			if (bidAmount > auctionbids.get(0).bidamount)
+			if (bidAmount > auctionbids.get(0).getBidMoneyAmount())
 			{
 				auctionbids.add(0, new PlotAuctionBid(bidderPlayer.getName(), bidAmount));
 				return true;
@@ -227,7 +278,7 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 	
-	public void enableSaling()
+	public void enableSelling()
 	{
 		if (isforsale != true)
 		{
@@ -236,7 +287,7 @@ public class Plot implements Comparable<Plot>
 		}
 	}
 	
-	public void disableSaling()
+	public void disableSelling()
 	{
 		if (isforsale != false)
 		{
@@ -255,7 +306,7 @@ public class Plot implements Comparable<Plot>
 		return isprotected;
 	}
 
-	public void setExpiration(int days)
+	public void setDaysUntilExpiration(int days)
 	{
 		if (days > 0)
 		{
@@ -263,7 +314,7 @@ public class Plot implements Comparable<Plot>
 			if (newDate != expireddate)
 			{
 				expireddate = newDate;
-				PlotManager.checkNextExpiration(this);
+				PlotManager.checkPlotExpiration(this);
 				PlotMeSqlManager.updatePlotData(this, "expireddate", newDate);
 			}
 		}
@@ -273,17 +324,17 @@ public class Plot implements Comparable<Plot>
 	{
 		if (days <= 0)
 		{
-			setExpiration(Math.round(System.currentTimeMillis()/1000));
+			doExpire();
 		}
 		else
 		{
-			setExpiration(days);
+			setDaysUntilExpiration(days);
 		}
 	}
 	
 	public void disableExpiration()
 	{
-		expireddate = 0;
+		expireddate = -1;
 		PlotMeSqlManager.updatePlotData(this, "expireddate", null);
 	}
 	
@@ -301,6 +352,11 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 	
+	public void doExpire()
+	{
+		expireddate = Math.round(System.currentTimeMillis()/1000);
+	}
+	
 	public void setFinished()
 	{
 		int newDate = Math.round(System.currentTimeMillis()/1000);
@@ -315,7 +371,7 @@ public class Plot implements Comparable<Plot>
 	{
 		if (finisheddate != 0)
 		{
-			finisheddate = 0;
+			finisheddate = -1;
 			PlotMeSqlManager.updatePlotData(this, "finisheddate", null);
 		}
 	}
@@ -367,7 +423,7 @@ public class Plot implements Comparable<Plot>
 	
 	public void setPrice(double newPrice)
 	{
-		if (newPrice != customprice)
+		if (newPrice != sellprice)
 		{
 			if (newPrice < 0)
 			{
@@ -375,7 +431,7 @@ public class Plot implements Comparable<Plot>
 				PlotMeSqlManager.updatePlotData(this, "isforsale", 0);
 				return;
 			}
-			customprice = newPrice;
+			sellprice = newPrice;
 			
 			if (newPrice > 0)
 			{
@@ -391,7 +447,7 @@ public class Plot implements Comparable<Plot>
 	
 	public double getCustomPrice()
 	{
-		return customprice;
+		return sellprice;
 	}
 	
 	public boolean isAuctionned()
@@ -407,7 +463,7 @@ public class Plot implements Comparable<Plot>
 	public int getCommentsCount()
 	{
 		@SuppressWarnings("unchecked")
-		HashMap<Integer, PlotProperties> comments = (HashMap<Integer, PlotProperties>)properties.getValue("comments");
+		HashMap<Integer, Jakky89Properties> comments = (HashMap<Integer, Jakky89Properties>)properties.getValue("comments");
 		if (comments != null)
 		{
 			return comments.size();
@@ -418,7 +474,7 @@ public class Plot implements Comparable<Plot>
 	public String[] getComment(int i)
 	{
 		@SuppressWarnings("unchecked")
-		HashMap<Integer, PlotProperties> comments = (HashMap<Integer, PlotProperties>)properties.getValue("comments");
+		HashMap<Integer, Jakky89Properties> comments = (HashMap<Integer, Jakky89Properties>)properties.getValue("comments");
 		if (comments != null)
 		{
 			return (String[])comments.get(i).getValue("texts");
@@ -460,10 +516,10 @@ public class Plot implements Comparable<Plot>
 			}
 		}
 		
-		PlotProperties rights = properties.getProperties("rights");
+		Jakky89Properties rights = properties.getProperties("rights");
 		if (rights != null)
 		{
-			PlotProperties rightsAllowed = rights.getProperties("allowed");
+			Jakky89Properties rightsAllowed = rights.getProperties("allowed");
 			if (rightsAllowed != null)
 			{
 				if (includeStar && rightsAllowed.getBoolean("*")==true)
@@ -526,10 +582,10 @@ public class Plot implements Comparable<Plot>
 			}
 		}
 
-		PlotProperties rights = properties.getProperties("rights");
+		Jakky89Properties rights = properties.getProperties("rights");
 		if (rights != null)
 		{
-			PlotProperties rightsDenied = rights.getProperties("denied");
+			Jakky89Properties rightsDenied = rights.getProperties("denied");
 			if (rightsDenied != null)
 			{
 				if (includeStar && rightsDenied.getBoolean("*")==true)

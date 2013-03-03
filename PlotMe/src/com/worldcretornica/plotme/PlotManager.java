@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -27,7 +29,8 @@ import org.bukkit.scheduler.BukkitTask;
 
 import com.griefcraft.lwc.LWC;
 import com.griefcraft.model.Protection;
-import com.worldcretornica.plotme.utils.PlotExpiredComparator;
+import com.worldcretornica.plotme.utils.ExpiredPlotsComparator;
+import com.worldcretornica.plotme.utils.Pair;
 import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
 public class PlotManager {
@@ -39,27 +42,30 @@ public class PlotManager {
 	public static Set<Plot> allPlots;
 	public static List<Plot> expiredPlots;
 	
-	public static Integer expirationCheckTaskId;
-	public static Long nextExpirationCheck;
-	
+	public static Long lastExpiredPlotDeletion;
+	public static int expiredPlotDeletionsProcessed;
+	public static Integer expiredPlotsCheckTaskId;
+	public static Long nextExpiredPlotsCheck;
+
 	
 	public PlotManager()
 	{
 		plotWorlds = new HashMap<World, PlotWorld>();
 		allPlots = new HashSet<Plot>();
+		
 		expiredPlots = new LinkedList<Plot>();
-		expirationCheckTaskId = null;
-		nextExpirationCheck = null;
+		expiredPlotsCheckTaskId = null;
+		nextExpiredPlotsCheck = null;
 	}
 	
 	public static boolean registerPlotWorld(PlotWorld plotWorld)
 	{
-		if (plotWorld == null || plotWorld.MinecraftWorld == null)
+		if (plotWorld == null || plotWorld.getMinecraftWorld() == null)
 		{
 			return false;
 		}
 		
-		if (plotWorlds.put(plotWorld.MinecraftWorld, plotWorld) != plotWorld)
+		if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) != plotWorld)
 		{
 			return true;
 		}
@@ -87,48 +93,48 @@ public class PlotManager {
 
 	public void refreshNeighbours(Plot plot)
 	{
-		if (plot == null || plot.plotpos == null || plot.plotpos.w == null)
+		if (plot == null || plot.getPlotPosition() == null || plot.getPlotWorld() == null)
 		{
 			return;
 		}
-		plot.plotpos.w.refreshNeighbours(plot);
+		plot.getPlotWorld().refreshNeighbours(plot);
 	}
 	
-	public static void checkNextExpiration(Plot plot)
+	public static void checkPlotExpiration(Plot plot)
 	{
 		if (plot.getExpiration() > 0)
 		{
-			if (nextExpirationCheck == null || plot.getExpiration() < nextExpirationCheck)
+			if (nextExpiredPlotsCheck == null || plot.getExpiration() < nextExpiredPlotsCheck)
 			{
-				if (expirationCheckTaskId != null)
+				if (expiredPlotsCheckTaskId != null)
 				{
-					Bukkit.getScheduler().cancelTask(expirationCheckTaskId);
-					expirationCheckTaskId = null;
+					Bukkit.getScheduler().cancelTask(expiredPlotsCheckTaskId);
+					expiredPlotsCheckTaskId = null;
 				}
-				nextExpirationCheck = plot.getExpiration();
+				nextExpiredPlotsCheck = plot.getExpiration();
 				Long ticksUntilExpiration = (long)Math.round((plot.getExpiration() * 20) + (System.currentTimeMillis() / 50));
-				BukkitTask expireCheckTask = null;
+				BukkitTask expiredPlotsCheckTask = null;
 				if (ticksUntilExpiration > 0)
 				{
-					expireCheckTask = Bukkit.getScheduler().runTaskLaterAsynchronously(PlotMe.self, new RunnableExpiredPlotsRemover(), ticksUntilExpiration);
+					expiredPlotsCheckTask = Bukkit.getScheduler().runTaskLaterAsynchronously(PlotMe.self, new RunnableExpiredPlotsRemover(), ticksUntilExpiration);
 				}
 				else
 				{
-					expireCheckTask = Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new RunnableExpiredPlotsRemover());
+					expiredPlotsCheckTask = Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new RunnableExpiredPlotsRemover());
 				}
-				expirationCheckTaskId = expireCheckTask.getTaskId();
+				expiredPlotsCheckTaskId = expiredPlotsCheckTask.getTaskId();
 			}
 		}
 	}
 	
 	public static boolean registerPlot(Plot plot)
 	{
-		if (plot == null || plot.id <= 0 || plot.plotpos == null || plot.plotpos.w == null || (plot.getExpiration()>0 && plot.getExpiration()<(System.currentTimeMillis()/1000)))
+		if (plot == null || plot.getId() <= 0 || plot.getPlotPosition() == null || plot.getPlotWorld() == null || (plot.getExpiration() > 0 && plot.getExpiration() < (System.currentTimeMillis()/1000)))
 		{
 			return false;
 		}
 		
-		PlotWorld pwi = plot.plotpos.w;
+		PlotWorld pwi = plot.getPlotWorld();
 		if (pwi == null)
 		{
 			return false;
@@ -138,7 +144,7 @@ public class PlotManager {
 		{
 			setOwnerSign(plot);
 			allPlots.add(plot);
-			checkNextExpiration(plot);
+			checkPlotExpiration(plot);
 			return true;
 		}
 		
@@ -147,27 +153,17 @@ public class PlotManager {
 	
 	public static Location getPlotBlockTop(Plot plot)
 	{
-		double multi = plot.plotpos.w.getPlotBlockPositionMultiplier();
+		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
 		
-		int topX    = (int)Math.ceil(plot.plotpos.x * multi);
-		int topZ    = (int)Math.ceil(plot.plotpos.z * multi);
+		int maxX    = (int)Math.ceil(plot.getPlotPosition().x * multi);
+		int maxZ    = (int)Math.ceil(plot.getPlotPosition().z * multi);
 
-		return new Location(plot.plotpos.w.MinecraftWorld, topX, plot.plotpos.w.MinecraftWorld.getMaxHeight(), topZ);
+		return new Location(plot.getMinecraftWorld(), maxX, plot.getMinecraftWorld().getMaxHeight(), maxZ);
 	}
 	
-	public static Location getPlotBlockBottom(Plot plot)
-	{
-		double multi = plot.plotpos.w.getPlotBlockPositionMultiplier();
-		
-		int bottomX = (int)Math.floor((plot.plotpos.x - 1) * multi);
-		int bottomZ = (int)Math.floor((plot.plotpos.z - 1) * multi);
-		
-		return new Location(plot.plotpos.w.MinecraftWorld, bottomX, 1, bottomZ);
-	}
-
 	public static Plot getPlotAtBlockPosition(PlotWorld plotWorld, Location blockLocation)
 	{
-		if (plotWorld == null || blockLocation == null || !blockLocation.getWorld().equals(plotWorld.MinecraftWorld)) {
+		if (plotWorld == null || blockLocation == null || !blockLocation.getWorld().equals(plotWorld.getMinecraftWorld())) {
 			return null;
 		}
 		return plotWorld.getPlotAtBlockPosition(blockLocation);
@@ -180,7 +176,7 @@ public class PlotManager {
 			return null;
 		}
 		PlotWorld plotWorld = plotWorlds.get(minecraftWorld);
-		if (plotWorld != null && blockLocation != null && blockLocation.getWorld().equals(plotWorld.MinecraftWorld)) {
+		if (plotWorld != null && blockLocation != null && blockLocation.getWorld().equals(plotWorld.getMinecraftWorld())) {
 			plotWorld.getPlotAtBlockPosition(blockLocation);
 		}
 		return null;
@@ -194,7 +190,7 @@ public class PlotManager {
 		}
 
 		PlotWorld plotWorld = plotWorlds.get(blockLocation.getWorld());
-		if (plotWorld != null && blockLocation != null && blockLocation.getWorld().equals(plotWorld.MinecraftWorld)) {
+		if (plotWorld != null && blockLocation != null && blockLocation.getWorld().equals(plotWorld.getMinecraftWorld())) {
 			return plotWorld.getPlotAtBlockPosition(blockLocation);
 		}
 		
@@ -225,7 +221,7 @@ public class PlotManager {
 
 		if (plot.neighbourplots == null)
 		{
-			plot.plotpos.w.refreshNeighbours(plot);
+			plot.getPlotWorld().refreshNeighbours(plot);
 		}
 		
 		if (plot.neighbourplots != null)
@@ -296,22 +292,22 @@ public class PlotManager {
 	
 	private static void fillroad(Plot plot1, Plot plot2)
 	{
-		if (!plot1.plotpos.w.equals(plot2.plotpos.w.id))
+		if (!plot1.getPlotWorld().equals(plot2.getPlotWorld()))
 		{
 			return;
 		}
 
-		double multi = plot1.plotpos.w.getPlotBlockPositionMultiplier();
+		double multi = plot1.getPlotWorld().getPlotBlockPositionMultiplier();
 		
-		int bottomX1 = (int)Math.floor((plot1.plotpos.x - 1) * multi);
-		int bottomZ1 = (int)Math.floor((plot1.plotpos.z - 1) * multi);
-		int topX1    = (int)Math.ceil(plot1.plotpos.x * multi);
-		int topZ1    = (int)Math.ceil(plot1.plotpos.z * multi);
+		int minX1 = (int)Math.floor((plot1.getPlotX() - 1) * multi);
+		int minZ1 = (int)Math.floor((plot1.getPlotZ() - 1) * multi);
+		int maxX1 =	(int)Math.ceil(plot1.getPlotX() * multi);
+		int maxZ1 =	(int)Math.ceil(plot1.getPlotZ() * multi);
 		
-		int bottomX2 = (int)Math.floor((plot2.plotpos.x - 1) * multi);
-		int bottomZ2 = (int)Math.floor((plot2.plotpos.z - 1) * multi);
-		int topX2    = (int)Math.ceil(plot2.plotpos.x * multi);
-		int topZ2    = (int)Math.ceil(plot2.plotpos.z * multi);
+		int minX2 = (int)Math.floor((plot2.getPlotX() - 1) * multi);
+		int minZ2 = (int)Math.floor((plot2.getPlotZ() - 1) * multi);
+		int maxX2 = (int)Math.ceil(plot2.getPlotX() * multi);
+		int maxZ2 =	(int)Math.ceil(plot2.getPlotZ() * multi);
 		
 		int minX;
 		int maxX;
@@ -319,21 +315,21 @@ public class PlotManager {
 		int maxZ;
 		boolean isWallX;
 			
-		if (bottomX1 == bottomX2)
+		if (minX1 == minX2)
 		{
-			minX = bottomX1;
-			maxX = topX1;
+			minX = minX1;
+			maxX = maxX1;
 			
-			minZ = Math.min(bottomZ1, bottomZ2) + plot1.plotpos.w.PlotSize;
-			maxZ = Math.max(topZ1, topZ2) - plot1.plotpos.w.PlotSize;
+			minZ = Math.min(minZ1, minZ2) + plot1.getPlotWorld().PlotSize;
+			maxZ = Math.max(maxZ1, maxZ2) - plot1.getPlotWorld().PlotSize;
 		}
 		else
 		{
-			minZ = bottomZ1;
-			maxZ = topZ1;
+			minZ = minZ1;
+			maxZ = maxZ1;
 			
-			minX = Math.min(bottomX1, bottomX2) + plot1.plotpos.w.PlotSize;
-			maxX = Math.max(topX1, topX2) - plot1.plotpos.w.PlotSize;
+			minX = Math.min(minX1, minX2) + plot1.getPlotWorld().PlotSize;
+			maxX = Math.max(maxX1, maxX2) - plot1.getPlotWorld().PlotSize;
 		}
 		
 		isWallX = (maxX - minX) > (maxZ - minZ);
@@ -349,36 +345,36 @@ public class PlotManager {
 			maxZ++;
 		}
 		
-		int maxY = plot1.plotpos.w.MinecraftWorld.getMaxHeight();
+		int maxY = plot1.getMinecraftWorld().getMaxHeight();
 
 		for (int x = minX; x <= maxX; x++)
 		{
 			for (int z = minZ; z <= maxZ; z++)
 			{
-				for (int y = plot1.plotpos.w.RoadHeight; y < maxY; y++)
+				for (int y = plot1.getPlotWorld().RoadHeight; y < maxY; y++)
 				{
-					if (y >= (plot1.plotpos.w.RoadHeight + 2))
+					if (y >= (plot1.getPlotWorld().RoadHeight + 2))
 					{
-						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setType(Material.AIR);
 					}
-					else if(y == (plot1.plotpos.w.RoadHeight + 1))
+					else if(y == (plot1.getPlotWorld().RoadHeight + 1))
 					{
 						if (isWallX && (x == minX || x == maxX))
 						{
-							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(plot1.plotpos.w.WallBlockId, plot1.plotpos.w.WallBlockValue, true);
+							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlockId, plot1.getPlotWorld().WallBlockValue, true);
 						}
 						else if(!isWallX && (z == minZ || z == maxZ))
 						{
-							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(plot1.plotpos.w.WallBlockId, plot1.plotpos.w.WallBlockValue, true);
+							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlockId, plot1.getPlotWorld().WallBlockValue, true);
 						}
 						else
 						{
-							plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
+							plot1.getMinecraftWorld().getBlockAt(x, y, z).setType(Material.AIR);
 						}
 					}
 					else
 					{
-						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeIdAndData(plot1.plotpos.w.PlotFloorBlockId, plot1.plotpos.w.PlotFloorBlockValue, true);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().PlotFloorBlockId, plot1.getPlotWorld().PlotFloorBlockValue, true);
 					}
 				}
 			}
@@ -387,48 +383,48 @@ public class PlotManager {
 	
 	private static void fillmiddleroad(Plot plot1, Plot plot2)
 	{
-		if (!plot1.plotpos.w.equals(plot2.plotpos.w)) {
+		if (!plot1.getPlotWorld().equals(plot2.getPlotWorld())) {
 			return;
 		}
 		
-		double multi = plot1.plotpos.w.getPlotBlockPositionMultiplier();
+		double multi = plot1.getPlotWorld().getPlotBlockPositionMultiplier();
 		
-		int bottomX1 = (int)Math.floor((plot1.plotpos.x - 1) * multi);
-		int bottomZ1 = (int)Math.floor((plot1.plotpos.z - 1) * multi);
-		int topX1    = (int)Math.ceil(plot1.plotpos.x * multi);
-		int topZ1    = (int)Math.ceil(plot1.plotpos.z * multi);
+		int minX1 =	(int)Math.floor((plot1.getPlotX() - 1) * multi);
+		int minZ1 =	(int)Math.floor((plot1.getPlotZ() - 1) * multi);
+		int maxX1 = (int)Math.ceil(plot1.getPlotX() * multi);
+		int maxZ1 =	(int)Math.ceil(plot1.getPlotZ() * multi);
 		
-		int bottomX2 = (int)Math.floor((plot2.plotpos.x - 1) * multi);
-		int bottomZ2 = (int)Math.floor((plot2.plotpos.z - 1) * multi);
-		int topX2    = (int)Math.ceil(plot2.plotpos.x * multi);
-		int topZ2    = (int)Math.ceil(plot2.plotpos.z * multi);
+		int minX2 = (int)Math.floor((plot2.getPlotX() - 1) * multi);
+		int minZ2 = (int)Math.floor((plot2.getPlotZ() - 1) * multi);
+		int maxX2 = (int)Math.ceil(plot2.getPlotX() * multi);
+		int maxZ2 = (int)Math.ceil(plot2.getPlotZ() * multi);
 
 		int minX;
 		int maxX;
 		int minZ;
 		int maxZ;
 
-		minX = Math.min(topX1, topX2);
-		maxX = Math.max(bottomX1, bottomX2);
+		minX = Math.min(maxX1, maxX2);
+		maxX = Math.max(minX1, minX2);
 		
-		minZ = Math.min(topZ1, topZ2);
-		maxZ = Math.max(bottomZ1, bottomZ2);
+		minZ = Math.min(maxZ1, maxZ2);
+		maxZ = Math.max(minZ1, minZ2);
 		
-		int maxY = plot1.plotpos.w.MinecraftWorld.getMaxHeight();
+		int maxY = plot1.getMinecraftWorld().getMaxHeight();
 				
 		for (int x = minX; x <= maxX; x++)
 		{
 			for (int z = minZ; z <= maxZ; z++)
 			{
-				for (int y = plot1.plotpos.w.RoadHeight; y < maxY; y++)
+				for (int y = plot1.getPlotWorld().RoadHeight; y < maxY; y++)
 				{
-					if(y >= (plot1.plotpos.w.RoadHeight + 1))
+					if(y >= (plot1.getPlotWorld().RoadHeight + 1))
 					{
-						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setType(Material.AIR);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setType(Material.AIR);
 					}
 					else
 					{
-						plot1.plotpos.w.MinecraftWorld.getBlockAt(x, y, z).setTypeId(plot1.plotpos.w.PlotFloorBlockId);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeId(plot1.getPlotWorld().PlotFloorBlockId);
 					}
 				}
 			}
@@ -442,7 +438,7 @@ public class PlotManager {
 			return false;
 		}
 
-		PlotWorld pwi = plotWorlds.get(plotPosition.w.MinecraftWorld);
+		PlotWorld pwi = plotWorlds.get(plotPosition.getMinecraftWorld());
 		if (pwi == null)
 		{
 			return false;
@@ -481,21 +477,7 @@ public class PlotManager {
 	
 	public static boolean isPlotAvailable(String worldName, int plotX, int plotZ)
 	{
-		PlotWorld pwi = plotWorlds.get(worldName);
-		if (pwi == null)
-		{
-			return false;
-		}
-			
-		PlotPosition plp = new PlotPosition(pwi, plotX, plotZ);
-		
-		Plot tst = pwi.getPlotAtPlotPosition(plp);
-		if (tst == null)
-		{
-			return true;
-		}
-
-		return false;
+		return isPlotAvailable(Bukkit.getWorld(worldName), plotX, plotZ);
 	}
 	
 	public static boolean isPlotAvailable(Player player)
@@ -505,7 +487,7 @@ public class PlotManager {
 			return false;
 		}
 		
-		PlotWorld pwi = plotWorlds.get(player.getWorld().getName());
+		PlotWorld pwi = plotWorlds.get(player.getWorld());
 		if (pwi == null)
 		{
 			return false;
@@ -516,12 +498,17 @@ public class PlotManager {
 	
 	public static void actualizePlotSignInfoLine(Plot plot)
 	{
-		double multi = plot.plotpos.w.getPlotBlockPositionMultiplier();
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return;
+		}
 		
-		int bottomX = (int)Math.floor((plot.plotpos.x - 1) * multi);
-		int bottomZ = (int)Math.floor((plot.plotpos.z - 1) * multi);
+		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
+		
+		int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
+		int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
 
-		Location pillar = new Location(plot.plotpos.w.MinecraftWorld, bottomX - 1, plot.plotpos.w.RoadHeight + 1, bottomZ - 1);
+		Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
 						
 		Block bsign = pillar.add(0, 0,-1).getBlock();
 		if (!(bsign instanceof Sign))
@@ -575,12 +562,17 @@ public class PlotManager {
 
 	public static void setOwnerSign(Plot plot)
 	{
-		double multi = plot.plotpos.w.getPlotBlockPositionMultiplier();
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return;
+		}
 		
-		int bottomX = (int)Math.floor((plot.plotpos.x - 1) * multi);
-		int bottomZ = (int)Math.floor((plot.plotpos.z - 1) * multi);
+		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
+		
+		int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
+		int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
 
-		Location pillar = new Location(plot.plotpos.w.MinecraftWorld, bottomX - 1, plot.plotpos.w.RoadHeight + 1, bottomZ - 1);
+		Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
 						
 		Block bsign = pillar.add(0, 0,-1).getBlock();
 		bsign.setType(Material.AIR);
@@ -626,16 +618,21 @@ public class PlotManager {
 	
 	public static void setSellSign(Plot plot)
 	{
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return;
+		}
+		
 		removeSellSign(plot);
 		
 		if (plot.isforsale || plot.isauctionned)
 		{
-			double multi = plot.plotpos.w.getPlotBlockPositionMultiplier();
+			double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
 			
-			int bottomX = (int)Math.floor((plot.plotpos.x - 1) * multi);
-			int bottomZ = (int)Math.floor((plot.plotpos.z - 1) * multi);
+			int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
+			int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
 
-			Location pillar = new Location(plot.plotpos.w.MinecraftWorld, bottomX - 1, plot.plotpos.w.RoadHeight + 1, bottomZ - 1);
+			Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
 						
 			Block bsign = pillar.clone().add(-1, 0, 0).getBlock();
 			bsign.setType(Material.AIR);
@@ -647,7 +644,7 @@ public class PlotManager {
 			{
 				sign.setLine(0, PlotMe.caption("SignForSale"));
 				sign.setLine(1, PlotMe.caption("SignPrice"));
-				int tmpPrice = (int)Math.round(plot.customprice * 100);
+				int tmpPrice = (int)Math.round(plot.sellprice * 100);
 				sign.setLine(2, PlotMe.caption("SignPriceColor") + String.valueOf(tmpPrice / 100));
 				sign.setLine(3, "/plotme " + PlotMe.caption("CommandBuy"));
 				sign.update(true);
@@ -669,7 +666,7 @@ public class PlotManager {
 				{
 					sign.setLine(1, PlotMe.caption("SignCurrentBid"));
 					PlotAuctionBid highestBid = plot.auctionbids.get(0);
-					int tmpAmount = (int)Math.round(highestBid.bidamount * 100);
+					int tmpAmount = (int)Math.round(highestBid.getBidMoneyAmount() * 100);
 					String tmpAuctionLine = PlotMe.caption("SignCurrentBidColor") + Math.round(tmpAmount / 100);
 					if (tmpAuctionLine.length() < 16)
 					{
@@ -682,11 +679,11 @@ public class PlotManager {
 					String bname;
 					if (PlotMe.useDisplayNamesOnSigns)
 					{
-						bname = highestBid.biddisplayname;
+						bname = highestBid.getBidderDisplayName();
 					}
 					else
 					{
-						bname = highestBid.bidplayername;
+						bname = highestBid.getBidderRealPlayerName();
 					}
 					if (bname.length() < 16)
 					{
@@ -711,17 +708,20 @@ public class PlotManager {
 	
 	public static void removeOwnerSign(Plot plot)
 	{
-		Location bottom = getPlotBlockBottom(plot);
+		Location bottom = plot.getWorldMinBlockLocation();
 		
 		Location pillar = new Location(plot.getMinecraftWorld(), bottom.getX() - 1, plot.getPlotWorld().RoadHeight + 1, bottom.getZ() - 1);
 		
 		Block bsign = pillar.add(0, 0, -1).getBlock();
-		bsign.setType(Material.AIR);
+		if (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN)
+		{
+			bsign.setType(Material.AIR);
+		}
 	}
 	
 	public static void removeSellSign(Plot plot)
 	{
-		Location bottom = getPlotBlockBottom(plot);
+		Location bottom = plot.getWorldMinBlockLocation();
 		
 		Location pillar = new Location(plot.getMinecraftWorld(), bottom.getX() - 1, plot.getPlotWorld().RoadHeight + 1, bottom.getZ() - 1);
 		
@@ -734,17 +734,21 @@ public class PlotManager {
 	
 	public static void setBiome(Plot plot, Biome bio)
 	{
-		Location bottom = getPlotBlockBottom(plot);
-		Location top    = getPlotBlockTop(plot);
-		
-		int bottomX = bottom.getBlockX() - 1;
-		int bottomZ = bottom.getBlockZ() - 1;
-		int topX = top.getBlockX() + 1;
-		int topZ = top.getBlockZ() + 1;
-
-		for (int x = bottomX; x <= topX; x++)
+		if (plot == null || plot.getMinecraftWorld() == null || bio == null)
 		{
-			for (int z = bottomZ; z <= topZ; z++)
+			return;
+		}
+		
+		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		
+		int minX = locations.getLeft().getBlockX() - 1;
+		int minZ = locations.getLeft().getBlockZ() - 1;
+		int maxX = locations.getRight().getBlockX() + 1;
+		int maxZ = locations.getRight().getBlockZ() + 1;
+
+		for (int x = minX; x <= maxX; x++)
+		{
+			for (int z = minZ; z <= maxZ; z++)
 			{
 				plot.getMinecraftWorld().getBlockAt(x, 0, z).setBiome(bio);
 			}
@@ -758,351 +762,532 @@ public class PlotManager {
 	
 	public static void refreshPlotChunks(Plot plot)
 	{
-		if (plot.getPlotWorld() == null || plot.getMinecraftWorld() == null)
+		if (plot == null || plot.getMinecraftWorld() == null)
 		{
 			return;
 		}
 		
-		Location bottom = getPlotBlockBottom(plot);
-		Location top    = getPlotBlockTop(plot);
+		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
 		
-		int minChunkX = (int)Math.floor((double)bottom.getBlockX() / 16);
-		int minChunkZ = (int)Math.floor((double)bottom.getBlockZ() / 16);
-		int maxChunkX = (int)Math.floor((double)top.getBlockX() / 16);
-		int maxChunkZ = (int)Math.floor((double)top.getBlockZ() / 16);
+		int minChunkX = (int)Math.floor((double)locations.getLeft().getBlockX() / 16);
+		int minChunkZ = (int)Math.floor((double)locations.getLeft().getBlockZ() / 16);
+		int maxChunkX = (int)Math.ceil((double)locations.getRight().getBlockX() / 16);
+		int maxChunkZ = (int)Math.ceil((double)locations.getRight().getBlockZ() / 16);
 		
-		if (plot.getMinecraftWorld() != null)
+		for (int x = minChunkX; x <= maxChunkX; x++)
 		{
-			for (int x = minChunkX; x <= maxChunkX; x++)
+			for (int z = minChunkZ; z <= maxChunkZ; z++)
 			{
-				for (int z = minChunkZ; z <= maxChunkZ; z++)
-				{
-					plot.getMinecraftWorld().refreshChunk(x, z);
-				}
+				plot.getMinecraftWorld().refreshChunk(x, z);
 			}
 		}
+		
 	}
 	
-	public static void clear(Plot plot)
-	{
-		clear(plot);
-		
-		RemoveLWC(plot);
-		
-		//regen(plot);
-	}
 	
-	public static void clear(Location bottom, Location top)
+	public static void clear(Location loc1, Location loc2)
 	{
-		if (!bottom.getWorld().equals(top.getWorld()))
+		if (loc1 == null || loc2 == null || loc1.getWorld() == null || loc2.getWorld() == null || !loc1.getWorld().equals(loc2.getWorld()))
 		{
 			return;
 		}
 		
-		int bottomX = bottom.getBlockX();
-		int topX = top.getBlockX();
-		int bottomZ = bottom.getBlockZ();
-		int topZ = top.getBlockZ();
-		
-		World w = bottom.getWorld();
-		PlotWorld pwi = getPlotWorld(w);
-		
-		int minChunkX = (int)Math.floor((double)bottomX / 16);
-		int maxChunkX = (int)Math.floor((double)topX / 16);
-		int minChunkZ = (int)Math.floor((double)bottomZ / 16);
-		int maxChunkZ = (int)Math.floor((double)topZ / 16);
-
-		for (int cx = minChunkX; cx <= maxChunkX; cx++)
-		{			
-			for (int cz = minChunkZ; cz <= maxChunkZ; cz++)
-			{			
-				Chunk chunk = w.getChunkAt(cx, cz);
-				
-				for (Entity e : chunk.getEntities())
-				{
-					Location eloc = e.getLocation();
-					
-					if (!(e instanceof Player) && eloc.getBlockX() >= bottom.getBlockX() && eloc.getBlockX() <= top.getBlockX() &&
-						  eloc.getBlockZ() >= bottom.getBlockZ() && eloc.getBlockZ() <= top.getBlockZ())
-					{
-						e.remove();
-					}
-				}
-			}
-		}
-
-		for (int x = bottomX; x <= topX; x++)
-		{
-			for (int z = bottomZ; z <= topZ; z++)
-			{
-				Block block = new Location(w, x, 0, z).getBlock();
-				
-				block.setBiome(Biome.PLAINS);
-				
-				for (int y = w.getMaxHeight(); y >= 0; y--)
-				{
-					block = new Location(w, x, y, z).getBlock();
-					
-					BlockState state = block.getState();
-					
-					if(state instanceof InventoryHolder)
-					{
-						InventoryHolder holder = (InventoryHolder) state;
-						holder.getInventory().clear();
-					}
-					
-					
-					if (state instanceof Jukebox)
-					{
-						Jukebox jukebox = (Jukebox) state;
-						//Remove once they fix the NullPointerException
-						try
-						{
-							jukebox.setPlaying(Material.AIR);
-						}
-						catch(Exception e)
-						{
-							
-						}
-					}
-					
-										
-					if (y == 0)
-						block.setTypeId(pwi.BottomBlockId);
-					else if(y < pwi.RoadHeight)
-						block.setTypeId(pwi.PlotFillingBlockId);
-					else if(y == pwi.RoadHeight)
-						block.setTypeId(pwi.PlotFloorBlockId);
-					else
-					{
-						if(y == (pwi.RoadHeight + 1) && 
-								(x == bottomX - 1 || 
-								 x == topX + 1 ||
-								 z == bottomZ - 1 || 
-								 z == topZ + 1))
-						{
-							//block.setTypeId(plot1.plotpos.w.WallBlockId);
-						}
-						else
-						{
-							block.setTypeIdAndData(0, (byte) 0, false); //.setType(Material.AIR);
-						}
-					}
-				}
-			}
-		}
-		
-		adjustWall(bottom);
-	}
-	
-	public static void removePlot(Plot plot)
-	{
-		allPlots.remove(plot);
-		removeOwnerSign(plot);
-		removeSellSign(plot);
-	}
-		
-	public static void adjustWall(Location l)
-	{
-		World w = l.getWorld();
-		PlotWorld pwi = getPlotWorld(w);
-		Plot plot = pwi.getPlotAtBlockPosition(l);
-		
-		List<String> wallids = new ArrayList<String>();
-		
-		String auctionwallid = pwi.AuctionWallBlockId;
-		String forsalewallid = pwi.ForSaleWallBlockId;
-		
-		if (plot.isprotected)
-		{
-			wallids.add(pwi.ProtectedWallBlockId);
-		}
-		if (plot.isauctionned && !wallids.contains(auctionwallid))
-		{
-			wallids.add(auctionwallid);
-		}
-		if (plot.isforsale && !wallids.contains(forsalewallid))
-		{
-			wallids.add(forsalewallid);
-		}
-		if (wallids.size() == 0){
-			wallids.add(String.valueOf(pwi.WallBlockId + ":" + pwi.WallBlockValue));
-		}
-		
-		int ctr = 0;
-			
-		Location bottom = getPlotBlockBottom(plot);
-		Location top = getPlotBlockTop(plot);
-		
-		int x;
-		int z;
-		
-		String currentblockid;
-		Block block;
-		
-		for (x = bottom.getBlockX() - 1; x < top.getBlockX() + 1; x++)
-		{
-			z = bottom.getBlockZ() - 1;
-			currentblockid = wallids.get(ctr);
-			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pwi.RoadHeight + 1, z);
-			setWall(block, currentblockid);
-		}
-		
-		for (z = bottom.getBlockZ() - 1; z < top.getBlockZ() + 1; z++)
-		{
-			x = top.getBlockX() + 1;
-			currentblockid = wallids.get(ctr);
-			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pwi.RoadHeight + 1, z);
-			setWall(block, currentblockid);
-		}
-		
-		for (x = top.getBlockX() + 1; x > bottom.getBlockX() - 1; x--)
-		{
-			z = top.getBlockZ() + 1;
-			currentblockid = wallids.get(ctr);
-			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pwi.RoadHeight + 1, z);
-			setWall(block, currentblockid);
-		}
-		
-		for (z = top.getBlockZ() + 1; z > bottom.getBlockZ() - 1; z--)
-		{
-			x = bottom.getBlockX() - 1;
-			currentblockid = wallids.get(ctr);
-			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = w.getBlockAt(x, pwi.RoadHeight + 1, z);
-			setWall(block, currentblockid);
-		}
-	}
-	
-	
-	private static void setWall(Block block, String currentblockid)
-	{
-		if (block == null || currentblockid == null)
-		{
-			return;
-		}
-		
-		int blockId;
-		byte blockData = 0;
-		PlotWorld pwi = plotWorlds.get(block.getWorld());
-		
+		World mw = loc1.getWorld();
+		PlotWorld pwi = getPlotWorld(mw);
 		if (pwi == null)
 		{
 			return;
 		}
 		
-		if(currentblockid.contains(":"))
-		{
-			try
+		Location minLocation = new Location(mw, Math.min(loc1.getX(), loc2.getX()), Math.min(loc1.getY(), loc2.getY()), Math.min(loc1.getZ(), loc2.getZ()));
+		Location maxLocation = new Location(mw, Math.max(loc1.getX(), loc2.getX()), Math.max(loc1.getY(), loc2.getY()), Math.max(loc1.getZ(), loc2.getZ()));
+
+		int minX = minLocation.getBlockX();
+		int minZ = minLocation.getBlockZ();
+		int maxX = maxLocation.getBlockX();
+		int maxZ = maxLocation.getBlockZ();
+
+		int minChunkX = (int)Math.floor((double)minX / 16);
+		int minChunkZ = (int)Math.floor((double)minZ / 16);
+		int maxChunkX = (int)Math.ceil((double)maxX / 16);
+		int maxChunkZ = (int)Math.ceil((double)maxZ / 16);
+
+		for (int cx = minChunkX; cx <= maxChunkX; cx++)
+		{			
+			for (int cz = minChunkZ; cz <= maxChunkZ; cz++)
 			{
-				blockId = Integer.parseInt(currentblockid.substring(0, currentblockid.indexOf(":")));
-				blockData = Byte.parseByte(currentblockid.substring(currentblockid.indexOf(":") + 1));
-			}
-			catch(NumberFormatException e)
-			{
-				blockId = pwi.WallBlockId;
-				blockData = pwi.WallBlockValue;
-			}
-		}
-		else
-		{
-			try
-			{
-				blockId = Integer.parseInt(currentblockid);
-			}
-			catch(NumberFormatException e)
-			{
-				blockId = pwi.WallBlockId;
-			}
-		}
-		
-		block.setTypeIdAndData(blockId, blockData, true);
-	}
-	
-	
-	public static boolean isBlockInPlot(Plot plot, Location blocklocation)
-	{
-		if (!plot.getMinecraftWorld().equals(blocklocation.getWorld()))
-		{
-			return false;
-		}
-		
-		Location bottom = getPlotBlockBottom(plot);
-		Location top = getPlotBlockTop(plot);
-		
-		return blocklocation.getBlockX() >= bottom.getBlockX() && blocklocation.getBlockX() <= top.getBlockX()
-				&& blocklocation.getBlockZ() >= bottom.getBlockZ() && blocklocation.getBlockZ() <= top.getBlockZ();
-	}
-	
-	public static boolean movePlot(Plot plotFrom, Plot plotTo)
-	{
-		if (plotFrom.getMinecraftWorld() == null || plotTo.getMinecraftWorld() == null || !plotFrom.getMinecraftWorld().equals(plotTo.getMinecraftWorld()))
-		{
-			return false;
-		}
-		
-		Location plot1Bottom = getPlotBlockBottom(plotFrom);
-		Location plot2Bottom = getPlotBlockBottom(plotTo);
-		Location plot1Top = getPlotBlockTop(plotFrom);
-		
-		int distanceX = plot1Bottom.getBlockX() - plot2Bottom.getBlockX();
-		int distanceZ = plot1Bottom.getBlockZ() - plot2Bottom.getBlockZ();
-		
-		for (int x = plot1Bottom.getBlockX(); x <= plot1Top.getBlockX(); x++)
-		{
-			for (int z = plot1Bottom.getBlockZ(); z <= plot1Top.getBlockZ(); z++)
-			{
-				Block plot1Block = plotFrom.getMinecraftWorld().getBlockAt(new Location(plotFrom.getMinecraftWorld(), x, 0, z));
-				Block plot2Block = plotTo.getMinecraftWorld().getBlockAt(new Location(plotTo.getMinecraftWorld(), x - distanceX, 0, z - distanceZ));
-				
-				String plot1Biome = plot1Block.getBiome().name();
-				String plot2Biome = plot2Block.getBiome().name();
-				
-				plot1Block.setBiome(Biome.valueOf(plot2Biome));
-				plot2Block.setBiome(Biome.valueOf(plot1Biome));
-				
-				for (int y = 0; y < plotTo.getMinecraftWorld().getMaxHeight() ; y++)
+				Chunk chunk = mw.getChunkAt(cx, cz);
+				Entity[] entities = chunk.getEntities();
+				if (entities.length > 0)
 				{
-					plot1Block = plotFrom.getMinecraftWorld().getBlockAt(new Location(plotFrom.getMinecraftWorld(), x, y, z));
-					int plot1Type = plot1Block.getTypeId();
-					byte plot1Data = plot1Block.getData();
-					
-					plot2Block = plotTo.getMinecraftWorld().getBlockAt(new Location(plotTo.getMinecraftWorld(), x - distanceX, y, z - distanceZ));
-					int plot2Type = plot2Block.getTypeId();
-					byte plot2Data = plot2Block.getData();
-					
-					//plot1Block.setTypeId(plot2Type);
-					plot1Block.setTypeIdAndData(plot2Type, plot2Data, false);
-					plot1Block.setData(plot2Data);
-					
-					//net.minecraft.server.World world = ((org.bukkit.craftbukkit.CraftWorld) w).getHandle();
-					//world.setRawTypeIdAndData(plot1Block.getX(), plot1Block.getY(), plot1Block.getZ(), plot2Type, plot2Data);
-					
-					
-					
-					//plot2Block.setTypeId(plot1Type);
-					plot2Block.setTypeIdAndData(plot1Type, plot1Data, false);
-					plot2Block.setData(plot1Data);
-					//world.setRawTypeIdAndData(plot2Block.getX(), plot2Block.getY(), plot2Block.getZ(), plot1Type, plot1Data);
+					for (Entity entity : entities)
+					{
+						Location entityloc = entity.getLocation();
+						if (!(entity instanceof Player) && entityloc.getBlockX() >= minLocation.getBlockX() && entityloc.getBlockX() <= maxLocation.getBlockX() &&
+														   entityloc.getBlockZ() >= minLocation.getBlockZ() && entityloc.getBlockZ() <= maxLocation.getBlockZ())
+						{
+							entity.remove();
+						}
+					}
 				}
 			}
-			
+		}
+
+		for (int x = minX; x <= maxX; x++)
+		{
+			for (int z = minZ; z <= maxZ; z++)
+			{
+				Block block = new Location(minLocation.getWorld(), x, 0, z).getBlock();
+				block.setBiome(Biome.PLAINS);
+				
+				for (int y = minLocation.getWorld().getMaxHeight(); y >= 0; y--)
+				{
+					block = new Location(mw, x, y, z).getBlock();
+					BlockState bstate = block.getState();
+					if (bstate instanceof InventoryHolder)
+					{
+						InventoryHolder holder = (InventoryHolder)bstate;
+						holder.getInventory().clear();
+					}
+
+					if (bstate instanceof Jukebox)
+					{
+						((Jukebox)bstate).setPlaying(null);
+					}
+					
+					if (y == 0)
+					{
+						block.setTypeId(pwi.BottomBlockId);
+					}
+					else if (y < pwi.RoadHeight)
+					{
+						block.setTypeId(pwi.PlotFillingBlockId);
+					}
+					else if (y == pwi.RoadHeight)
+					{
+						block.setTypeId(pwi.PlotFloorBlockId);
+					}
+					else
+					{
+						if (y > pwi.RoadHeight + 1 && 
+								 (x < minX - 1 || 
+								  x > maxX + 1 ||
+								  z < minZ - 1 || 
+								  z > maxZ + 1))
+						{
+							block.setTypeIdAndData(0, (byte)0, false);
+						}
+					}
+				}
+			}
+		}
+		adjustWall(minLocation);
+	}
+	
+	public static void clearPlot(Plot plot)
+	{
+		Pair<Location, Location> locations = plot.getPlotWorld().getMinMaxBlockLocation(plot);
+		removeOwnerSign(plot);
+		removeSellSign(plot);
+		clear(locations.getLeft(), locations.getRight());
+		
+		removePlotLWCProtections(plot);
+
+		//regen(plot);
+	}
+	
+	public static void removePlot(Plot plot)
+	{
+		clearPlot(plot);
+		PlotMeSqlManager.removePlot(plot);
+		allPlots.remove(plot);
+	}
+		
+	public static void adjustWall(Location loc)
+	{
+		if (loc == null)
+		{
+			return;
+		}
+
+		PlotWorld pwi = plotWorlds.get(loc.getWorld());
+		if (pwi == null)
+		{
+			return;
+		}
+
+		List<Pair<Short, Byte>> wallids = new ArrayList<Pair<Short, Byte>>();
+		
+		Plot plot = pwi.getPlotAtBlockPosition(loc);
+		if (plot != null)
+		{
+			if (plot.isprotected)
+			{
+				wallids.add(new Pair<Short, Byte>(pwi.ProtectedWallBlockId, null));
+			}
+			if (plot.isauctionned)
+			{
+				wallids.add(new Pair<Short, Byte>(pwi.AuctionWallBlockId, null));
+			}
+			if (plot.isforsale)
+			{
+				wallids.add(new Pair<Short, Byte>(pwi.ForSaleWallBlockId, null));
+			}
 		}
 		
-		removeOwnerSign(plotFrom);
-		removeSellSign(plotFrom);
+		if (wallids.size() == 0){
+			wallids.add(new Pair<Short, Byte>(pwi.WallBlockId, pwi.WallBlockValue));
+		}
 		
-		PlotMeSqlManager.updatePlotData(plotFrom, "xpos", plotTo.getPlotX());
-		PlotMeSqlManager.updatePlotData(plotFrom, "zpos", plotTo.getPlotZ());
+		int ctr = 0;
+			
+		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		
+		int x;
+		int z;
+		
+		Pair<Short, Byte> currentblockid;
+		Block block;
+		
+		for (x = locations.getLeft().getBlockX() - 1; x < locations.getRight().getBlockX() + 1; x++)
+		{
+			z = locations.getLeft().getBlockZ() - 1;
+			currentblockid = wallids.get(ctr);
+			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
+			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			setWall(block, currentblockid);
+		}
+		
+		for (z = locations.getLeft().getBlockZ() - 1; z < locations.getRight().getBlockZ() + 1; z++)
+		{
+			x = locations.getRight().getBlockX() + 1;
+			currentblockid = wallids.get(ctr);
+			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
+			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			setWall(block, currentblockid);
+		}
+		
+		for (x = locations.getRight().getBlockX() + 1; x > locations.getLeft().getBlockX() - 1; x--)
+		{
+			z = locations.getRight().getBlockZ() + 1;
+			currentblockid = wallids.get(ctr);
+			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
+			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			setWall(block, currentblockid);
+		}
+		
+		for (z = locations.getRight().getBlockZ() + 1; z > locations.getLeft().getBlockZ() - 1; z--)
+		{
+			x = locations.getLeft().getBlockX() - 1;
+			currentblockid = wallids.get(ctr);
+			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
+			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			setWall(block, currentblockid);
+		}
+	}
+	
+	
+	private static void setWall(Block block, Pair<Short, Byte> blockIdData)
+	{
+		if (block == null)
+		{
+			return;
+		}
+		
+		PlotWorld pwi = plotWorlds.get(block.getWorld());
+		if (pwi == null)
+		{
+			return;
+		}
+		
+		if (blockIdData != null)
+		{
+			if (blockIdData.getLeft() != null && blockIdData.getRight() != null)
+			{
+				block.setTypeIdAndData(blockIdData.getLeft(), blockIdData.getRight(), true);
+				return;
+			}
+			else if (blockIdData.getRight() == null)
+			{
+				block.setTypeId(blockIdData.getLeft());
+				return;
+			}
+		}
+		block.setTypeIdAndData(pwi.WallBlockId, pwi.WallBlockValue, true);
+	}
+	
+	
+	public static boolean isBlockInPlot(Plot plot, Location blockLocation)
+	{
+		if (!plot.getMinecraftWorld().equals(blockLocation.getWorld()))
+		{
+			return false;
+		}
+		
+		Pair<Location, Location> locations = plot.getPlotWorld().getMinMaxBlockLocation(plot);
+		
+		if (blockLocation.getBlockX() >= locations.getLeft().getBlockX() && blockLocation.getBlockX() <= locations.getRight().getBlockX()
+		 && blockLocation.getBlockZ() >= locations.getLeft().getBlockZ() && blockLocation.getBlockZ() <= locations.getRight().getBlockZ())
+		{
+			return true;
+		}
+		return false;
+	}
 
-		setOwnerSign(plotFrom);
-		setSellSign(plotFrom);
-		setOwnerSign(plotTo);
-		setSellSign(plotTo);
-				
+	/**
+	 * TODO: Split some loops to methods
+	 */
+	
+	public static boolean movePlot(Plot plot1, Plot plot2)
+	{
+		if (plot1 == null || plot2 == null || plot1.getMinecraftWorld() == null || plot2.getMinecraftWorld() == null)
+		{
+			return false;
+		}
+		
+		PlotWorld plot1PlotWorld = plot1.getPlotWorld();
+		PlotWorld plot2PlotWorld = plot2.getPlotWorld();
+		
+		if (plot1PlotWorld.PlotSize > plot2PlotWorld.PlotSize || plot2PlotWorld.PlotSize > plot1PlotWorld.PlotSize)
+		{
+			return false;
+		}
+		
+		World plot1MinecraftWorld = plot1.getMinecraftWorld();
+		World plot2MinecraftWorld = plot2.getMinecraftWorld();
+
+		Pair<Location, Location> plot1Locs = plot1.getWorldMinMaxBlockLocations();
+		Pair<Location, Location> plot2Locs = plot2.getWorldMinMaxBlockLocations();
+		
+		int x;
+		int y;
+		int z;
+		
+		int minX1 = plot1Locs.getLeft().getBlockX();
+		int minZ1 = plot1Locs.getLeft().getBlockZ();
+		int maxX1 = plot1Locs.getRight().getBlockX();
+		int maxZ1 = plot1Locs.getRight().getBlockZ();
+		
+		int minX2 = plot2Locs.getLeft().getBlockX();
+		int minZ2 = plot2Locs.getLeft().getBlockZ();
+		int maxX2 = plot2Locs.getRight().getBlockX();
+		int maxZ2 = plot2Locs.getRight().getBlockZ();
+
+		int maxDeltaX = Math.max((maxX1 - minX1), (maxX2 - minX2));
+		int maxDeltaZ = Math.max((maxZ1 - minZ1), (maxZ2 - minZ2));
+		int maxDeltaY = 1;
+		
+		for (x = minX1; x <= maxX1; x++)
+		{
+			for (z = minZ1; z <= maxZ1; z++)
+			{
+				y = plot1MinecraftWorld.getHighestBlockYAt(x, z);
+				if (y > maxDeltaY)
+				{
+					if (y > plot2MinecraftWorld.getMaxHeight())
+					{
+						return false;
+					}
+					maxDeltaY = y;
+				}
+			}
+		}
+		
+		for (x = minX2; x <= maxX2; x++)
+		{
+			for (z = minZ2; z <= maxZ2; z++)
+			{
+				y = plot2MinecraftWorld.getHighestBlockYAt(x, z);
+				if (y > maxDeltaY)
+				{
+					if (y > plot1MinecraftWorld.getMaxHeight())
+					{
+						return false;
+					}
+					maxDeltaY = y;
+				}
+			}
+		}
+		
+		int addc1 = 0;
+		if (plot2PlotWorld.PlotSize > plot1PlotWorld.PlotSize)
+		{
+			addc1 = (int)Math.floor((plot2PlotWorld.PlotSize - plot1PlotWorld.PlotSize) / 2);
+		}
+		
+		int addc2 = 0;
+		if (plot1PlotWorld.PlotSize > plot2PlotWorld.PlotSize)
+		{
+			addc2 = (int)Math.floor((plot1PlotWorld.PlotSize - plot2PlotWorld.PlotSize) / 2);
+		}
+
+		List<Entity> tempEntities1 = new ArrayList<Entity>();
+		List<Entity> tempEntities2 = new ArrayList<Entity>();
+
+		Block block1;
+		Biome biome1;
+		BlockState blockState1;
+		
+		Block block2;
+		Biome biome2;
+		BlockState blockState2;
+
+		// Remove signs
+		
+		removeOwnerSign(plot1);
+		removeSellSign(plot1);
+		
+		// 
+		
+		removeOwnerSign(plot2);
+		removeSellSign(plot2);
+		
+		// Remove protections
+		
+		removePlotLWCProtections(plot1);
+		removePlotLWCProtections(plot2);
+		
+		// Save entities
+		
+		int cx;
+		int cz;
+		
+		int minChunkX;
+		int maxChunkX;
+		int minChunkZ;
+		int maxChunkZ;
+		
+		minChunkX = (int)Math.floor((double)minX1 / 16);
+		maxChunkX = (int)Math.ceil((double)maxX1 / 16);
+		minChunkZ = (int)Math.floor((double)minZ1 / 16);
+		maxChunkZ = (int)Math.ceil((double)maxZ1 / 16);
+
+		for (cx = minChunkX; cx <= maxChunkX; cx++)
+		{			
+			for (cz = minChunkZ; cz <= maxChunkZ; cz++)
+			{
+				Chunk chunk = plot1MinecraftWorld.getChunkAt(cx, cz);
+				if (chunk != null)
+				{
+					Entity[] entities = chunk.getEntities();
+					if (entities.length > 0)
+					{
+						for (Entity entity : entities)
+						{
+							Location entityloc = entity.getLocation();
+							if (!(entity instanceof Player) && entityloc.getBlockX() >= minX1 && entityloc.getBlockX() <= maxX1 &&
+															   entityloc.getBlockZ() >= minZ1 && entityloc.getBlockZ() <= maxZ1)
+							{
+								tempEntities1.add(entity);
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		//
+
+		minChunkX = (int)Math.floor((double)minX2 / 16);
+		maxChunkX = (int)Math.ceil((double)maxX2 / 16);
+		minChunkZ = (int)Math.floor((double)minZ2 / 16);
+		maxChunkZ = (int)Math.ceil((double)maxZ2 / 16);
+		
+		for (cx = minChunkX; cx <= maxChunkX; cx++)
+		{			
+			for (cz = minChunkZ; cz <= maxChunkZ; cz++)
+			{
+				Chunk chunk = plot2MinecraftWorld.getChunkAt(cx, cz);
+				if (chunk != null)
+				{
+					Entity[] entities = chunk.getEntities();
+					if (entities.length > 0)
+					{
+						for (Entity entity : entities)
+						{
+							Location entityloc = entity.getLocation();
+							if (!(entity instanceof Player) && entityloc.getBlockX() >= minX2 && entityloc.getBlockX() <= maxX2 &&
+															   entityloc.getBlockZ() >= minZ2 && entityloc.getBlockZ() <= maxZ2)
+							{
+								tempEntities2.add(entity);
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		
+		// Move plot 1 to plot 2 and plot 2 to plot 1
+		for (x = 0; x <= maxDeltaX; x++)
+		{
+			for (z = 0; z <= maxDeltaZ; z++)
+			{
+				for (y = 1; y <= maxDeltaY; y++)
+				{
+					if (minX1 + x <= maxX1 && minZ1 + z <= maxZ2)
+					{
+						block1 = plot1.getMinecraftWorld().getBlockAt(minX1 + x, y, minZ1 + z);
+						biome1 = block1.getBiome();
+						blockState1 = block1.getState();
+						block1.setType(Material.AIR);
+					}
+					else
+					{
+						block1 = null;
+						biome1 = null;
+						blockState1 = null;
+					}
+					if (minX2 + x <= maxX2 && minZ2 + z <= maxZ2)
+					{
+						block2 = plot2.getMinecraftWorld().getBlockAt(minX2 + x, y, minZ2 + z);
+						biome2 = block2.getBiome();
+						blockState2 = block2.getState();
+						block2.setType(Material.AIR);
+					}
+					else
+					{
+						block2 = null;
+						biome2 = null;
+						blockState2 = null;
+					}
+					if (block1 != null && block2 != null)
+					{
+						block2.setBiome(biome1);
+						block2.setTypeIdAndData(blockState1.getTypeId(), blockState1.getRawData(), false);
+						
+						block1.setBiome(biome2);
+						block1.setTypeIdAndData(blockState2.getTypeId(), blockState2.getRawData(), false);
+					}
+				}
+			}
+		}
+		
+		Iterator<Entity> entityIterator;
+		Entity tmpEntity;
+		Location tmpLoc;
+		
+		entityIterator = tempEntities1.iterator();
+		while (entityIterator.hasNext())
+		{
+			tmpEntity = entityIterator.next();
+			tmpLoc = tmpEntity.getLocation();
+			tmpEntity.teleport(new Location(plot2MinecraftWorld, (tmpLoc.getX() - minX1) + minX2, tmpLoc.getY(), (tmpLoc.getZ() - minZ1) + minZ2));
+		}
+		
+		entityIterator = tempEntities2.iterator();
+		while (entityIterator.hasNext())
+		{
+			tmpEntity = entityIterator.next();
+			tmpLoc = tmpEntity.getLocation();
+			tmpEntity.teleport(new Location(plot1MinecraftWorld, (tmpLoc.getX() - minX2) + minX1, tmpLoc.getY(), (tmpLoc.getZ() - minZ2) + minZ1));
+		}
+
+		PlotMeSqlManager.updatePlotData(plot1, "xpos", plot2.getPlotX());
+		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotZ());
+		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotZ());
+		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotZ());
+
 		return true;
 	}
 
@@ -1195,47 +1380,57 @@ public class PlotManager {
 		return false;
 	}
 	
-	public static void deleteNextExpired()
+	public static void scanExpirationsExpensive()
 	{
-		if (expiredPlots == null || expiredPlots.size()<=0)
-		{
-			return;
-		}
-		int expireDiff;
-		Plot expirePlot;
-		Collections.sort(expiredPlots, new PlotExpiredComparator());
-		do
-		{
-			expirePlot = expiredPlots.get(0);
-			expireDiff = Math.round(expirePlot.getExpiration() - (System.currentTimeMillis()/1000));
-			if (expireDiff<=0)
-			{
-				removePlot(expirePlot);
-				removeOwnerSign(expirePlot);
-				removeSellSign(expirePlot);
-				expiredPlots.remove(0);
-			}
-		} while (expireDiff<=0 && expiredPlots.size()>0);
-		if (expiredPlots.size()>0)
-		{
-			nextExpirationCheck = expiredPlots.get(0).getExpiration();
-		}
-	}
+		expiredPlots.clear();
 
-	private static void removePlot(Plot expirePlot) {
-		// TODO Auto-generated method stub
+		long currentTime = Math.round(System.currentTimeMillis() / 1000);
+
+		Iterator<Plot> expireIterator = allPlots.iterator();
+		Plot testplot;
 		
+		while (expireIterator.hasNext())
+		{
+			testplot = expireIterator.next();
+			if (!testplot.isprotected && testplot.finisheddate <= 0 && testplot.expireddate > 0 && testplot.expireddate <= currentTime)
+			{
+				PlotManager.expiredPlots.add(testplot);
+
+			}
+		}
+		
+		if (PlotManager.expiredPlots.size() <= 0)
+		{
+			nextExpiredPlotsCheck = null;
+			expiredPlotsCheckTaskId = null;
+		}
+		else
+		{
+			Collections.sort(expiredPlots, new ExpiredPlotsComparator());
+			testplot = expiredPlots.get(0);
+			if (testplot.getExpiration() > 0 && testplot.getExpiration() < PlotManager.nextExpiredPlotsCheck)
+			{
+				PlotManager.nextExpiredPlotsCheck = testplot.getExpiration();
+			}
+		}
 	}
+	
 
 	public static void regen(Plot plot, CommandSender sender)
 	{
-		Location bottom = getPlotBlockBottom(plot);
-		Location top    = getPlotBlockTop(plot);
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return;
+		}
 		
-		int minChunkX = (int) Math.floor((double)bottom.getBlockX() / 16);
-		int minChunkZ = (int) Math.floor((double)bottom.getBlockZ() / 16);
-		int maxChunkX = (int) Math.floor((double)top.getBlockX() / 16);
-		int maxChunkZ = (int) Math.floor((double)top.getBlockZ() / 16);
+		World mw = plot.getMinecraftWorld();
+		
+		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		
+		int minChunkX = (int)Math.floor((double)locations.getLeft().getBlockX() / 16);
+		int minChunkZ = (int)Math.floor((double)locations.getLeft().getBlockZ() / 16);
+		int maxChunkX = (int)Math.ceil((double)locations.getRight().getBlockX() / 16);
+		int maxChunkZ = (int)Math.ceil((double)locations.getRight().getBlockZ() / 16);
 		
 		HashMap<Location, Biome> biomes = new HashMap<Location, Biome>();
 		
@@ -1246,18 +1441,17 @@ public class PlotManager {
 			{	
 				int zz = cz << 4;
 				BlockState[][][] blocks = new BlockState[16][16][plot.getMinecraftWorld().getMaxHeight()];
-				//Biome[][] biomes = new Biome[16][16];
 				for (int x = 0; x < 16; x++)
 				{
 					for (int z = 0; z < 16; z++)
 					{
-						biomes.put(new Location(plot.getMinecraftWorld(), x + xx, 0, z + zz), plot.getMinecraftWorld().getBiome(x + xx, z + zz));
-						for (int y = 0; y < plot.getMinecraftWorld().getMaxHeight(); y++)
+						biomes.put(new Location(mw, x + xx, 0, z + zz), mw.getBiome(x + xx, z + zz));
+						for (int y = 0; y < mw.getHighestBlockYAt(x, z); y++)
 						{
 							Block block = plot.getMinecraftWorld().getBlockAt(x + xx, y, z + zz);
 							blocks[x][z][y] = block.getState();
 							
-							if(PlotMe.usinglwc)
+							if (PlotMe.usinglwc)
 							{
 								LWC lwc = com.griefcraft.lwc.LWC.getInstance();
 								Material material = block.getType();
@@ -1268,27 +1462,9 @@ public class PlotManager {
 								{
 									Protection protection = lwc.findProtection(block);
 
-									if(protection != null)
+									if (protection != null)
 									{
 										protection.remove();
-										
-										/*if(sender instanceof Player)
-										{
-											Player p = (Player) sender;
-											boolean canAccess = lwc.canAccessProtection(p, protection);
-									        boolean canAdmin = lwc.canAdminProtection(p, protection);
-											
-											try 
-											{
-									            LWCProtectionDestroyEvent evt = new LWCProtectionDestroyEvent(p, protection, LWCProtectionDestroyEvent.Method.BLOCK_DESTRUCTION, canAccess, canAdmin);
-									            lwc.getModuleLoader().dispatchEvent(evt);
-									        } 
-											catch (Exception e) 
-									        {
-									            lwc.sendLocale(p, "protection.internalerror", "id", "BLOCK_BREAK");
-									            e.printStackTrace();
-									        }
-										}*/
 									}
 								}
 							}
@@ -1300,6 +1476,7 @@ public class PlotManager {
 				{
 					plot.getMinecraftWorld().regenerateChunk(cx, cz);
 		        } catch (Throwable t) {
+		        	PlotMe.logger.severe(PlotMe.PREFIX + "ERROR while regenerating chunk at chunk position " + String.valueOf(cx) + "," + String.valueOf(cz) + " :");
 		            t.printStackTrace();
 		        }
 				
@@ -1309,15 +1486,12 @@ public class PlotManager {
 					{						
 						for (int y = 0; y < plot.getMinecraftWorld().getMaxHeight(); y++)
 						{
-							if ((x + xx) < bottom.getX() || (x + xx) > top.getX() || (z + zz) < bottom.getZ() || (z + zz) > top.getZ())
+							if ((x + xx) < locations.getLeft().getX() || (x + xx) > locations.getRight().getX() || (z + zz) < locations.getLeft().getZ() || (z + zz) > locations.getRight().getZ())
 							{
 								Block newblock = plot.getMinecraftWorld().getBlockAt(x + xx, y, z + zz);
 								BlockState oldblock = blocks[x][z][y];
-								
 								newblock.setTypeIdAndData(oldblock.getTypeId(), oldblock.getRawData(), false);
 								oldblock.update();
-								
-								//blocks[x][z][y].update(true);
 							}
 						}
 					}
@@ -1325,55 +1499,68 @@ public class PlotManager {
 			}
 		}
 		
-		for(Location loc : biomes.keySet())
+		for (Location loc : biomes.keySet())
 		{
 			int x = loc.getBlockX();
 			int z = loc.getBlockX();
-			
 			plot.getMinecraftWorld().setBiome(x, z, biomes.get(loc));
 		}
-		
-		//refreshPlotChunks(w, plot);
+
+		refreshPlotChunks(plot);
 	}
 	
 	public static Location getPlotHome(Plot plot)
 	{
-		if (plot.getMinecraftWorld() != null)
+		Location hl = null;
+		
+		if (plot != null && isPlotWorld(plot.getMinecraftWorld()))
 		{
-			Location hl = plot.getPlotWorld().getCenterLocation(plot);
-			if (hl != null)
-			{
-				return hl;
-			}
+			hl = plot.getPlotWorld().getCenterLocation(plot).add(0, 3, 0);
 		}
-		return plot.getMinecraftWorld().getSpawnLocation();
+		else
+		{
+			hl = plot.getMinecraftWorld().getSpawnLocation();
+		}
+
+		return PlotMe.getAirSpawnPosition(hl);
 	}
 	
-	public static void RemoveLWC(final Plot plot)
+	public static void removePlotLWCProtections(final Plot plot)
 	{
-		if (PlotMe.usinglwc)
+		if (!PlotMe.usinglwc || plot == null || plot.getMinecraftWorld() == null)
 		{
-			Location bottom = getPlotBlockBottom(plot);
-			Location top    = getPlotBlockTop(plot);
-			final int x1 = bottom.getBlockX();
-			final int y1 = bottom.getBlockY();
-	    	final int z1 = bottom.getBlockZ();
-	    	final int x2 = top.getBlockX();
-	    	final int y2 = top.getBlockY();
-	    	final int z2 = top.getBlockZ();
-	    	
-			Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new Runnable() 
-			{	
-				public void run() 
-				{
-					LWC lwc = com.griefcraft.lwc.LWC.getInstance();
-					List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.plotpos.w.MinecraftWorld.getName(), x1, x2, y1, y2, z1, z2);
+			return;
+		}
 
-					for (Protection protection : protections) {
-					    protection.remove();
+		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+
+		final int x1 = locations.getLeft().getBlockX();
+		final int y1 = locations.getLeft().getBlockY();
+    	final int z1 = locations.getLeft().getBlockZ();
+    	final int x2 = locations.getRight().getBlockX();
+    	final int y2 = locations.getRight().getBlockY();
+    	final int z2 = locations.getRight().getBlockZ();
+    	
+		Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new Runnable() 
+		{	
+			public void run() 
+			{
+				LWC lwc = com.griefcraft.lwc.LWC.getInstance();
+				List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.getMinecraftWorld().getName(), x1, x2, y1, y2, z1, z2);
+				if (protections != null && protections.size()>0)
+				{
+					Protection tmpp;
+					Iterator<Protection> protectionIterator = protections.iterator();
+					while (protectionIterator.hasNext())
+					{
+						tmpp = protectionIterator.next();
+						if (tmpp != null)
+						{
+							tmpp.remove();
+						}
 					}
 				}
-			});
-	    }
+			}
+		});
 	}
 }

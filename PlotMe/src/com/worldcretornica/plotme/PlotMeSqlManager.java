@@ -12,6 +12,8 @@ import java.sql.Statement;
 
 import org.bukkit.Location;
 
+import com.worldcretornica.plotme.utils.Jakky89Properties;
+
 
 
 public class PlotMeSqlManager {
@@ -212,7 +214,7 @@ public class PlotMeSqlManager {
 												 "ON plotme_players.id=plotme_plots.owner " +
 												 "INNER JOIN plotme_worlds " +
 												 "ON plotme_worlds.id=plotme_plots.world " +
-												 "WHERE world=" + String.valueOf(plotWorld.id) + " " +
+												 "WHERE world=" + String.valueOf(plotWorld.getId()) + " " +
 												 		"AND (xpos BETWEEN "+String.valueOf(centerX-range)+" AND "+String.valueOf(centerX+range)+") " +
 												 		"AND (zpos BETWEEN "+String.valueOf(centerZ-range)+" AND "+String.valueOf(centerZ+range)+")");
 			while (setPlots.next()) 
@@ -448,7 +450,7 @@ public class PlotMeSqlManager {
     {
         Connection con = null;
         PreparedStatement ps = null;
-        PlotProperties desero = null;
+        Jakky89Properties desero = null;
     	
         try
         {
@@ -469,7 +471,7 @@ public class PlotMeSqlManager {
     		    	oin = new ObjectInputStream(new ByteArrayInputStream(buf));
     		    }
 				try {
-					desero = (PlotProperties)oin.readObject();
+					desero = (Jakky89Properties)oin.readObject();
 				} catch (ClassNotFoundException ex) {
 		        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object!");
 					PlotMe.logger.severe("  " + ex.getMessage());
