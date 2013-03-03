@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.block.Biome;
 
 import com.worldcretornica.plotme.utils.Jakky89Properties;
@@ -201,23 +202,196 @@ public class PlotMeSqlManager {
 		return false;
     }
     
+    public static PlotWorld getPlotWorld(World bukkitWorld)
+    {
+    	Connection con = getConnection();
+    	if (con == null)
+    	{
+    		return null;
+    	}
+
+    	PreparedStatement st = null;
+   	    ResultSet rs = null;
+   	    
+        try {
+            Integer worldId = -1;
+            st = con.prepareStatement("SELECT id, worldname FROM plotme_worlds WHERE worldname=? LIMIT 2");
+            st.setString(1, bukkitWorld.getName());
+            st.executeQuery();
+            rs = st.getResultSet();
+            if (rs.next())
+            {
+            	worldId = rs.getInt(1);
+            }
+            else
+            {
+	            st = con.prepareStatement("INSERT INTO " + PlotMe.databasePrefix + "plotme_worlds (worldname) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+	            st.setString(1, bukkitWorld.getName());
+	            if (st.executeUpdate() != 1) {
+	                return null;
+	            }
+	            rs = st.getGeneratedKeys();
+	            worldId = rs.getInt(1);
+	            if (rs.next()) {
+	            	worldId = rs.getInt(1);
+	            }
+            }
+            if (worldId != null && worldId > 0)
+            {
+                // error when we found more than one world with that name (should normally never happen)
+                if (rs.next())
+                {
+                	return null;
+                }
+                return new PlotWorld(worldId, bukkitWorld);
+            }
+            return null;
+        }
+        catch (SQLException ex)
+        {
+        	
+        }
+        finally
+        {
+            if (rs != null)
+            {
+            	try {
+            		rs.close();
+            	} catch (SQLException ex) {
+            		
+            	}
+            }
+            if (st != null)
+            {
+            	try {
+            		st.close();
+            	} catch (SQLException ex) {
+            		
+            	}
+            }
+        }
+        return null;
+    }
+    
+    public static Plot loadSinglePlot(int plotId)
+    {
+    	Connection con = getConnection();
+    	if (con == null)
+    	{
+    		return null;
+    	}
+
+    	PreparedStatement st = null;
+   	    ResultSet rs = null;
+   	    
+        try {
+        	st = con.prepareStatement("SELECT id,worldname,xpos,zpos,playername,biome," +
+											 "expireddate,finisheddate,sellprice," +
+											 "isforsale,isprotected,isauctionned,properties " +
+									  "FROM plotme_plots " +
+									  "INNER JOIN plotme_players " +
+									  		 "ON plotme_players.id=plotme_plots.owner " +
+									  "INNER JOIN plotme_worlds " +
+									  		 "ON plotme_worlds.id=plotme_plots.world " +
+									  "WHERE id=? " +
+											 "LIMIT 2");
+			rs = st.executeQuery();
+			st.setInt(1, plotId);
+			if (rs.next())
+			{
+				Integer id = rs.getInt(1);
+				if (id != null && id > 0)
+				{
+					PlotWorld plotWorld = PlotManager.getPlotWorld(rs.getString(2));
+					if (plotWorld != null)
+					{
+						int xpos = rs.getInt(3);
+						int zpos = rs.getInt(4);
+						PlotPosition plotpos = new PlotPosition(plotWorld, xpos, zpos);
+						PlotOwner owner = new PlotOwner(rs.getInt(5), rs.getString(5), rs.getString(6));
+						Biome biome = Biome.valueOf(rs.getString(7));
+						long expireddate = rs.getLong(7);
+						long finisheddate = rs.getLong(8);
+						double sellprice = rs.getDouble(9);
+						boolean isforsale = rs.getBoolean(11);
+						boolean isprotected = rs.getBoolean(13);
+						boolean isauctionned = rs.getBoolean(14);
+						
+		                // error when we found more than one plot with that id (should normally never happen)
+		                if (rs.next())
+		                {
+		                	return null;
+		                }
+		
+						Plot plot = new Plot(
+							id,
+							plotpos,
+							owner,
+							biome,
+							expireddate,
+							finisheddate,
+							sellprice,
+							isforsale,
+							isprotected,
+							isauctionned
+						);
+						PlotManager.registerPlot(plot);
+						
+						return plot;
+					}
+				}
+			}
+			return null;
+        }
+        catch (SQLException ex)
+        {
+        	
+        }
+        finally
+        {
+            if (rs != null)
+            {
+            	try {
+            		rs.close();
+            	} catch (SQLException ex) {
+            		
+            	}
+            }
+            if (st != null)
+            {
+            	try {
+            		st.close();
+            	} catch (SQLException ex) {
+            		
+            	}
+            }
+        }
+		return null;
+    }
+				
+				
     public static void loadPlots(PlotWorld plotWorld, Integer centerX, Integer centerZ, Integer range)
     {
-    	Connection conn = getConnection();
+    	Connection con = getConnection();
+    	if (con == null)
+    	{
+    		return;
+    	}
+    	
     	Statement st;
 		try {
 			st = conn.createStatement();
-			ResultSet setPlots = st.executeQuery("SELECT id, xpos, zpos, owner, playername, biome," +
-												 		"expireddate, finisheddate, sellprice, rentprice," +
-												 		"isforsale, isforrent, isprotected, isauctionned, properties " +
+			ResultSet setPlots = st.executeQuery("SELECT id,worldname,xpos,zpos,playername,biome," +
+												 		"expireddate,finisheddate,sellprice," +
+												 		"isforsale,isprotected,isauctionned,properties " +
 												 "FROM plotme_plots " +
 												 "INNER JOIN plotme_players " +
-												 "ON plotme_players.id=plotme_plots.owner " +
+												 		"ON plotme_players.id=plotme_plots.owner " +
 												 "INNER JOIN plotme_worlds " +
-												 "ON plotme_worlds.id=plotme_plots.world " +
+												 		"ON plotme_worlds.id=plotme_plots.world " +
 												 "WHERE world=" + String.valueOf(plotWorld.getId()) + " " +
-												 		"AND (xpos BETWEEN "+String.valueOf(centerX-range)+" AND "+String.valueOf(centerX+range)+") " +
-												 		"AND (zpos BETWEEN "+String.valueOf(centerZ-range)+" AND "+String.valueOf(centerZ+range)+")");
+												 		"AND (x BETWEEN "+String.valueOf(centerX-range)+" AND "+String.valueOf(centerX+range)+") " +
+												 		"AND (z BETWEEN "+String.valueOf(centerZ-range)+" AND "+String.valueOf(centerZ+range)+")");
 			while (setPlots.next()) 
 			{
 				int id = setPlots.getInt(1);
@@ -229,9 +403,7 @@ public class PlotMeSqlManager {
 				long expireddate = setPlots.getLong(7);
 				long finisheddate = setPlots.getLong(8);
 				double sellprice = setPlots.getDouble(9);
-				double rentprice = setPlots.getDouble(10);
 				boolean isforsale = setPlots.getBoolean(11);
-				boolean isforrent = setPlots.getBoolean(12);
 				boolean isprotected = setPlots.getBoolean(13);
 				boolean isauctionned = setPlots.getBoolean(14);
 				
@@ -243,9 +415,7 @@ public class PlotMeSqlManager {
 	    				expireddate,
 	    				finisheddate,
 	    				sellprice,
-	    				rentprice,
 	    				isforsale,
-	    				isforrent,
 	    				isprotected,
 	    				isauctionned
 	    		);
@@ -331,7 +501,7 @@ public class PlotMeSqlManager {
         {
             conn = getConnection();
 
-            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, sellprice, rentprice, isforsale, isforrent, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, sellprice, isforsale, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             
             ps.setInt(1, plot.getId());
             ps.setInt(2, plot.getPlotWorld().getId());
@@ -342,9 +512,7 @@ public class PlotMeSqlManager {
             ps.setLong(7, plot.expireddate);
             ps.setLong(8, plot.finisheddate);
             ps.setDouble(9, plot.sellprice);
-            ps.setDouble(10, plot.rentprice);
             ps.setBoolean(11, plot.isforsale);
-            ps.setBoolean(12, plot.isforrent);
             ps.setBoolean(13, plot.isprotected);
             ps.setBoolean(14, plot.isauctionned);
             

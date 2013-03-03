@@ -23,8 +23,6 @@ import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.CraftingInventory;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
@@ -37,10 +35,10 @@ import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
 public class PlotManager {
 
-    /**
-     *  Maps world names to PlotWorld instances 
-     */
+    // Maps bukkit worlds to PlotWorld instances 
 	public static Map<World, PlotWorld> plotWorlds;
+	// Maps player names to PlotOwner instances 
+	public static Map<Player, PlotOwner> plotOwners;
 	public static Set<Plot> allPlots;
 	public static List<Plot> expiredPlots;
 	
@@ -80,6 +78,15 @@ public class PlotManager {
 		if (minecraftWorld != null)
 		{
 			return plotWorlds.get(minecraftWorld);
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(String worldName)
+	{
+		if (worldName != null)
+		{
+			return plotWorlds.get(Bukkit.getServer().getWorld(worldName));
 		}
 		return null;
 	}
@@ -560,6 +567,24 @@ public class PlotManager {
 			sign.setLine(3, infoLine);
 			sign.update(true);
 		}
+	}
+	
+	public static PlotOwner getOnlinePlotOwner(Player bukkitPlayer)
+	{
+		if (bukkitPlayer == null)
+		{
+			return null;
+		}
+		return plotOwners.get(bukkitPlayer.getName());
+	}
+	
+	public static PlotOwner getPlotOwner(String playerName)
+	{
+		if (playerName == null || playerName.isEmpty())
+		{
+			return null;
+		}
+		return getPlotOwner(playerName);		
 	}
 
 	public static void setOwnerSign(Plot plot)

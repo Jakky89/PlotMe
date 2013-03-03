@@ -444,7 +444,12 @@ public class PlotMe extends JavaPlugin
 				}
 			}
 			
-			PlotWorld tmpPlotWorld = new PlotWorld(bukkitWorld);
+			PlotWorld tmpPlotWorld = PlotMeSqlManager.getPlotWorld(bukkitWorld);
+			if (tmpPlotWorld == null)
+			{
+				logger.warning(PREFIX + "Id of world \"" + cfgWorldName + "\" could not be loaded from or created in database!");
+				continue;
+			}
 			
 			tmpPlotWorld.PlotAutoLimit			= cfgCurrWorld.getInt("PlotAutoLimit",	DEFAULT_PLOT_AUTO_LIMIT);
 			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PathWidth",		DEFAULT_PATH_WIDTH);
@@ -997,7 +1002,6 @@ public class PlotMe extends JavaPlugin
 		properties.put("SignOwner", "Owner:");
 		properties.put("SignId", "ID:");
 		properties.put("SignForSale", "&9&lFOR SALE");
-		properties.put("SignForRent", "&9&lFOR RENT");
 		properties.put("SignPrice", "Price :");
 		properties.put("SignPriceColor", "&9");
 		properties.put("SignOnAuction", "&9&lON AUCTION");

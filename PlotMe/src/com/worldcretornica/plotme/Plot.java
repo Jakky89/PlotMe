@@ -70,7 +70,7 @@ public class Plot implements Comparable<Plot>
 	}
 	
 	public Plot(int plotId, PlotPosition plotPosition, PlotOwner plotOwner, Biome plotBiome, long plotExpiredDate,
-				long plotFinishedDate, double plotSellPrice, double plotRentPrice, boolean plotIsForSale, boolean plotIsProtected, boolean plotIsAuctionned)
+				long plotFinishedDate, double plotSellPrice, boolean plotIsForSale, boolean plotIsProtected, boolean plotIsAuctionned)
 	{
 		id = plotId;
 		position = plotPosition;

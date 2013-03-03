@@ -26,6 +26,13 @@ public class PlotOwner implements Comparable<PlotOwner>
 		this.displayname = ownerName;
 		this.ownedplots = null;
 	}
+	public PlotOwner(int id, String ownerName, String displayName)
+	{
+		this.id = id;
+		this.playername = ownerName;
+		this.displayname = displayName;
+		this.ownedplots = null;
+	}
 	
 	public PlotOwner(int id, Player minecraftPlayer)
 	{

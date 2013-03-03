@@ -83,7 +83,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	private HashSet<Pair<Short, Byte>> PreventedItems;
 	
 	public Map<PlotPosition, Plot> plotPositions;
-	
+		
 	
 	public PlotWorld()
 	{
@@ -110,6 +110,11 @@ public class PlotWorld implements Comparable<PlotWorld>
 		plotPositions = new HashMap<PlotPosition, Plot>();
 		ProtectedBlocks = null;
 		PreventedItems = null;
+	}
+	
+	private void getIdFromDatabase()
+	{
+		
 	}
 	
 	public void setId(int worldId)
