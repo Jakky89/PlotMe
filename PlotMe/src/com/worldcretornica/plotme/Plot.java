@@ -39,9 +39,7 @@ public class Plot implements Comparable<Plot>
 	public long expireddate;
 	public double buyprice;
 	public double sellprice;
-	public double rentprice;
 	public boolean isforsale;
-	public boolean isforrent;
 	public long finisheddate;
 	public boolean isprotected;
 	public boolean isauctionned;
@@ -61,18 +59,18 @@ public class Plot implements Comparable<Plot>
 		biome = Biome.PLAINS;
 		setDaysUntilExpiration(7);
 		sellprice = plotPosition.getPlotWorld().ClaimPrice;
-		rentprice = 0;
 		isforsale = false;
-		isforrent = false;
 		finisheddate = 0;
 		isprotected = false;
 		isauctionned = false;
 		neighbourplots = new Plot[8];
 		auctionbids = null;
+		ownersign = null;
+		sellsign = null;
 	}
 	
 	public Plot(int plotId, PlotPosition plotPosition, PlotOwner plotOwner, Biome plotBiome, long plotExpiredDate,
-				long plotFinishedDate, double plotSellPrice, double plotRentPrice, boolean plotIsForSale, boolean plotIsForRent, boolean plotIsProtected, boolean plotIsAuctionned)
+				long plotFinishedDate, double plotSellPrice, double plotRentPrice, boolean plotIsForSale, boolean plotIsProtected, boolean plotIsAuctionned)
 	{
 		id = plotId;
 		position = plotPosition;
@@ -83,12 +81,12 @@ public class Plot implements Comparable<Plot>
 		finisheddate = plotFinishedDate;
 		sellprice = plotSellPrice;
 		isforsale = plotIsForSale;
-		rentprice = plotRentPrice;
-		isforrent = plotIsForRent;
 		isauctionned = plotIsAuctionned;
 		isprotected = plotIsProtected;
 		neighbourplots = new Plot[8];
 		auctionbids = null;
+		ownersign = null;
+		sellsign = null;
 	}
 
 	public int getId()
@@ -154,6 +152,15 @@ public class Plot implements Comparable<Plot>
 			return position.getPlotWorld().getMinMaxBlockLocation(this);
 		}
 		return null;
+	}
+	
+	public int getPlotSize()
+	{
+		if (position != null && position.w != null)
+		{
+			return position.getPlotWorld().PlotSize;
+		}
+		return -1;
 	}
 	
 	public boolean hasNeighbourPlots()
@@ -301,6 +308,22 @@ public class Plot implements Comparable<Plot>
 		return isforsale;
 	}
 	
+	public void setProtected(boolean protect)
+	{
+		if (protect != isprotected)
+		{
+			isprotected = protect;
+			if (isprotected)
+			{
+				PlotMeSqlManager.updatePlotData(this, "isprotected", 1);
+			}
+			else
+			{
+				PlotMeSqlManager.updatePlotData(this, "isprotected", 0);
+			}
+		}
+	}
+	
 	public boolean isProtected()
 	{
 		return isprotected;
@@ -397,7 +420,7 @@ public class Plot implements Comparable<Plot>
 	
 	public boolean setBiome(Biome bio)
 	{
-		if (bio != null && bio != biome)
+		if (bio != null && biome != bio)
 		{
 			biome = bio;
 			PlotMeSqlManager.updatePlotData(this, "biome", bio.toString());
@@ -409,6 +432,26 @@ public class Plot implements Comparable<Plot>
 	public void setBiome(String newBiome)
 	{
 		setBiome(Biome.valueOf(newBiome));
+	}
+	
+	public Sign getOwnerSign()
+	{
+		return ownersign;
+	}
+	
+	public void setOwnerSign(Sign sign)
+	{
+		ownersign = sign;
+	}
+	
+	public Sign getSellSign()
+	{
+		return sellsign;
+	}
+	
+	public void setSellSign(Sign sign)
+	{
+		sellsign = sign;
 	}
 	
 	public PlotOwner getOwner()

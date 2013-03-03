@@ -997,6 +997,7 @@ public class PlotMe extends JavaPlugin
 		properties.put("SignOwner", "Owner:");
 		properties.put("SignId", "ID:");
 		properties.put("SignForSale", "&9&lFOR SALE");
+		properties.put("SignForRent", "&9&lFOR RENT");
 		properties.put("SignPrice", "Price :");
 		properties.put("SignPriceColor", "&9");
 		properties.put("SignOnAuction", "&9&lON AUCTION");

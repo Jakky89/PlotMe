@@ -8,10 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.Pair;
 
@@ -81,6 +84,15 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public Map<PlotPosition, Plot> plotPositions;
 	
+	
+	public PlotWorld()
+	{
+		id = -1;
+		MinecraftWorld = null;
+		plotPositions = new HashMap<PlotPosition, Plot>();
+		ProtectedBlocks = null;
+		PreventedItems = null;
+	}
 	
 	public PlotWorld(World minecraftWorld)
 	{
@@ -629,10 +641,71 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return tmpList;
 	}
 	
+	public List<Entity> getAreaEntities(double x1, double z1, double x2, double z2, boolean includePlayers)
+	{
+		List<Entity> tmpList = new ArrayList<Entity>();
+		
+		double minX = Math.min(x1, x2);
+		double minZ = Math.min(z1, z2);
+		double maxX = Math.max(x1, x2);
+		double maxZ = Math.max(z1, z2);
+		
+		int minChunkX = (int)Math.floor((double)(minX / 16));
+		int minChunkZ = (int)Math.floor((double)(minZ / 16));
+		int maxChunkX = (int)Math.ceil((double)(maxX / 16));
+		int maxChunkZ = (int)Math.ceil((double)(maxZ / 16));
+
+		for (int cx = minChunkX; cx <= maxChunkX; cx++)
+		{			
+			for (int cz = minChunkZ; cz <= maxChunkZ; cz++)
+			{
+				Chunk chunk = MinecraftWorld.getChunkAt(cx, cz);
+				if (chunk != null)
+				{
+					Entity[] entities = chunk.getEntities();
+					if (entities.length > 0)
+					{
+						for (Entity entity : entities)
+						{
+							Location entityloc = entity.getLocation();
+							if (entityloc.getBlockX() > minX && entityloc.getBlockX() < maxX &&
+								entityloc.getBlockZ() > minZ && entityloc.getBlockZ() < maxZ)
+							{
+								if (!(entity instanceof Player) || includePlayers)
+								{
+									tmpList.add(entity);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		
+		return tmpList;
+	}
+	
+	public List<Entity> getSinglePlotEntities(Plot plot, boolean includePlayers)
+	{
+		if (MinecraftWorld == null || plot == null || !plot.getPlotWorld().equals(this))
+		{
+			return null;
+		}
+		
+		double multi = getPlotBlockPositionMultiplier();
+		
+		double x1 = (double)(plot.getPlotX() * multi);
+		double z1 = (double)(plot.getPlotZ() * multi);
+		double x2 = (double)(x1 + PlotSize);
+		double z2 = (double)(z1 + PlotSize);
+		
+		return getAreaEntities(x1, z1, x2, z2, includePlayers);
+	}
+	
 	@Override
 	public int hashCode()
 	{
-		return MinecraftWorld.hashCode();
+		return id;
 	}
 	
 	@Override

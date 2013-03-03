@@ -23,7 +23,10 @@ import org.bukkit.block.Sign;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.CraftingInventory;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 
 import com.griefcraft.lwc.LWC;
@@ -648,7 +651,7 @@ public class PlotManager {
 				sign.setLine(3, "/plotme " + PlotMe.caption("CommandBuy"));
 				sign.update(true);
 			}
-			
+
 			if (plot.isauctionned)
 			{				
 				if (plot.isforsale)
@@ -707,12 +710,24 @@ public class PlotManager {
 	
 	public static void removeOwnerSign(Plot plot)
 	{
-		Location bottom = plot.getWorldMinBlockLocation();
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return;
+		}
 		
-		Location pillar = new Location(plot.getMinecraftWorld(), bottom.getX() - 1, plot.getPlotWorld().RoadHeight + 1, bottom.getZ() - 1);
+		if (plot.getOwnerSign() != null)
+		{
+			plot.getOwnerSign().setType(Material.AIR);
+			plot.setOwnerSign(null);
+			return;
+		}
+		
+		Location baseLocation = plot.getWorldMinBlockLocation();
+		
+		Location pillar = new Location(plot.getMinecraftWorld(), baseLocation.getBlockX() - 1, plot.getPlotWorld().RoadHeight + 1, baseLocation.getBlockZ() - 1);
 		
 		Block bsign = pillar.add(0, 0, -1).getBlock();
-		if (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN)
+		if (bsign != null && (bsign instanceof Sign) && (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN))
 		{
 			bsign.setType(Material.AIR);
 		}
@@ -720,42 +735,26 @@ public class PlotManager {
 	
 	public static void removeSellSign(Plot plot)
 	{
-		Location bottom = plot.getWorldMinBlockLocation();
-		
-		Location pillar = new Location(plot.getMinecraftWorld(), bottom.getX() - 1, plot.getPlotWorld().RoadHeight + 1, bottom.getZ() - 1);
-		
-		Block bsign = pillar.clone().add(-1, 0, 0).getBlock();
-		bsign.setType(Material.AIR);
-						
-		bsign = pillar.clone().add(-1, 0, 1).getBlock();
-		bsign.setType(Material.AIR);
-	}
-	
-	public static void setBiome(Plot plot, Biome bio)
-	{
-		if (plot == null || plot.getMinecraftWorld() == null || bio == null)
+		if (plot == null || plot.getMinecraftWorld() == null)
 		{
 			return;
 		}
 		
-		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
-		
-		int minX = locations.getLeft().getBlockX() - 1;
-		int minZ = locations.getLeft().getBlockZ() - 1;
-		int maxX = locations.getRight().getBlockX() + 1;
-		int maxZ = locations.getRight().getBlockZ() + 1;
-
-		for (int x = minX; x <= maxX; x++)
+		if (plot.getSellSign() != null)
 		{
-			for (int z = minZ; z <= maxZ; z++)
-			{
-				plot.getMinecraftWorld().getBlockAt(x, 0, z).setBiome(bio);
-			}
+			plot.getSellSign().setType(Material.AIR);
+			plot.setSellSign(null);
+			return;
 		}
 		
-		if (plot.setBiome(bio))
+		Location baseLocation = plot.getWorldMinBlockLocation();
+		
+		Location pillar = new Location(plot.getMinecraftWorld(), baseLocation.getBlockX() - 1, plot.getPlotWorld().RoadHeight + 1, baseLocation.getBlockZ() - 1);
+		
+		Block bsign = pillar.add(-1, 0, 0).getBlock();
+		if (bsign != null && (bsign instanceof Sign) && (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN))
 		{
-			refreshPlotChunks(plot);
+			bsign.setType(Material.AIR);
 		}
 	}
 	
@@ -766,24 +765,39 @@ public class PlotManager {
 			return;
 		}
 		
-		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		Location baseLocation = plot.getWorldMinBlockLocation();
 		
-		int minChunkX = (int)Math.floor((double)locations.getLeft().getBlockX() / 16);
-		int minChunkZ = (int)Math.floor((double)locations.getLeft().getBlockZ() / 16);
-		int maxChunkX = (int)Math.ceil((double)locations.getRight().getBlockX() / 16);
-		int maxChunkZ = (int)Math.ceil((double)locations.getRight().getBlockZ() / 16);
-		
-		for (int x = minChunkX; x <= maxChunkX; x++)
+		for (int x = 0; x <= plot.getPlotSize(); x++)
 		{
-			for (int z = minChunkZ; z <= maxChunkZ; z++)
+			for (int z = 0; z <= plot.getPlotSize(); z++)
 			{
-				plot.getMinecraftWorld().refreshChunk(x, z);
+				plot.getMinecraftWorld().refreshChunk(baseLocation.getBlockX() + x, baseLocation.getBlockZ() + z);
 			}
 		}
-		
 	}
 	
+	public static void setBiome(Plot plot, Biome bio)
+	{
+		if (plot == null || plot.getMinecraftWorld() == null || bio == null)
+		{
+			return;
+		}
+		
+		if (plot.setBiome(bio))
+		{
+			Location baseLocation = plot.getWorldMinBlockLocation();
 	
+			for (int x = 0; x <= plot.getPlotSize(); x++)
+			{
+				for (int z = 0; z <= plot.getPlotSize(); z++)
+				{
+					plot.getMinecraftWorld().setBiome(baseLocation.getBlockX() + x, baseLocation.getBlockZ() + z, bio);
+				}
+			}
+			refreshPlotChunks(plot);
+		}
+	}
+
 	public static void clear(Location loc1, Location loc2)
 	{
 		if (loc1 == null || loc2 == null || loc1.getWorld() == null || loc2.getWorld() == null || !loc1.getWorld().equals(loc2.getWorld()))
@@ -890,7 +904,7 @@ public class PlotManager {
 		removeSellSign(plot);
 		clear(locations.getLeft(), locations.getRight());
 		
-		removePlotLWCProtections(plot);
+		removeLWCProtections(plot);
 
 		//regen(plot);
 	}
@@ -1032,224 +1046,317 @@ public class PlotManager {
 		}
 		return false;
 	}
-
-	/**
-	 * TODO: Split some loops to methods
-	 */
 	
-	public static boolean movePlot(Plot plot1, Plot plot2)
+	public static List<Pair<BlockState, Biome>> getPlotBlocksSnapshot(Plot plot, boolean includeAir)
+	{
+		if (plot == null || plot.getMinecraftWorld() == null)
+		{
+			return null;
+		}
+		
+		ArrayList<Pair<BlockState, Biome>> tmpList = new ArrayList<Pair<BlockState, Biome>>();
+		
+		Location baseLocation = plot.getWorldMinBlockLocation();
+		
+		World minecraftWorld = plot.getMinecraftWorld();
+		
+		int minx = baseLocation.getBlockX();
+		int minz = baseLocation.getBlockZ();
+		int maxx = minx + plot.getPlotWorld().PlotSize;
+		int maxz = minz + plot.getPlotWorld().PlotSize;
+		
+		int x;
+		int y;
+		int z;
+		
+		int maxY = 0;
+		if (includeAir)
+		{
+			maxY = minecraftWorld.getMaxHeight();
+		}
+		Block block;
+		
+		if (maxY > 0)
+		{
+			for (x = minx; x <= maxx; x++)
+			{
+				for (z = minz; z <= maxz; z++)
+				{
+					if (!includeAir)
+					{
+						maxY = minecraftWorld.getHighestBlockYAt(x, z);
+					}
+					for (y = 0; y < maxY; y++)
+					{
+						block = minecraftWorld.getBlockAt(x, y, z);
+						if (block.getType() != Material.AIR || includeAir)
+						{
+							tmpList.add(new Pair<BlockState, Biome>(block.getState(), block.getBiome()));
+						}
+					}
+				}
+			}
+		}
+		
+		return tmpList;
+	}
+	
+	public static boolean moveOverwritePlot(Plot plot, PlotPosition targetPlotPosition)
+	{
+		if (plot == null || plot.getMinecraftWorld() == null || targetPlotPosition == null || targetPlotPosition.getMinecraftWorld() == null)
+		{
+			return false;
+		}
+
+		PlotWorld pwiFrom = plot.getPlotWorld();
+		PlotWorld pwiTo   = targetPlotPosition.getPlotWorld();
+		
+		Plot testPlot = pwiTo.getPlotAtPlotPosition(targetPlotPosition);
+		if (testPlot != null)
+		{
+			removePlot(testPlot);
+		}
+		
+		removeOwnerSign(plot);
+		removeSellSign(plot);
+		removeLWCProtections(plot);
+		
+		double multiFrom  = pwiFrom.getPlotBlockPositionMultiplier();
+		double multiTo    = pwiTo.getPlotBlockPositionMultiplier();
+		
+		World mwiFrom     = pwiFrom.getMinecraftWorld();
+		World mwiTo       = pwiTo.getMinecraftWorld();
+		
+		int maxY = Math.min(mwiFrom.getMaxHeight(), mwiTo.getMaxHeight());
+		if (maxY <= 0)
+		{
+			return false;
+		}
+		
+		// road height delta
+		int rhd = pwiTo.RoadHeight - pwiFrom.RoadHeight;
+
+		Location baseFrom = plot.getWorldMinBlockLocation();
+		
+		Location baseTo   = new Location(mwiTo, Math.floor(targetPlotPosition.getPlotX() * multiTo), 0, Math.floor(targetPlotPosition.getPlotZ() * multiTo));
+		
+		int x;
+		int y;
+		int z;
+		
+		Block sourceBlock;
+		Biome sourceBiome;
+		BlockState sourceBlockState;
+		ItemStack[] sourceInventoryContents;
+		
+		Block targetBlock;
+
+		for (x = 0; x <= pwiFrom.PlotSize; x++)
+		{
+			for (z = 0; z <= pwiFrom.PlotSize; z++)
+			{
+				inner2 : for (y = 0; y < maxY; y++)
+				{
+					if (y + rhd >= maxY || y + rhd <= 0)
+					{
+						break inner2;
+					}
+					
+					// Copy source block data
+					sourceBlock = mwiFrom.getBlockAt(baseFrom.getBlockX() + x, y, baseFrom.getBlockZ() + z);
+					sourceBiome = sourceBlock.getBiome();
+					sourceBlockState = sourceBlock.getState();
+					if (sourceBlock instanceof InventoryHolder)
+					{
+						sourceInventoryContents = ((InventoryHolder)sourceBlock).getInventory().getContents().clone();
+						((InventoryHolder)sourceBlock).getInventory().clear();
+					}
+					else
+					{
+						sourceInventoryContents = null;
+					}
+					
+					// For security reasons we first remove the old block
+					if (y > pwiFrom.RoadHeight)
+					{
+						sourceBlock.setType(Material.AIR);
+					}
+					else
+					{
+						sourceBlock.setTypeIdAndData(pwiFrom.BottomBlockId, pwiFrom.BottomBlockValue, false);
+					}
+					
+					// Move to destination
+					targetBlock = mwiTo.getBlockAt(baseTo.getBlockX() + x, y + rhd, baseTo.getBlockZ() + z);
+					if (targetBlock != null)
+					{
+						targetBlock.setBiome(sourceBiome);
+						targetBlock.setTypeIdAndData(sourceBlockState.getTypeId(), sourceBlockState.getRawData(), false);
+						if (sourceInventoryContents != null)
+						{
+							((InventoryHolder)targetBlock).getInventory().setContents(sourceInventoryContents);
+						}
+					}
+				}
+			}
+		}
+		removePlot(plot);
+		
+		return true;
+	}
+	
+	public static boolean swapPlots(Plot plot1, Plot plot2)
 	{
 		if (plot1 == null || plot2 == null || plot1.getMinecraftWorld() == null || plot2.getMinecraftWorld() == null)
 		{
 			return false;
 		}
 		
-		PlotWorld plot1PlotWorld = plot1.getPlotWorld();
-		PlotWorld plot2PlotWorld = plot2.getPlotWorld();
+		PlotWorld plotWorld1 = plot1.getPlotWorld();
+		PlotWorld plotWorld2 = plot2.getPlotWorld();
+				
+		// Remove signs
+		removeOwnerSign(plot1);
+		removeOwnerSign(plot2);
+		removeSellSign(plot1);
+		removeSellSign(plot2);
 		
-		if (plot1PlotWorld.PlotSize > plot2PlotWorld.PlotSize || plot2PlotWorld.PlotSize > plot1PlotWorld.PlotSize)
+		// Remove protections
+		removeLWCProtections(plot1);
+		removeLWCProtections(plot2);
+		
+		// Take a snapshot of entities (also including players -> will be more fun when players standing on plot will move with it ;) )
+
+		List<Entity> tempEntities1 = plotWorld1.getSinglePlotEntities(plot1, true);
+		List<Entity> tempEntities2 = plotWorld1.getSinglePlotEntities(plot2, true);
+		
+		World minecraftWorld1 = plotWorld1.getMinecraftWorld();
+		World minecraftWorld2 = plotWorld2.getMinecraftWorld();
+		
+		int maxY = Math.min(minecraftWorld1.getMaxHeight(), minecraftWorld2.getMaxHeight());
+		if (maxY <= 0)
 		{
 			return false;
 		}
 		
-		World plot1MinecraftWorld = plot1.getMinecraftWorld();
-		World plot2MinecraftWorld = plot2.getMinecraftWorld();
-
-		Pair<Location, Location> plot1Locs = plot1.getWorldMinMaxBlockLocations();
-		Pair<Location, Location> plot2Locs = plot2.getWorldMinMaxBlockLocations();
+		int plotSize = Math.min(plotWorld1.PlotSize, plotWorld2.PlotSize);
 		
+		// half of plot size delta
+		int phd = Math.round((plotWorld2.PlotSize - plotWorld1.PlotSize) / 2);
+		
+		// road height delta
+		int rhd = plotWorld1.RoadHeight - plotWorld2.RoadHeight;
+
+		Location baseLocation1 = plot1.getWorldMinBlockLocation();
+		Location baseLocation2 = plot2.getWorldMinBlockLocation();
+
 		int x;
 		int y;
 		int z;
 		
-		int minX1 = plot1Locs.getLeft().getBlockX();
-		int minZ1 = plot1Locs.getLeft().getBlockZ();
-		int maxX1 = plot1Locs.getRight().getBlockX();
-		int maxZ1 = plot1Locs.getRight().getBlockZ();
+		int maxY1 = 1;
+		int maxY2 = 1;
 		
-		int minX2 = plot2Locs.getLeft().getBlockX();
-		int minZ2 = plot2Locs.getLeft().getBlockZ();
-		int maxX2 = plot2Locs.getRight().getBlockX();
-		int maxZ2 = plot2Locs.getRight().getBlockZ();
-
-		int maxDeltaX = Math.max((maxX1 - minX1), (maxX2 - minX2));
-		int maxDeltaZ = Math.max((maxZ1 - minZ1), (maxZ2 - minZ2));
-		int maxDeltaY = 1;
-		
-		for (x = minX1; x <= maxX1; x++)
-		{
-			for (z = minZ1; z <= maxZ1; z++)
-			{
-				y = plot1MinecraftWorld.getHighestBlockYAt(x, z);
-				if (y > maxDeltaY)
-				{
-					if (y > plot2MinecraftWorld.getMaxHeight())
-					{
-						return false;
-					}
-					maxDeltaY = y;
-				}
-			}
-		}
-		
-		for (x = minX2; x <= maxX2; x++)
-		{
-			for (z = minZ2; z <= maxZ2; z++)
-			{
-				y = plot2MinecraftWorld.getHighestBlockYAt(x, z);
-				if (y > maxDeltaY)
-				{
-					if (y > plot1MinecraftWorld.getMaxHeight())
-					{
-						return false;
-					}
-					maxDeltaY = y;
-				}
-			}
-		}
-
-		List<Entity> tempEntities1 = new ArrayList<Entity>();
-		List<Entity> tempEntities2 = new ArrayList<Entity>();
-
 		Block block1;
 		Biome biome1;
 		BlockState blockState1;
+		ItemStack[] blockInventoryContents1;
 		
 		Block block2;
 		Biome biome2;
 		BlockState blockState2;
-
-		// Remove signs
+		ItemStack[] blockInventoryContents2;
 		
-		removeOwnerSign(plot1);
-		removeSellSign(plot1);
+		Block targetBlock;
 		
-		// 
-		
-		removeOwnerSign(plot2);
-		removeSellSign(plot2);
-		
-		// Remove protections
-		
-		removePlotLWCProtections(plot1);
-		removePlotLWCProtections(plot2);
-		
-		// Save entities
-		
-		int cx;
-		int cz;
-		
-		int minChunkX;
-		int maxChunkX;
-		int minChunkZ;
-		int maxChunkZ;
-		
-		minChunkX = (int)Math.floor((double)minX1 / 16);
-		maxChunkX = (int)Math.ceil((double)maxX1 / 16);
-		minChunkZ = (int)Math.floor((double)minZ1 / 16);
-		maxChunkZ = (int)Math.ceil((double)maxZ1 / 16);
-
-		for (cx = minChunkX; cx <= maxChunkX; cx++)
-		{			
-			for (cz = minChunkZ; cz <= maxChunkZ; cz++)
-			{
-				Chunk chunk = plot1MinecraftWorld.getChunkAt(cx, cz);
-				if (chunk != null)
-				{
-					Entity[] entities = chunk.getEntities();
-					if (entities.length > 0)
-					{
-						for (Entity entity : entities)
-						{
-							Location entityloc = entity.getLocation();
-							if (!(entity instanceof Player) && entityloc.getBlockX() >= minX1 && entityloc.getBlockX() <= maxX1 &&
-															   entityloc.getBlockZ() >= minZ1 && entityloc.getBlockZ() <= maxZ1)
-							{
-								tempEntities1.add(entity);
-							}
-						}
-					}
-				}
-			}
-		}
-		
-		//
-
-		minChunkX = (int)Math.floor((double)minX2 / 16);
-		maxChunkX = (int)Math.ceil((double)maxX2 / 16);
-		minChunkZ = (int)Math.floor((double)minZ2 / 16);
-		maxChunkZ = (int)Math.ceil((double)maxZ2 / 16);
-		
-		for (cx = minChunkX; cx <= maxChunkX; cx++)
-		{			
-			for (cz = minChunkZ; cz <= maxChunkZ; cz++)
-			{
-				Chunk chunk = plot2MinecraftWorld.getChunkAt(cx, cz);
-				if (chunk != null)
-				{
-					Entity[] entities = chunk.getEntities();
-					if (entities.length > 0)
-					{
-						for (Entity entity : entities)
-						{
-							Location entityloc = entity.getLocation();
-							if (!(entity instanceof Player) && entityloc.getBlockX() >= minX2 && entityloc.getBlockX() <= maxX2 &&
-															   entityloc.getBlockZ() >= minZ2 && entityloc.getBlockZ() <= maxZ2)
-							{
-								tempEntities2.add(entity);
-							}
-						}
-					}
-				}
-			}
-		}
-		
-		
-		// Move plot 1 to plot 2 and plot 2 to plot 1
-		for (x = 0; x <= maxDeltaX; x++)
+		for (x = 0; x < plotSize; x++)
 		{
-			for (z = 0; z <= maxDeltaZ; z++)
+			for (z = 0; z < plotSize; z++)
 			{
-				for (y = 1; y <= maxDeltaY; y++)
+				inner2 : for (y = 0; y < maxY; y++)
 				{
-					if (minX1 + x <= maxX1 && minZ1 + z <= maxZ2)
+					if (rhd != 0)
 					{
-						block1 = plot1.getMinecraftWorld().getBlockAt(minX1 + x, y, minZ1 + z);
-						biome1 = block1.getBiome();
-						blockState1 = block1.getState();
+						if (y + Math.abs(rhd) >= maxY1 || y + Math.abs(rhd) >= maxY2 || y - Math.abs(rhd) < 1)
+						{
+							break inner2;
+						}
+					}
+
+					// Get block data copies
+					
+					// Plot 1
+					block1 = plot1.getMinecraftWorld().getBlockAt(baseLocation1.getBlockX() + x, y, baseLocation1.getBlockZ() + z);
+					biome1 = block1.getBiome();
+					blockState1 = block1.getState();
+					if (block1 instanceof InventoryHolder)
+					{
+						blockInventoryContents1 = ((InventoryHolder)block1).getInventory().getContents().clone();
+						((InventoryHolder)block1).getInventory().clear();
+					}
+					else
+					{
+						blockInventoryContents1 = null;
+					}
+					// For security reasons we first "remove" the old block
+					if (y > plotWorld1.RoadHeight)
+					{
 						block1.setType(Material.AIR);
 					}
 					else
 					{
-						block1 = null;
-						biome1 = null;
-						blockState1 = null;
+						block1.setTypeIdAndData(plotWorld1.BottomBlockId, plotWorld1.BottomBlockValue, false);
 					}
-					if (minX2 + x <= maxX2 && minZ2 + z <= maxZ2)
+					
+					// Plot 2
+					block2 = plot2.getMinecraftWorld().getBlockAt(baseLocation2.getBlockX() + x, y, baseLocation2.getBlockZ() + z);
+					biome2 = block2.getBiome();
+					blockState2 = block2.getState();
+					if (block2 instanceof InventoryHolder)
 					{
-						block2 = plot2.getMinecraftWorld().getBlockAt(minX2 + x, y, minZ2 + z);
-						biome2 = block2.getBiome();
-						blockState2 = block2.getState();
+						blockInventoryContents2 = ((InventoryHolder)block2).getInventory().getContents().clone();
+						((InventoryHolder)block2).getInventory().clear();
+					}
+					else
+					{
+						blockInventoryContents2 = null;
+					}
+					// For security reasons we first "remove" the old block
+					if (y > plotWorld2.RoadHeight)
+					{
 						block2.setType(Material.AIR);
 					}
 					else
 					{
-						block2 = null;
-						biome2 = null;
-						blockState2 = null;
+						block2.setTypeIdAndData(plotWorld2.BottomBlockId, plotWorld2.BottomBlockValue, false);
 					}
-					if (block1 != null && block2 != null)
+					
+					block2.setBiome(biome1);
+					block2.setTypeIdAndData(blockState1.getTypeId(), blockState1.getRawData(), false);
+					
+					block1.setTypeIdAndData(blockState2.getTypeId(), blockState2.getRawData(), false);
+					block1.setBiome(biome2);
+					
+					if (blockInventoryContents1 != null)
 					{
-						block2.setBiome(biome1);
-						block2.setTypeIdAndData(blockState1.getTypeId(), blockState1.getRawData(), false);
-						
-						block1.setBiome(biome2);
-						block1.setTypeIdAndData(blockState2.getTypeId(), blockState2.getRawData(), false);
+						((InventoryHolder)block2).getInventory().setContents(blockInventoryContents2);
 					}
+					if (blockInventoryContents2 != null)
+					{
+						((InventoryHolder)block1).getInventory().setContents(blockInventoryContents1);
+					}
+
+					// Compensate road height and plot size differences
+					if (rhd != 0)
+					{
+						block1.getLocation().add(-phd, -rhd, -phd);
+						block2.getLocation().add(phd, rhd, phd);
+					}
+					
 				}
 			}
 		}
-		
+
 		Iterator<Entity> entityIterator;
 		Entity tmpEntity;
 		Location tmpLoc;
@@ -1259,7 +1366,7 @@ public class PlotManager {
 		{
 			tmpEntity = entityIterator.next();
 			tmpLoc = tmpEntity.getLocation();
-			tmpEntity.teleport(new Location(plot2MinecraftWorld, (tmpLoc.getX() - minX1) + minX2, tmpLoc.getY(), (tmpLoc.getZ() - minZ1) + minZ2));
+			tmpEntity.teleport(new Location(minecraftWorld2, (tmpLoc.getX() - baseLocation1.getX()) + baseLocation2.getX() + phd, tmpLoc.getY() + rhd, (tmpLoc.getZ() - baseLocation1.getZ()) +  baseLocation2.getZ() + phd));
 		}
 		
 		entityIterator = tempEntities2.iterator();
@@ -1267,13 +1374,16 @@ public class PlotManager {
 		{
 			tmpEntity = entityIterator.next();
 			tmpLoc = tmpEntity.getLocation();
-			tmpEntity.teleport(new Location(plot1MinecraftWorld, (tmpLoc.getX() - minX2) + minX1, tmpLoc.getY(), (tmpLoc.getZ() - minZ2) + minZ1));
+			tmpEntity.teleport(new Location(minecraftWorld1, (tmpLoc.getX() - baseLocation2.getX()) + baseLocation1.getX() + phd, tmpLoc.getY() - rhd, (tmpLoc.getZ() - baseLocation2.getZ()) + baseLocation1.getX() + phd));
 		}
 
 		PlotMeSqlManager.updatePlotData(plot1, "xpos", plot2.getPlotX());
 		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotZ());
+		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotWorld().getId());
+		
 		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotX());
 		PlotMeSqlManager.updatePlotData(plot2, "zpos", plot1.getPlotZ());
+		PlotMeSqlManager.updatePlotData(plot2, "zpos", plot1.getPlotWorld().getId());
 
 		return true;
 	}
@@ -1512,7 +1622,7 @@ public class PlotManager {
 		return PlotMe.getAirSpawnPosition(hl);
 	}
 	
-	public static void removePlotLWCProtections(final Plot plot)
+	public static void removeLWCProtections(final Plot plot)
 	{
 		if (!PlotMe.usinglwc || plot == null || plot.getMinecraftWorld() == null)
 		{
