@@ -56,7 +56,7 @@ public class Plot implements Comparable<Plot>
 	{
 		id = 0;
 		owner = null;
-		properties = new Jakky89Properties(this);
+		properties = new Jakky89Properties();
 		playersinplot = new HashSet<String>();
 		biome = Biome.PLAINS;
 		setDaysUntilExpiration(7);
@@ -415,12 +415,7 @@ public class Plot implements Comparable<Plot>
 	{
 		return owner;
 	}
-	
-	public String getOwnerName()
-	{
-		return owner.playername;
-	}
-	
+		
 	public void setPrice(double newPrice)
 	{
 		if (newPrice != sellprice)
@@ -503,13 +498,13 @@ public class Plot implements Comparable<Plot>
 		if (player != null)
 		{
 			playerName = player.getName();
-			if (owner != null && !owner.playername.isEmpty())
+			if (owner != null && !owner.getRealPlayerName().isEmpty())
 			{
 				if (owner.equals(playerName) || (includeStar && owner.equals("*")))
 				{
 					return true;
 				}
-				if (includeGroups && owner.playername.length()>6 && player.hasPermission("plotme.group." + owner.playername.substring(6)))
+				if (includeGroups && owner.getRealPlayerName().length()>6 && player.hasPermission("plotme.group." + owner.getRealPlayerName().substring(6)))
 				{
 					return true;
 				}
@@ -569,13 +564,13 @@ public class Plot implements Comparable<Plot>
 		if (player != null)
 		{
 			playerName = player.getName();
-			if (owner != null && !owner.playername.isEmpty())
+			if (owner != null && !owner.getRealPlayerName().isEmpty())
 			{
 				if (owner.equals(playerName) || (includeStar && owner.equals("*")))
 				{
 					return false;
 				}
-				if (includeGroups && owner.playername.length()>6 && player.hasPermission("plotme.group." + owner.playername.substring(6)))
+				if (includeGroups && owner.getRealPlayerName().length()>6 && player.hasPermission("plotme.group." + owner.getRealPlayerName().substring(6)))
 				{
 					return false;
 				}

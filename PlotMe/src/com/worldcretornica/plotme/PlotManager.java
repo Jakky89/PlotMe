@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -232,7 +231,7 @@ public class PlotManager {
 				{
 					if (plot.neighbourplots[i] != null)
 					{
-						if (plot.neighbourplots[i].owner.playername.equals(plot.owner.playername))
+						if (plot.neighbourplots[i].owner.equals(plot.owner))
 						{
 							fillroad(plot.neighbourplots[i], plot);
 						}
@@ -589,11 +588,11 @@ public class PlotManager {
 		String tmpOwnerCaption;
 		if (PlotMe.useDisplayNamesOnSigns)
 		{
-			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.displayname;
+			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.getDisplayName();
 		}
 		else
 		{
-			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.playername;
+			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.getRealPlayerName();
 		}
 		if (tmpOwnerCaption.length() > 16)
 		{
@@ -1108,18 +1107,6 @@ public class PlotManager {
 				}
 			}
 		}
-		
-		int addc1 = 0;
-		if (plot2PlotWorld.PlotSize > plot1PlotWorld.PlotSize)
-		{
-			addc1 = (int)Math.floor((plot2PlotWorld.PlotSize - plot1PlotWorld.PlotSize) / 2);
-		}
-		
-		int addc2 = 0;
-		if (plot1PlotWorld.PlotSize > plot2PlotWorld.PlotSize)
-		{
-			addc2 = (int)Math.floor((plot1PlotWorld.PlotSize - plot2PlotWorld.PlotSize) / 2);
-		}
 
 		List<Entity> tempEntities1 = new ArrayList<Entity>();
 		List<Entity> tempEntities2 = new ArrayList<Entity>();
@@ -1285,8 +1272,8 @@ public class PlotManager {
 
 		PlotMeSqlManager.updatePlotData(plot1, "xpos", plot2.getPlotX());
 		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotZ());
-		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotZ());
-		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotZ());
+		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotX());
+		PlotMeSqlManager.updatePlotData(plot2, "zpos", plot1.getPlotZ());
 
 		return true;
 	}

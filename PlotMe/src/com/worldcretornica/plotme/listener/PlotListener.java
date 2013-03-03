@@ -84,7 +84,7 @@ public class PlotListener implements Listener
 		Plot plot = PlotManager.getPlotAtBlockPosition(block);
 		if (plot != null && plot.isAllowed(player.getName(), true, true))
 		{
-			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+			plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 		}
 		else
 		{
@@ -124,7 +124,7 @@ public class PlotListener implements Listener
 		Plot plot = PlotManager.getPlotAtBlockPosition(block);
 		if (plot != null && plot.isAllowed(player.getName(), true, true))
 		{
-			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+			plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 		}
 		else
 		{
@@ -162,7 +162,7 @@ public class PlotListener implements Listener
 		Plot plot = PlotManager.getPlotAtBlockPosition(block);
 		if (plot != null && plot.isAllowed(player.getName(), true, true))
 		{
-			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+			plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 		}
 		else
 		{
@@ -238,7 +238,7 @@ public class PlotListener implements Listener
 		Plot plot = PlotManager.getPlotAtBlockPosition(block);
 		if (plot != null && plot.isAllowed(player.getName(), true, true))
 		{
-			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+			plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 		}
 		else
 		{
@@ -276,7 +276,7 @@ public class PlotListener implements Listener
 		Plot plot = PlotManager.getPlotAtBlockPosition(block);
 		if (plot != null && plot.isAllowed(player.getName(), true, true))
 		{
-			plot.resetExpire(plot.plotpos.w.DaysToExpiration);
+			plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 		}
 		else
 		{
@@ -293,7 +293,7 @@ public class PlotListener implements Listener
 		
 		if (!PlotManager.isPlotWorld(b))
 		{
-			return
+			return;
 		}
 			PlotMapInfo pmi = PlotManager.getMap(b);
 			boolean blocked = false;

@@ -4,38 +4,23 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 
-import com.worldcretornica.plotme.Plot;
-
 
 public class Jakky89Properties {
-	
-	public Plot plot;
-	public Jakky89Properties parent;
+
 	public Map<String, Object> properties;
 
-	public Jakky89Properties(Plot forPlot)
+	public Jakky89Properties()
 	{
-		plot = forPlot;
-		parent = null;
 		properties = new HashMap<String, Object>();
 	}
-	
-	public Jakky89Properties(Plot forPlot, Jakky89Properties parent)
-	{
-		plot = forPlot;
-		properties = new HashMap<String, Object>();
-		this.parent = parent;
-	}
-	
+
 	public boolean setValue(String pkey, Object pvalue)
 	{
 		if (pkey == null || pkey.isEmpty())
 		{
 			return false;
 		}
-		
 		pkey = pkey.toLowerCase();
-		
 		if (pvalue != null)
 		{
 			if (properties.put(pkey, pvalue) != pvalue)
@@ -53,6 +38,15 @@ public class Jakky89Properties {
 		return false;
 	}
 	
+	public Object getValue(String pkey)
+	{
+		if (pkey == null)
+		{
+			return null;
+		}
+		return properties.get(pkey.toLowerCase());
+	}
+
 	@SuppressWarnings("unchecked")
 	public boolean addStringToHashSet(String pkey, String pvalue)
 	{
@@ -74,16 +68,6 @@ public class Jakky89Properties {
 		return false;
 	}
 		
-	public Object getValue(String pkey)
-	{
-		if (pkey == null)
-		{
-			return null;
-		}
-
-		return properties.get(pkey.toLowerCase());
-	}
-	
 	public Jakky89Properties getProperties(String pkey)
 	{
 		Object pval = getValue(pkey);
@@ -100,14 +84,12 @@ public class Jakky89Properties {
 		Jakky89Properties props = getProperties(pkey);
 		if (props == null)
 		{
-			props = new Jakky89Properties(plot, this);
+			props = new Jakky89Properties();
 			this.properties.put(pkey, props);
 		}
 		return props;
 	}
-	
 
-	
 	public boolean getBoolean(String pkey)
 	{
 		Object pval = getValue(pkey);
@@ -117,7 +99,7 @@ public class Jakky89Properties {
 		}
 		return false;
 	}
-	
+
 	public String getString(String pkey)
 	{
 		Object pval = getValue(pkey);
@@ -127,7 +109,7 @@ public class Jakky89Properties {
 		}
 		return null;
 	}
-	
+
 	public Integer getInteger(String pkey)
 	{
 		Object pval = getValue(pkey);
@@ -137,7 +119,7 @@ public class Jakky89Properties {
 		}
 		return 0;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public HashSet<String> getStringHashSet(String pkey)
 	{
@@ -148,7 +130,7 @@ public class Jakky89Properties {
 		}
 		return null;
 	}
-	
+
 	public boolean isStringInHashSet(String pkey, String vkey)
 	{
 		Object pval = getValue(pkey);

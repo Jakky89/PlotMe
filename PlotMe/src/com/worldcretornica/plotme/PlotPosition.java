@@ -1,6 +1,5 @@
 package com.worldcretornica.plotme;
 
-import org.bukkit.Location;
 import org.bukkit.World;
 
 
@@ -27,21 +26,6 @@ public class PlotPosition {
 		return z;
 	}
 	
-	public Location getCenterWorldLocation()
-	{
-		if (w != null && w.MinecraftWorld != null)
-		{
-			double multi = w.getPlotBlockPositionMultiplier();
-			double psh = w.PlotSize / 2;
-			
-			int centerx = (int)Math.round((x * multi) + psh);
-			int centerz = (int)Math.round((z * multi) + psh);
-			
-			return new Location(w.MinecraftWorld, centerx, w.RoadHeight, centerz);
-		}
-		return null;
-	}
-	
 	public PlotWorld getPlotWorld()
 	{
 		return w;
@@ -51,7 +35,7 @@ public class PlotPosition {
 	{
 		if (w != null)
 		{
-			return w.MinecraftWorld;
+			return w.getMinecraftWorld();
 		}
 		return null;
 	}
@@ -76,9 +60,9 @@ public class PlotPosition {
 	    	return false;
 	    }
 		PlotPosition pp = (PlotPosition)o;
-		if (this.w != null && pp.w != null)
+		if (this.getMinecraftWorld() != null && pp.getMinecraftWorld() != null)
 		{
-			if (this.w.MinecraftWorld.getName() != pp.w.MinecraftWorld.getName())
+			if (!this.getMinecraftWorld().equals(pp.getMinecraftWorld()))
 			{
 				return false;
 			}

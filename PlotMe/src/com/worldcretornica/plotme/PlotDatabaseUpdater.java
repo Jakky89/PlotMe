@@ -4,9 +4,6 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map;
 
 
 public class PlotDatabaseUpdater
@@ -21,7 +18,8 @@ public class PlotDatabaseUpdater
     final static String LAYOUT_PLAYER_TABLE	=	"CREATE TABLE IF NOT EXISTS `plotme_players` " + 
 	    							 			"("
 	    							 	  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-	    							 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE" +
+	    							 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE"
+	    							 	  			+ "`displayname` VARCHAR(32) DEFAULT NULL" +
 	    							 	  		");";
   
     final static String LAYOUT_PLOT_TABLE	=	"CREATE TABLE IF NOT EXISTS `plotme_plots` " +
@@ -34,8 +32,10 @@ public class PlotDatabaseUpdater
 		    						  		  		+ "`biome` VARCHAR(16) NOT NULL DEFAULT 'PLAINS',"
 		    						  		  		+ "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
 				    						  		+ "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
-				    						  		+ "`customprice` UNSIGNED DOUBLE DEFAULT NULL,"
-				    						  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+				    						  		+ "`sellprice` UNSIGNED DOUBLE DEFAULT NULL,"
+				    						  		+ "`rentprice` UNSIGNED DOUBLE DEFAULT NULL,"
+				    						  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
+				    						  		+ "`isforrent` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
 				    						  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
 				    						  		+ "`isauctionned` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
 				    						  		+ "`properties` BLOB, "

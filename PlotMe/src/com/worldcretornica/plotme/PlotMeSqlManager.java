@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import org.bukkit.Location;
+import org.bukkit.block.Biome;
 
 import com.worldcretornica.plotme.utils.Jakky89Properties;
 
@@ -207,8 +208,8 @@ public class PlotMeSqlManager {
 		try {
 			st = conn.createStatement();
 			ResultSet setPlots = st.executeQuery("SELECT id, xpos, zpos, owner, playername, biome," +
-												 		"expireddate, finisheddate, customprice," +
-												 		"isforsale, isprotected, isauctionned, properties " +
+												 		"expireddate, finisheddate, sellprice, rentprice," +
+												 		"isforsale, isforrent, isprotected, isauctionned, properties " +
 												 "FROM plotme_plots " +
 												 "INNER JOIN plotme_players " +
 												 "ON plotme_players.id=plotme_plots.owner " +
@@ -222,25 +223,29 @@ public class PlotMeSqlManager {
 				int id = setPlots.getInt(1);
 				int tX = setPlots.getInt(2);
 				int tZ = setPlots.getInt(3);
+				PlotPosition plotpos = new PlotPosition(plotWorld, tX, tZ);
 				PlotOwner owner = new PlotOwner(setPlots.getInt(4), setPlots.getString(5));
-				String biome = setPlots.getString(6);
+				Biome biome = Biome.valueOf(setPlots.getString(6));
 				long expireddate = setPlots.getLong(7);
 				long finisheddate = setPlots.getLong(8);
-				double customprice = setPlots.getDouble(9);
-				boolean isforsale = setPlots.getBoolean(10);
-				boolean isprotected = setPlots.getBoolean(11);
-				boolean isauctionned = setPlots.getBoolean(12);
+				double sellprice = setPlots.getDouble(9);
+				double rentprice = setPlots.getDouble(10);
+				boolean isforsale = setPlots.getBoolean(11);
+				boolean isforrent = setPlots.getBoolean(12);
+				boolean isprotected = setPlots.getBoolean(13);
+				boolean isauctionned = setPlots.getBoolean(14);
 				
 				Plot plot = new Plot(
 	    				id,
-	    				plotWorld,
-	    				tX, tZ,
+	    				plotpos,
 	    				owner,
 	    				biome,
 	    				expireddate,
 	    				finisheddate,
-	    				customprice,
+	    				sellprice,
+	    				rentprice,
 	    				isforsale,
+	    				isforrent,
 	    				isprotected,
 	    				isauctionned
 	    		);
@@ -326,20 +331,22 @@ public class PlotMeSqlManager {
         {
             conn = getConnection();
 
-            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, customprice, isforsale, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, sellprice, rentprice, isforsale, isforrent, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             
-            ps.setInt(1, plot.id);
-            ps.setInt(2, plot.plotpos.w.id);
-            ps.setInt(3, plot.plotpos.x);
-            ps.setInt(4, plot.plotpos.z);
-            ps.setInt(5, plot.owner.id);
+            ps.setInt(1, plot.getId());
+            ps.setInt(2, plot.getPlotWorld().getId());
+            ps.setInt(3, plot.getPlotX());
+            ps.setInt(4, plot.getPlotZ());
+            ps.setInt(5, plot.getOwner().getId());
             ps.setString(6, plot.biome.toString());
             ps.setLong(7, plot.expireddate);
             ps.setLong(8, plot.finisheddate);
-            ps.setDouble(9, plot.customprice);
-            ps.setBoolean(10, plot.isforsale);
-            ps.setBoolean(11, plot.isprotected);
-            ps.setBoolean(12, plot.isauctionned);
+            ps.setDouble(9, plot.sellprice);
+            ps.setDouble(10, plot.rentprice);
+            ps.setBoolean(11, plot.isforsale);
+            ps.setBoolean(12, plot.isforrent);
+            ps.setBoolean(13, plot.isprotected);
+            ps.setBoolean(14, plot.isauctionned);
             
             ps.executeUpdate();
             conn.commit();

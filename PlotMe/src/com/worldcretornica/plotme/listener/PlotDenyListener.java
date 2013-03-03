@@ -77,7 +77,7 @@ public class PlotDenyListener implements Listener
 				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
 				if (plot != null && plot.isDenied(player.getName(), true, true))
 				{
-					event.setTo(PlotManager.getPlotHome(player.getWorld(), plot));
+					event.setTo(PlotManager.getPlotHome(plot));
 				}
 			}
 		}
@@ -86,19 +86,15 @@ public class PlotDenyListener implements Listener
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onPlayerJoin(final PlayerJoinEvent event)
 	{
-		Player p = event.getPlayer();
-		
-		if(PlotManager.isPlotWorld(p) && !PlotMe.cPerms(p, "plotme.admin.bypassdeny"))
+		Player player = event.getPlayer();
+		if (PlotManager.isPlotWorld(player.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
 		{
-			String id = PlotManager.getPlotId(p);
-			
-			if(!id.equalsIgnoreCase(""))
+			Plot plot = PlotManager.getPlotAtBlockPosition(player);
+			if (plot != null)
 			{
-				Plot plot = PlotManager.getPlotById(p, id);
-				
-				if(plot != null && plot.isDenied(p.getName()))
+				if (plot.isDenied(player.getName(), false, false))
 				{
-					p.teleport(PlotManager.getPlotHome(p.getWorld(), plot));
+					player.teleport(PlotManager.getPlotHome(plot));
 				}
 			}
 		}

@@ -103,7 +103,6 @@ public class PlotMe extends JavaPlugin
 	public void onDisable()
 	{	
 		PlotMeSqlManager.closeConnection();
-		PlotProtectionRemover.forceRun();
 		NAME = null;
 		PREFIX = null;
 		VERSION = null;
@@ -1233,12 +1232,7 @@ public class PlotMe extends JavaPlugin
 	{
 		return ChatColor.translateAlternateColorCodes('&', string);
     }
-	
-	public void scheduleProtectionRemoval(Plot plot)
-	{
-		PlotProtectionRemover.addPlotToQueue(plot);
-	}
-	
+
 	private short getBlockId(ConfigurationSection cs, String section, String def)
 	{
 		String idvalue = cs.getString(section, def.toString());
