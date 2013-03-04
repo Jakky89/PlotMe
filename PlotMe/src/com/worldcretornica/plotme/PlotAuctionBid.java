@@ -6,29 +6,42 @@ import org.bukkit.entity.Player;
 
 public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 
-	public String realplayername;
-	public String playerdisplayname;
-	public Double moneyamount;
+	private String realplayername;
+	private String playerdisplayname;
+	private int auctionnumber;
+	private Double moneyamount;
+	private long date;
 
-	public PlotAuctionBid(Player minecraftPlayer, Double moneyAmount)
+	public PlotAuctionBid(int auctionNumber, Player minecraftPlayer, Double moneyAmount)
 	{
+		auctionnumber = auctionNumber;
 		realplayername = minecraftPlayer.getName();
 		playerdisplayname = minecraftPlayer.getDisplayName();
-		this.moneyamount = moneyAmount;
+		moneyamount = moneyAmount;
+		date = Math.round(System.currentTimeMillis() / 1000);
 	}
 	
-	public PlotAuctionBid(String playerName, Double moneyAmount)
+	public PlotAuctionBid(int auctionNumber, String playerName, Double moneyAmount)
 	{
+		auctionnumber = auctionNumber;
 		realplayername = playerName;
 		playerdisplayname = playerName;
 		moneyamount = moneyAmount;
+		date = Math.round(System.currentTimeMillis() / 1000);
 	}
 	
-	public PlotAuctionBid(String playerName, String displayName, Double moneyAmount)
+	public PlotAuctionBid(int auctionNumber, String playerName, String displayName, Double moneyAmount)
 	{
+		auctionnumber = auctionNumber;
 		realplayername = playerName;
 		playerdisplayname = displayName;
 		moneyamount = moneyAmount;
+		date = Math.round(System.currentTimeMillis() / 1000);
+	}
+	
+	public int getAuctionNumber()
+	{
+		return auctionnumber;
 	}
 	
 	public String getBidderRealPlayerName()
@@ -41,9 +54,14 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 		return playerdisplayname;
 	}
 
-	public double getBidMoneyAmount()
+	public double getMoneyAmount()
 	{
 		return moneyamount;
+	}
+	
+	public long getDate()
+	{
+		return date;
 	}
 	
 	

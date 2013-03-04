@@ -111,17 +111,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		ProtectedBlocks = null;
 		PreventedItems = null;
 	}
-	
-	private void getIdFromDatabase()
-	{
-		
-	}
-	
-	public void setId(int worldId)
-	{
-		id = worldId;
-	}
-	
+
 	public int getId()
 	{
 		return id;
@@ -380,16 +370,16 @@ public class PlotWorld implements Comparable<PlotWorld>
 		Integer px = plot.getPlotX();
 		Integer pz = plot.getPlotZ();
 		
-		plot.neighbourplots[0] = getPlotAtPlotPosition( px    , pz - 1 );
-		plot.neighbourplots[1] = getPlotAtPlotPosition( px + 1, pz - 1 );
-		plot.neighbourplots[2] = getPlotAtPlotPosition( px + 1, pz     );
-		plot.neighbourplots[3] = getPlotAtPlotPosition( px + 1, pz + 1 );
-		plot.neighbourplots[4] = getPlotAtPlotPosition( px    , pz + 1 );
-		plot.neighbourplots[5] = getPlotAtPlotPosition( px - 1, pz + 1 );
-		plot.neighbourplots[6] = getPlotAtPlotPosition( px - 1, pz     );
-		plot.neighbourplots[7] = getPlotAtPlotPosition( px - 1, pz - 1 );
+		plot.setNeighbourPlot((byte)0, getPlotAtPlotPosition( px    , pz - 1 ));
+		plot.setNeighbourPlot((byte)1, getPlotAtPlotPosition( px + 1, pz - 1 ));
+		plot.setNeighbourPlot((byte)2, getPlotAtPlotPosition( px + 1, pz     ));
+		plot.setNeighbourPlot((byte)3, getPlotAtPlotPosition( px + 1, pz + 1 ));
+		plot.setNeighbourPlot((byte)4, getPlotAtPlotPosition( px    , pz + 1 ));
+		plot.setNeighbourPlot((byte)5, getPlotAtPlotPosition( px - 1, pz + 1 ));
+		plot.setNeighbourPlot((byte)6, getPlotAtPlotPosition( px - 1, pz     ));
+		plot.setNeighbourPlot((byte)7, getPlotAtPlotPosition( px - 1, pz - 1 ));
 		
-		plot.notifyNeighbourPlots();
+		plot.refreshNeighbourPlots();
 	}
 	
 	public boolean registerPlot(Plot plot) {
@@ -446,21 +436,6 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return new PlotPosition(this, (int)Math.floor((double)(blockX / divi)), (int)Math.floor((double)(blockZ / divi)));
 	}
 	
-	public int getPlotPositionVectorDirection(PlotPosition plotpos, double posX, double posZ)
-	{
-		int dir = -1;
-		
-		if (plotpos.getPlotWorld().equals(this))
-		{
-			double divi = getPlotBlockPositionMultiplier();
-			
-			int centerx = (int)Math.round((double)(plotpos.getPlotX() * divi) + (double)(PlotSize / 2));
-			int centerz = (int)Math.round((double)(plotpos.getPlotZ() * divi) + (double)(PlotSize / 2));
-
-			dir = PlotMe.getDirection(centerx, centerz, posX, posZ);
-		}
-		return dir;
-	}
 	
 	public boolean isOnRoad(double posX, double posZ)
 	{
@@ -471,7 +446,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		
 		double pph = (double)(PathWidth / 2);
 		
-		if (bsx <= pph || bsx >= PlotSize || bsz <= pph || bsz >= PlotSize)
+		if (bsx <= pph || bsx >= pph + PlotSize || bsz <= pph || bsz >= pph + PlotSize)
 		{
 			return true;
 		}
@@ -480,41 +455,57 @@ public class PlotWorld implements Comparable<PlotWorld>
 	}
 	
 	/**
+	 * TODO: NEEDS TESTING !!!
+	 */
+	public Location getCenterBlockLocation(Plot plot)
+	{
+		if (plot != null && plot.getPlotWorld().equals(this))
+		{
+			Location baseLocation = getMinBlockLocation(plot);
+			return new Location(MinecraftWorld, ((double)baseLocation.getBlockX() + (double)(PlotSize / 2)), RoadHeight, ((double)baseLocation.getBlockZ() + (double)(PlotSize / 2)));
+		}
+		return null;
+	}
+	
+	public int getPlotPositionVectorDirection(Plot plot, double posX, double posZ)
+	{
+		int dir = -1;
+		if (plot.getPlotWorld().equals(this))
+		{
+			Location centerLocation = getCenterBlockLocation(plot);
+			dir = PlotMe.getDirection(centerLocation.getX(), centerLocation.getZ(), posX, posZ);
+		}
+		return dir;
+	}
+	
+	/**
 	 * TODO: NEEDS TESTING!!!
 	 */
 	public Plot getPlotAtBlockPosition(double posX, double posZ)
 	{
 		double divi = getPlotBlockPositionMultiplier();
-		
-		int roundplotx = (int)Math.floor((double)(posX / divi));
-		int roundplotz = (int)Math.floor((double)(posZ / divi));
-		
-		double psh = (double)(PlotSize / 2);
-		
-		double centerx = Math.round((double)(roundplotx * divi) + psh);
-		double centerz = Math.round((double)(roundplotz * divi) + psh);
-		
-		byte dir = PlotMe.getDirection(centerx, centerz, posX, posZ);
 
 		// Get nearest plot
-		Plot plot = getPlotAtPlotPosition(roundplotx, roundplotz);
-		
-		if (plot != null && AutoLinkPlots)
+		Plot plot = getPlotAtPlotPosition((int)Math.floor((double)(posX / divi)), (int)Math.floor((double)(posZ / divi)));
+		if (plot != null)
 		{
-			double bsx = posX % divi;
-			double bsz = posZ % divi;
-			
-			double pph = (double)(PathWidth / 2);
-			
-			if (bsx <= pph || bsx >= PlotSize || bsz <= pph || bsz >= PlotSize)
+			if (isOnRoad(posX, posZ) && AutoLinkPlots)
 			{
-				if (plot.neighbourplots != null && plot.neighbourplots.length > 0)
+				if (plot.hasNeighbourPlots())
 				{
-					if (plot.neighbourplots[dir].owner != null && plot.neighbourplots[dir].owner == plot.owner)
+					int dir = getPlotPositionVectorDirection(plot, posX, posZ);
+					if (dir >= 0)
 					{
-						return plot;
+						if (plot.getNeighbourPlot(dir).getOwner() != null && plot.getNeighbourPlot(dir).getOwner().equals(plot.getOwner()))
+						{
+							return plot;
+						}
 					}
 				}
+			}
+			else
+			{
+				return plot;
 			}
 		}
 		// FALLBACK
@@ -540,55 +531,24 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		double multi = getPlotBlockPositionMultiplier();
 		
-		int locx = (int)Math.floor((double)(plot.getPlotX() * multi));
-		int locz = (int)Math.floor((double)(plot.getPlotZ() * multi));
+		double pph = (double)(PathWidth / 2);
+		
+		int locx = (int)Math.floor((double)(plot.getPlotX() * multi) + pph);
+		int locz = (int)Math.floor((double)(plot.getPlotZ() * multi) + pph);
 		
 		return new Location(MinecraftWorld, locx, 1, locz);
 	}
 	
 	public Location getMaxBlockLocation(Plot plot)
 	{
-		double multi = getPlotBlockPositionMultiplier();
-		
-		int locx = (int)Math.ceil((double)((plot.getPlotX() + 1) * multi));
-		int locz = (int)Math.ceil((double)((plot.getPlotZ() + 1) * multi));
-		
-		return new Location(MinecraftWorld, locx, MinecraftWorld.getMaxHeight(), locz);
+		Location baseLocation = getMinBlockLocation(plot);
+		return new Location(MinecraftWorld, baseLocation.getBlockX() + PlotSize, MinecraftWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize);
 	}
 	
 	public Pair<Location, Location> getMinMaxBlockLocation(Plot plot)
 	{
-		double multi = getPlotBlockPositionMultiplier();
-		
-		int locminx = (int)Math.floor((double)(plot.getPlotX() * multi));
-		int locminz = (int)Math.floor((double)(plot.getPlotZ() * multi));
-		
-		int locmaxx = (int)Math.ceil((double)((plot.getPlotX() + 1) * multi));
-		int locmaxz = (int)Math.ceil((double)((plot.getPlotZ() + 1) * multi));
-		
-		return new Pair<Location, Location>(new Location(MinecraftWorld, locminx, 1, locminz), new Location(MinecraftWorld, locmaxx, MinecraftWorld.getMaxHeight(), locmaxz));
-	}
-	
-	/**
-	 * TODO: NEEDS TESTING !!!
-	 */
-	public Location getCenterLocation(int plotX, int plotZ)
-	{
-		double multi = getPlotBlockPositionMultiplier();
-		
-		int locx = (int)Math.round((double)(plotX * multi) + (double)(PlotSize / 2));
-		int locz = (int)Math.round((double)(plotZ * multi) + (double)(PlotSize / 2));
-		
-		return new Location(MinecraftWorld, locx, RoadHeight, locz);
-	}
-	
-	public Location getCenterLocation(Plot plot)
-	{
-		if (plot != null)
-		{
-			return getCenterLocation(plot.getPlotX(), plot.getPlotZ());
-		}
-		return null;
+		Location baseLocation = getMinBlockLocation(plot);
+		return new Pair<Location, Location>(new Location(MinecraftWorld, baseLocation.getBlockX(), 1, baseLocation.getBlockZ()), new Location(MinecraftWorld, baseLocation.getBlockX() + PlotSize, MinecraftWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize));
 	}
 	
 	/**

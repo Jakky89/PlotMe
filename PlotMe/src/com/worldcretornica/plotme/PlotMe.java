@@ -653,6 +653,8 @@ public class PlotMe extends JavaPlugin
         if (economyProvider != null) 
         {
             economy = economyProvider.getProvider();
+            
+            PlotOwner bankOwner = new PlotOwner(0, "$BANK$");
         }
     }
 	
@@ -780,10 +782,7 @@ public class PlotMe extends JavaPlugin
 		File filelang = new File(this.getDataFolder(), "caption-english.yml");
 		
 		TreeMap<String, String> properties = new TreeMap<String, String>();
-		properties.put("MsgStartDeleteSession","Starting delete session");
 		properties.put("MsgDeletedExpiredPlots", "Deleted expired plot");
-		properties.put("MsgDeleteSessionFinished","Deletion session finished, rerun to reset more plots");
-		properties.put("MsgAlreadyProcessingPlots", "is already processing expired plots");
 		properties.put("MsgDoesNotExistOrNotLoaded","does not exist or is not loaded.");
 		properties.put("MsgNotPlotWorld", "This is not a plot world.");
 		properties.put("MsgInvalidPageNumber", "Invalid page number!");
@@ -1002,11 +1001,11 @@ public class PlotMe extends JavaPlugin
 		properties.put("SignOwner", "Owner:");
 		properties.put("SignId", "ID:");
 		properties.put("SignForSale", "&9&lFOR SALE");
-		properties.put("SignPrice", "Price :");
+		properties.put("SignPrice", "Price:");
 		properties.put("SignPriceColor", "&9");
 		properties.put("SignOnAuction", "&9&lON AUCTION");
-		properties.put("SignMinimumBid", "Minimum bid :");
-		properties.put("SignCurrentBid","Current bid :");
+		properties.put("SignMinimumBid", "Minimum bid:");
+		properties.put("SignCurrentBid","Current bid:");
 		properties.put("SignCurrentBidColor", "&9");
 		
 		properties.put("InfoId", "ID");

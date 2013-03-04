@@ -13,6 +13,7 @@ import java.sql.Statement;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
+import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.Jakky89Properties;
 
@@ -20,7 +21,7 @@ import com.worldcretornica.plotme.utils.Jakky89Properties;
 
 public class PlotMeSqlManager {
 
-	private static Connection conn = null;
+	private static Connection con = null;
 	
 	public final static String sqlitedb = "/plots.db";
 	
@@ -32,85 +33,85 @@ public class PlotMeSqlManager {
         	if (PlotMe.usemySQL)
         	{
         		Class.forName("com.mysql.jdbc.Driver");
-        		conn = DriverManager.getConnection(PlotMe.mySQLconn, PlotMe.mySQLuname, PlotMe.mySQLpass);
+        		con = DriverManager.getConnection(PlotMe.mySQLconn, PlotMe.mySQLuname, PlotMe.mySQLpass);
         	}
         	else
         	{
         		Class.forName("org.sqlite.JDBC");
-        		conn = DriverManager.getConnection("jdbc:sqlite:" + PlotMe.configpath + "/plots.db");
+        		con = DriverManager.getConnection("jdbc:sqlite:" + PlotMe.configpath + "/plots.db");
         	}
-        	conn.setAutoCommit(false);
+        	con.setAutoCommit(false);
         }
         catch (SQLException ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " SQL exception on initialize:");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "SQL exception on initialize:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         catch (ClassNotFoundException ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " You need the SQLite/MySQL library!");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "You need the SQLite/MySQL library!");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         catch (Exception ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " Exception occurred while initializing database connection :");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Exception occurred while initializing database connection :");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         createTable();
-        return conn;
+        return con;
     }
     
     public static String getSchema()
     {
-    	String conn = PlotMe.mySQLconn;
-    	if (conn.lastIndexOf("/") > 0)
+    	String constr = PlotMe.mySQLconn;
+    	if (constr.lastIndexOf("/") > 0)
     	{
-    		return conn.substring(conn.lastIndexOf("/") + 1);
+    		return constr.substring(constr.lastIndexOf("/") + 1);
     	}
     	return "";
     }
     
     public static Connection getConnection()
     {
-		if (conn == null)
+		if (con == null)
 		{
-			conn = initialize();
+			con = initialize();
 		}
 		if (PlotMe.usemySQL)
 		{
 			try
 			{
-				if (!conn.isValid(10))
+				if (!con.isValid(10))
 				{
-					conn = initialize();
+					con = initialize();
 				}
 			} 
 			catch (SQLException ex) 
 			{
-				PlotMe.logger.severe(PlotMe.PREFIX + " Failed establishing SQL database connection :");
+				PlotMe.logger.severe(PlotMe.PREFIX + "Failed establishing SQL database connection :");
 				PlotMe.logger.severe("  " + ex.getMessage());
 			}
 		}
-		return conn;
+		return con;
 	}
 
     public static void closeConnection() {
-		if (conn != null)
+		if (con != null)
 		{
 			try
 			{
 				if (PlotMe.usemySQL)
 				{
-					if (conn.isValid(10))
+					if (con.isValid(10))
 					{
-						conn.close();
+						con.close();
 					}
 				}
 				else
 				{
-					conn.close();
+					con.close();
 				}
-				conn = null;
+				con = null;
 			}
 			catch (SQLException ex)
 			{
@@ -154,7 +155,7 @@ public class PlotMeSqlManager {
 	        {
             	try
             	{
-            		conn.commit();
+            		con.commit();
             		return true;
             	}
             	catch (SQLException ex)
@@ -175,7 +176,7 @@ public class PlotMeSqlManager {
 	        {
 	        	try
 	        	{
-	        		conn.rollback();
+	        		con.rollback();
             	}
 	        	catch (SQLException ex)
 	        	{
@@ -186,10 +187,13 @@ public class PlotMeSqlManager {
 	        	finally
 	        	{
             		PlotMe.logger.info(PlotMe.PREFIX + " Rolled back SQL statement batch.");
-            		if (!st.isClosed())
+            		try
             		{
-            			st.close();
-            		}
+            			if (!st.isClosed())
+            			{
+            				st.close();
+            			}
+            		} catch (SQLException ex) {}
             	}
             }
 		}
@@ -204,7 +208,12 @@ public class PlotMeSqlManager {
     
     public static PlotWorld getPlotWorld(World bukkitWorld)
     {
-    	Connection con = getConnection();
+    	if (bukkitWorld == null)
+    	{
+    		return null;
+    	}
+    	
+    	con = getConnection();
     	if (con == null)
     	{
     		return null;
@@ -215,17 +224,18 @@ public class PlotMeSqlManager {
    	    
         try {
             Integer worldId = -1;
-            st = con.prepareStatement("SELECT id, worldname FROM plotme_worlds WHERE worldname=? LIMIT 2");
+            st = con.prepareStatement("SELECT id, worldname FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE worldname='?'");
             st.setString(1, bukkitWorld.getName());
             st.executeQuery();
             rs = st.getResultSet();
             if (rs.next())
             {
             	worldId = rs.getInt(1);
+            	PlotMe.logger.info(PlotMe.PREFIX + "World \"" + bukkitWorld.getName() + "\" has id " + String.valueOf(worldId));
             }
             else
             {
-	            st = con.prepareStatement("INSERT INTO " + PlotMe.databasePrefix + "plotme_worlds (worldname) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
+	            st = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_worlds` (worldname) VALUES ('?')", Statement.RETURN_GENERATED_KEYS);
 	            st.setString(1, bukkitWorld.getName());
 	            if (st.executeUpdate() != 1) {
 	                return null;
@@ -234,6 +244,7 @@ public class PlotMeSqlManager {
 	            worldId = rs.getInt(1);
 	            if (rs.next()) {
 	            	worldId = rs.getInt(1);
+	            	PlotMe.logger.info(PlotMe.PREFIX + "Created new id " + String.valueOf(worldId) + " for world \"" + bukkitWorld.getName() + "\" in database.");
 	            }
             }
             if (worldId != null && worldId > 0)
@@ -241,6 +252,7 @@ public class PlotMeSqlManager {
                 // error when we found more than one world with that name (should normally never happen)
                 if (rs.next())
                 {
+                	PlotMe.logger.severe(PlotMe.PREFIX + "World with name \"" + bukkitWorld.getName() + "\" is not unique in database!");
                 	return null;
                 }
                 return new PlotWorld(worldId, bukkitWorld);
@@ -249,25 +261,24 @@ public class PlotMeSqlManager {
         }
         catch (SQLException ex)
         {
-        	
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting data for world \"" + bukkitWorld.getName() + "\" from database :");
+        	PlotMe.logger.severe("  " + ex.getMessage());
         }
         finally
         {
             if (rs != null)
             {
-            	try {
+            	try
+            	{
             		rs.close();
-            	} catch (SQLException ex) {
-            		
-            	}
+            	} catch (SQLException ex) {}
             }
             if (st != null)
             {
-            	try {
+            	try
+            	{
             		st.close();
-            	} catch (SQLException ex) {
-            		
-            	}
+            	} catch (SQLException ex) {}
             }
         }
         return null;
@@ -285,7 +296,7 @@ public class PlotMeSqlManager {
    	    ResultSet rs = null;
    	    
         try {
-        	st = con.prepareStatement("SELECT id,worldname,xpos,zpos,playername,biome," +
+        	st = con.prepareStatement("SELECT id,world,xpos,zpos,player,biome," +
 											 "expireddate,finisheddate,sellprice," +
 											 "isforsale,isprotected,isauctionned,properties " +
 									  "FROM plotme_plots " +
@@ -634,7 +645,7 @@ public class PlotMeSqlManager {
 	        
 		    ps = con.prepareStatement("SELECT properties FROM plotme_plots WHERE id=(?) LIMIT 1");
 		    
-		    ps.setInt(1, plot.id);
+		    ps.setInt(1, plot.getId());
 		    
 		    ResultSet rs = ps.executeQuery();
 		    if (rs.next())
@@ -674,8 +685,46 @@ public class PlotMeSqlManager {
         	}
         }
     }
+    
+    public static int getNextAuctionNumber(Plot plot)
+    {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        int tmpan = -1;
+        
+        try
+        {
+	        con = getConnection();
+		    st = con.createStatement();
+		    rs = st.executeQuery("SELECT MAX(auction) FROM plotme_auctions");
+		    while (rs.next())
+		    {
+		    	if (rs.getInt(1) >= tmpan)
+		    	{
+		    		tmpan = rs.getInt(1) + 1;
+		    	}
+		    }
+		    return tmpan;
+        }
+        catch (Exception ex)
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting next auction number from database!");
+			PlotMe.logger.severe("  " + ex.getMessage());
+		}
+        finally
+        {
+        	if (st != null)
+        	{
+        		try {
+					st.close();
+				} catch (SQLException ex) {}
+        	}
+        }
+        return -1;
+    }
 
-    public static void addPlotBid(String player, double bid, int idX, int idZ, String world)
+    public static void addPlotBid(Plot plot, Player player, double amount)
     {
     	PreparedStatement ps = null;
         Connection conn;
@@ -685,10 +734,9 @@ public class PlotMeSqlManager {
         {
             conn = getConnection();
             
-            ps = conn.prepareStatement("INSERT INTO plotmeAuctions (idX, idZ, player, world, bid) " +
-					   "VALUES (?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT INTO `plotme_auctions` (auction,date,plot,player,amount) VALUES (?,?,(SELECT id FROM plotme_players WHERE playername='?'),?)");
             
-            ps.setInt(1, idX);
+            ps.setInt(1, plot.getId());
             ps.setInt(2, idZ);
             ps.setString(3, player);
             ps.setString(4, world.toLowerCase());

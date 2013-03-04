@@ -19,18 +19,16 @@ public class RunnableExpiredPlotsRemover implements Runnable {
 		{
 			if (PlotManager.expiredPlotDeletionsProcessed >= PlotMe.MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR)
 			{
-				if (PlotManager.lastExpiredPlotDeletion < (currentTime - 3600))
+				if (PlotManager.lastExpiredPlotDeletion > (currentTime - 3600))
 				{
-					PlotManager.expiredPlotDeletionsProcessed = 0;
-					
+					return;
 				}
+				PlotManager.expiredPlotDeletionsProcessed = 0;
 			}
 			if (PlotManager.expiredPlotDeletionsProcessed < PlotMe.MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR)
 			{
 				PlotManager.lastExpiredPlotDeletion = currentTime;
-				
 				Collections.sort(PlotManager.expiredPlots, new ExpiredPlotsComparator());
-			
 				Iterator<Plot> expiredPlotsIterator = PlotManager.expiredPlots.iterator();
 				int expireDiff;
 				while (expiredPlotsIterator.hasNext() && PlotManager.expiredPlotDeletionsProcessed < PlotMe.MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR)

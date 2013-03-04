@@ -38,7 +38,7 @@ public class PlotManager {
     // Maps bukkit worlds to PlotWorld instances 
 	public static Map<World, PlotWorld> plotWorlds;
 	// Maps player names to PlotOwner instances 
-	public static Map<Player, PlotOwner> plotOwners;
+	public static Map<String, PlotOwner> plotOwners;
 	public static Set<Plot> allPlots;
 	public static List<Plot> expiredPlots;
 	
@@ -51,7 +51,7 @@ public class PlotManager {
 	public PlotManager()
 	{
 		plotWorlds = new HashMap<World, PlotWorld>();
-		allPlots = new HashSet<Plot>();
+		plotOwners = new HashMap<String, PlotOwner>();
 		
 		expiredPlots = new LinkedList<Plot>();
 		expiredPlotsCheckTaskId = null;
@@ -65,7 +65,22 @@ public class PlotManager {
 			return false;
 		}
 		
-		if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) != plotWorld)
+		if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public static boolean registerPlotOwner(PlotOwner plotOwner)
+	{
+		if (plotOwner == null || plotOwner.getId() < 0)
+		{
+			return false;
+		}
+		
+		if (plotOwners.put(plotOwner.getRealName(), plotOwner) == null)
 		{
 			return true;
 		}
@@ -91,7 +106,16 @@ public class PlotManager {
 		return null;
 	}
 	
-	public void resetNeighbours(Plot plot)
+	public static PlotOwner getPlotOwner(String ownerName)
+	{
+		if (ownerName != null && !ownerName.isEmpty())
+		{
+			return plotOwners.get(ownerName);
+		}
+		return null;
+	}
+	
+	public static void resetNeighbours(Plot plot)
 	{
 		if (plot == null)
 		{
@@ -151,9 +175,9 @@ public class PlotManager {
 
 		if (pwi.registerPlot(plot))
 		{
-			setOwnerSign(plot);
 			allPlots.add(plot);
 			checkPlotExpiration(plot);
+			actualizePlotSigns(plot);
 			return true;
 		}
 		
@@ -228,72 +252,60 @@ public class PlotManager {
 			return;
 		}
 
-		if (plot.neighbourplots == null)
+		plot.getPlotWorld().refreshNeighbours(plot);
+		
+		for (int i=0; i<8; i++)
 		{
-			plot.getPlotWorld().refreshNeighbours(plot);
+			if (plot.getNeighbourPlot(i) != null)
+			{
+				if (plot.getNeighbourPlot(i).getOwner().equals(plot.getOwner()))
+				{
+					fillroad(plot.getNeighbourPlot(i), plot);
+				}
+			}
 		}
 		
-		if (plot.neighbourplots != null)
+		if (plot.getNeighbourPlot(1) != null && plot.getNeighbourPlot(1).getOwner().equals(plot.getOwner()))
 		{
-			for (int i=0; i<8; i++)
+			if (plot.getNeighbourPlot(7) != null &&
+				plot.getNeighbourPlot(0) != null)
 			{
-				if (plot.neighbourplots != null)
+				if (plot.getNeighbourPlot(7).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot(0).getOwner().equals(plot.getOwner()))
 				{
-					if (plot.neighbourplots[i] != null)
-					{
-						if (plot.neighbourplots[i].owner.equals(plot.owner))
-						{
-							fillroad(plot.neighbourplots[i], plot);
-						}
-					}
-				}
-			}
-
-			if (plot.neighbourplots[7] != null &&
-				plot.neighbourplots[0] != null &&
-				plot.neighbourplots[1] != null)
-			{
-				if (plot.neighbourplots[7].owner.equals(plot.owner) &&
-					plot.neighbourplots[0].owner.equals(plot.owner) &&
-					plot.neighbourplots[1].owner.equals(plot.owner))
-				{
-					fillmiddleroad(plot.neighbourplots[0], plot);
+					fillmiddleroad(plot.getNeighbourPlot(0), plot);
 				}
 			}
 			
-			if (plot.neighbourplots[1] != null &&
-				plot.neighbourplots[2] != null &&
-				plot.neighbourplots[3] != null)
+			if (plot.getNeighbourPlot(2) != null &&
+				plot.getNeighbourPlot(3) != null)
 			{
-				if (plot.neighbourplots[1].owner.equals(plot.owner) &&
-					plot.neighbourplots[2].owner.equals(plot.owner) &&
-					plot.neighbourplots[3].owner.equals(plot.owner))
+				if (plot.getNeighbourPlot(2).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot(3).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.neighbourplots[2], plot);
+					fillmiddleroad(plot.getNeighbourPlot(2), plot);
 				}
 			}
-				
-			if (plot.neighbourplots[3] != null &&
-				plot.neighbourplots[4] != null &&
-				plot.neighbourplots[5] != null)
+		}
+		if (plot.getNeighbourPlot(5) != null && plot.getNeighbourPlot(5).getOwner().equals(plot.getOwner()))
+		{
+			if (plot.getNeighbourPlot(3) != null &&
+				plot.getNeighbourPlot(4) != null)
 			{
-				if (plot.neighbourplots[3].owner.equals(plot.owner) &&
-					plot.neighbourplots[4].owner.equals(plot.owner) &&
-					plot.neighbourplots[5].owner.equals(plot.owner))
+				if (plot.getNeighbourPlot(3).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot(4).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.neighbourplots[4], plot);
+					fillmiddleroad(plot.getNeighbourPlot(4), plot);
 				}
 			}
 			
-			if (plot.neighbourplots[5] != null &&
-				plot.neighbourplots[6] != null &&
-				plot.neighbourplots[7] != null)
+			if (plot.getNeighbourPlot(6) != null &&
+				plot.getNeighbourPlot(7) != null)
 			{
-				if (plot.neighbourplots[5].owner.equals(plot.owner) &&
-					plot.neighbourplots[6].owner.equals(plot.owner) &&
-					plot.neighbourplots[7].owner.equals(plot.owner))
+				if (plot.getNeighbourPlot(6).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot(7).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.neighbourplots[6], plot);
+					fillmiddleroad(plot.getNeighbourPlot(6), plot);
 				}
 			}
 		}
@@ -505,67 +517,183 @@ public class PlotManager {
 		return (pwi.getPlotAtBlockPosition(player.getLocation()) == null);
 	}
 	
-	public static void actualizePlotSignInfoLine(Plot plot)
+	public static void actualizePlotSigns(Plot plot)
 	{
 		if (plot == null || plot.getMinecraftWorld() == null)
 		{
 			return;
 		}
 		
-		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
-		
-		int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
-		int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
+		Sign infosign = null;
+		Sign auctionsign = null;
+		Sign sellsign = null;
 
-		Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
-						
-		Block bsign = pillar.add(0, 0,-1).getBlock();
-		if (!(bsign instanceof Sign))
+		Location baseLocation = plot.getWorldMinBlockLocation();
+		
+		Location pillar = new Location(plot.getMinecraftWorld(), baseLocation.getBlockX() - 1, plot.getPlotWorld().RoadHeight + 1, baseLocation.getBlockZ() - 1);
+		
+		Block binfo = pillar.clone().add(-1, 0, 0).getBlock();
+		if (binfo != null && (binfo instanceof Sign))
 		{
-			return;
+			infosign = (Sign)binfo.getState();
 		}
 		
-		Sign sign = (Sign)bsign.getState();
+		Block bauction = pillar.clone().add(-1, 0, -1).getBlock();
+		if (bauction != null && (bauction instanceof Sign))
+		{
+			auctionsign = (Sign)bauction.getState();
+		}
 		
-		String infoLine = "";
-		if (plot.isFinished())
+		Block bsell = pillar.clone().add(0, 0, -1).getBlock();
+		if (bsell != null && (bsell instanceof Sign))
 		{
-			infoLine = PlotMe.caption("InfoFinished");
+			sellsign = (Sign)bsell.getState();
 		}
-		else if (plot.isProtected())
+		
+		long currentTime = Math.round(System.currentTimeMillis()/1000);
+
+
+		if (binfo != null)
 		{
-			infoLine = PlotMe.caption("InfoProtected");
-		}
-		else
-		{
-			if (plot.expireddate > 0)
+			if (infosign == null)
 			{
-				int secsRemain = Math.round(plot.expireddate - (System.currentTimeMillis()/1000));
-				if (secsRemain > 0)
+				binfo.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)2, false);
+				infosign = (Sign)binfo.getState();
+			}
+			if (infosign != null)
+			{
+				// Always show plot id info in the first line
+				infosign.setLine(0, PlotMe.caption("SignId") + String.valueOf(plot.getId()));
+	
+				// Check if someone owns this plot
+				if (plot.getOwner() != null)
 				{
-					if (secsRemain < 2592000)
+					String tmpOwnerCaption;
+					if (PlotMe.useDisplayNamesOnSigns)
 					{
-						if (secsRemain > 604800)
+						tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.getOwner().getDisplayName();
+					}
+					else
+					{
+						tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.getOwner().getRealName();
+					}
+					if (tmpOwnerCaption.length() > 16)
+					{
+						infosign.setLine(1, tmpOwnerCaption.substring(0, 16));
+						if (tmpOwnerCaption.length() > 32)
 						{
-							infoLine = PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 604800)) + "w";
+							infosign.setLine(2, tmpOwnerCaption.substring(16, 32));
 						}
-						else if (secsRemain > 86400)
+						else
 						{
-							infoLine = PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 86400)) + "d";
+							infosign.setLine(2, tmpOwnerCaption.substring(16));
 						}
-						else if (secsRemain > 3600)
-						{
-							infoLine = PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 3600)) + "h";
-						}
-						sign.update(true);
+					}
+					else
+					{
+						infosign.setLine(2, tmpOwnerCaption);
 					}
 				}
+				if (plot.isFinished())
+				{
+					infosign.setLine(3, PlotMe.caption("InfoFinished"));
+				}
+				else if (plot.isProtected())
+				{
+					infosign.setLine(3, PlotMe.caption("InfoProtected"));
+				}
+				else
+				{
+					if (plot.getExpiration() > 0)
+					{
+						int secsRemain = Math.round(plot.getExpiration() - currentTime);
+						if (secsRemain > 0)
+						{
+							if (secsRemain < 2592000)
+							{
+								if (secsRemain > 604800)
+								{
+									infosign.setLine(3, PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 604800)) + "w");
+								}
+								else if (secsRemain > 86400)
+								{
+									infosign.setLine(3, PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 86400)) + "d");
+								}
+								else if (secsRemain > 3600)
+								{
+									infosign.setLine(3, PlotMe.caption("InfoExpire") + " +" + String.valueOf(Math.floor(secsRemain / 3600)) + "h");
+								}
+							}
+						}
+					}
+				}
+				infosign.update(true);
 			}
 		}
-		if (sign.getLine(3) != infoLine)
+		
+		if (bsell != null)
 		{
-			sign.setLine(3, infoLine);
-			sign.update(true);
+			if (plot.isForSale())
+			{
+				if (sellsign == null)
+				{
+					bsell.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)2, false);
+					sellsign = (Sign)bsell.getState();
+				}
+				if (sellsign != null)
+				{
+					sellsign.setLine(0, PlotMe.caption("SignForSale"));
+					int tmpPrice = (int)Math.round(plot.getPrice() * 100);
+					sellsign.setLine(1, PlotMe.caption("SignPrice"));
+					sellsign.setLine(2, PlotMe.caption("SignPriceColor") + String.valueOf(tmpPrice / 100));
+					sellsign.setLine(3, "/plot " + PlotMe.caption("CommandBuy"));
+					sellsign.update(true);
+				}
+			}
+			else if (bsell.getType().equals(Material.WALL_SIGN))
+			{
+				bsell.setType(Material.AIR);
+			}
+		}
+
+		if (bauction != null)
+		{
+			if (plot.isAuctioned())
+			{
+				if (auctionsign == null)
+				{
+					bauction.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)4, false);
+					auctionsign = (Sign)bauction.getState();
+				}
+				if (auctionsign != null)
+				{
+					auctionsign.setLine(0, PlotMe.caption("SignOnAuction"));
+					PlotAuctionBid highestBid = plot.getAuctionBid(0);
+					if (highestBid != null)
+					{
+						auctionsign.setLine(1, PlotMe.caption("SignCurrentBid"));
+						int tmpAmount = (int)Math.round(highestBid.getMoneyAmount() * 100);
+						String tmpAuctionLine = PlotMe.caption("SignCurrentBidColor") + Math.round(tmpAmount / 100);
+						if (tmpAuctionLine.length() < 16)
+						{
+							auctionsign.setLine(2, tmpAuctionLine);
+						}
+						else
+						{
+							auctionsign.setLine(2, ">" + tmpAuctionLine.substring(0, 14));
+						}
+					}
+					else
+					{
+						auctionsign.setLine(1, PlotMe.caption("SignMinimumBid"));
+					}
+					auctionsign.setLine(3, "/plot " + PlotMe.caption("CommandBid") + " <x>");
+				}
+			}
+			else if (bsell.getType().equals(Material.WALL_SIGN))
+			{
+				bauction.setType(Material.AIR);
+			}
 		}
 	}
 	
@@ -577,173 +705,11 @@ public class PlotManager {
 		}
 		return plotOwners.get(bukkitPlayer.getName());
 	}
-	
-	public static PlotOwner getPlotOwner(String playerName)
-	{
-		if (playerName == null || playerName.isEmpty())
-		{
-			return null;
-		}
-		return getPlotOwner(playerName);		
-	}
 
-	public static void setOwnerSign(Plot plot)
+	public static void removePlotSigns(Plot plot)
 	{
 		if (plot == null || plot.getMinecraftWorld() == null)
 		{
-			return;
-		}
-		
-		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
-		
-		int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
-		int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
-
-		Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
-						
-		Block bsign = pillar.add(0, 0,-1).getBlock();
-		bsign.setType(Material.AIR);
-		bsign.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)2, false);
-		if (!(bsign instanceof Sign))
-		{
-			return;
-		}
-		
-		Sign sign = (Sign)bsign.getState();
-		
-		sign.setLine(0, PlotMe.caption("SignId") + String.valueOf(plot.id));
-		
-		String tmpOwnerCaption;
-		if (PlotMe.useDisplayNamesOnSigns)
-		{
-			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.getDisplayName();
-		}
-		else
-		{
-			tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.owner.getRealPlayerName();
-		}
-		if (tmpOwnerCaption.length() > 16)
-		{
-			sign.setLine(2, tmpOwnerCaption.substring(0, 16));
-			if (tmpOwnerCaption.length() > 32)
-			{
-				sign.setLine(3, tmpOwnerCaption.substring(16, 32));
-			}
-			else
-			{
-				sign.setLine(3, tmpOwnerCaption.substring(16));
-			}
-			sign.update(true);
-		}
-		else
-		{
-			sign.setLine(2, tmpOwnerCaption);
-			actualizePlotSignInfoLine(plot);
-		}
-		
-	}
-	
-	public static void setSellSign(Plot plot)
-	{
-		if (plot == null || plot.getMinecraftWorld() == null)
-		{
-			return;
-		}
-		
-		removeSellSign(plot);
-		
-		if (plot.isforsale || plot.isauctionned)
-		{
-			double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
-			
-			int minX = (int)Math.floor((plot.getPlotPosition().x - 1) * multi);
-			int minZ = (int)Math.floor((plot.getPlotPosition().z - 1) * multi);
-
-			Location pillar = new Location(plot.getMinecraftWorld(), minX - 1, plot.getPlotWorld().RoadHeight + 1, minZ - 1);
-						
-			Block bsign = pillar.clone().add(-1, 0, 0).getBlock();
-			bsign.setType(Material.AIR);
-			bsign.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)4, false);
-			
-			Sign sign = (Sign) bsign.getState();
-
-			if (plot.isforsale)
-			{
-				sign.setLine(0, PlotMe.caption("SignForSale"));
-				sign.setLine(1, PlotMe.caption("SignPrice"));
-				int tmpPrice = (int)Math.round(plot.sellprice * 100);
-				sign.setLine(2, PlotMe.caption("SignPriceColor") + String.valueOf(tmpPrice / 100));
-				sign.setLine(3, "/plotme " + PlotMe.caption("CommandBuy"));
-				sign.update(true);
-			}
-
-			if (plot.isauctionned)
-			{				
-				if (plot.isforsale)
-				{
-					bsign = pillar.clone().add(-1, 0, 1).getBlock();
-					bsign.setType(Material.AIR);
-					bsign.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte)4, false);
-					sign = (Sign) bsign.getState();
-				}
-				
-				sign.setLine(0, PlotMe.caption("SignOnAuction"));
-				
-				if (plot.auctionbids != null && plot.auctionbids.size()>0)
-				{
-					sign.setLine(1, PlotMe.caption("SignCurrentBid"));
-					PlotAuctionBid highestBid = plot.auctionbids.get(0);
-					int tmpAmount = (int)Math.round(highestBid.getBidMoneyAmount() * 100);
-					String tmpAuctionLine = PlotMe.caption("SignCurrentBidColor") + Math.round(tmpAmount / 100);
-					if (tmpAuctionLine.length() < 16)
-					{
-						sign.setLine(2, tmpAuctionLine);
-					}
-					else
-					{
-						sign.setLine(2, ">" + tmpAuctionLine.substring(0, 14));
-					}
-					String bname;
-					if (PlotMe.useDisplayNamesOnSigns)
-					{
-						bname = highestBid.getBidderDisplayName();
-					}
-					else
-					{
-						bname = highestBid.getBidderRealPlayerName();
-					}
-					if (bname.length() < 16)
-					{
-						sign.setLine(3, PlotMe.caption("SignCurrentBidColor") + bname);
-					}
-					else
-					{
-						sign.setLine(3, PlotMe.caption("SignCurrentBidColor") + bname.substring(0, 12) + "...");
-					}
-				}
-				else
-				{
-					sign.setLine(1, PlotMe.caption("SignMinimumBid"));
-				}
-
-				sign.setLine(3, "/plotme " + PlotMe.caption("CommandBid") + " <x>");
-				
-				sign.update(true);
-			}
-		}
-	}
-	
-	public static void removeOwnerSign(Plot plot)
-	{
-		if (plot == null || plot.getMinecraftWorld() == null)
-		{
-			return;
-		}
-		
-		if (plot.getOwnerSign() != null)
-		{
-			plot.getOwnerSign().setType(Material.AIR);
-			plot.setOwnerSign(null);
 			return;
 		}
 		
@@ -751,36 +717,24 @@ public class PlotManager {
 		
 		Location pillar = new Location(plot.getMinecraftWorld(), baseLocation.getBlockX() - 1, plot.getPlotWorld().RoadHeight + 1, baseLocation.getBlockZ() - 1);
 		
-		Block bsign = pillar.add(0, 0, -1).getBlock();
-		if (bsign != null && (bsign instanceof Sign) && (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN))
+		Block binfo = pillar.clone().add(-1, 0, 0).getBlock();
+		if (binfo != null && (binfo instanceof Sign))
 		{
-			bsign.setType(Material.AIR);
-		}
-	}
-	
-	public static void removeSellSign(Plot plot)
-	{
-		if (plot == null || plot.getMinecraftWorld() == null)
-		{
-			return;
+			binfo.setType(Material.AIR);
 		}
 		
-		if (plot.getSellSign() != null)
+		Block bauction = pillar.clone().add(-1, 0, -1).getBlock();
+		if (bauction != null && (bauction instanceof Sign))
 		{
-			plot.getSellSign().setType(Material.AIR);
-			plot.setSellSign(null);
-			return;
+			bauction.setType(Material.AIR);
 		}
 		
-		Location baseLocation = plot.getWorldMinBlockLocation();
-		
-		Location pillar = new Location(plot.getMinecraftWorld(), baseLocation.getBlockX() - 1, plot.getPlotWorld().RoadHeight + 1, baseLocation.getBlockZ() - 1);
-		
-		Block bsign = pillar.add(-1, 0, 0).getBlock();
-		if (bsign != null && (bsign instanceof Sign) && (bsign.getType() == Material.SIGN_POST || bsign.getType() == Material.WALL_SIGN))
+		Block bsell = pillar.clone().add(0, 0, -1).getBlock();
+		if (bsell != null && (bsell instanceof Sign))
 		{
-			bsign.setType(Material.AIR);
+			bsell.setType(Material.AIR);
 		}
+		
 	}
 	
 	public static void refreshPlotChunks(Plot plot)
@@ -925,8 +879,7 @@ public class PlotManager {
 	public static void clearPlot(Plot plot)
 	{
 		Pair<Location, Location> locations = plot.getPlotWorld().getMinMaxBlockLocation(plot);
-		removeOwnerSign(plot);
-		removeSellSign(plot);
+		removePlotSigns(plot);
 		clear(locations.getLeft(), locations.getRight());
 		
 		removeLWCProtections(plot);
@@ -940,41 +893,31 @@ public class PlotManager {
 		PlotMeSqlManager.removePlot(plot);
 		allPlots.remove(plot);
 	}
-		
-	public static void adjustWall(Location loc)
+	
+	public static void adjustWall(Plot plot)
 	{
-		if (loc == null)
+		if (plot == null)
 		{
 			return;
 		}
-
-		PlotWorld pwi = plotWorlds.get(loc.getWorld());
-		if (pwi == null)
-		{
-			return;
-		}
-
+		
 		List<Pair<Short, Byte>> wallids = new ArrayList<Pair<Short, Byte>>();
-		
-		Plot plot = pwi.getPlotAtBlockPosition(loc);
-		if (plot != null)
+
+		if (plot.isProtected())
 		{
-			if (plot.isprotected)
-			{
-				wallids.add(new Pair<Short, Byte>(pwi.ProtectedWallBlockId, null));
-			}
-			if (plot.isauctionned)
-			{
-				wallids.add(new Pair<Short, Byte>(pwi.AuctionWallBlockId, null));
-			}
-			if (plot.isforsale)
-			{
-				wallids.add(new Pair<Short, Byte>(pwi.ForSaleWallBlockId, null));
-			}
+			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().ProtectedWallBlockId, null));
 		}
-		
+		if (plot.isAuctioned())
+		{
+			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().AuctionWallBlockId, null));
+		}
+		if (plot.isForSale())
+		{
+			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().ForSaleWallBlockId, null));
+		}
+
 		if (wallids.size() == 0){
-			wallids.add(new Pair<Short, Byte>(pwi.WallBlockId, pwi.WallBlockValue));
+			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().WallBlockId, plot.getPlotWorld().WallBlockValue));
 		}
 		
 		int ctr = 0;
@@ -992,7 +935,7 @@ public class PlotManager {
 			z = locations.getLeft().getBlockZ() - 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			block = plot.getPlotWorld().getMinecraftWorld().getBlockAt(x, plot.getPlotWorld().RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -1001,7 +944,7 @@ public class PlotManager {
 			x = locations.getRight().getBlockX() + 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			block = plot.getPlotWorld().getMinecraftWorld().getBlockAt(x, plot.getPlotWorld().RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -1010,7 +953,7 @@ public class PlotManager {
 			z = locations.getRight().getBlockZ() + 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			block = plot.getPlotWorld().getMinecraftWorld().getBlockAt(x, plot.getPlotWorld().RoadHeight + 1, z);
 			setWall(block, currentblockid);
 		}
 		
@@ -1019,8 +962,29 @@ public class PlotManager {
 			x = locations.getLeft().getBlockX() - 1;
 			currentblockid = wallids.get(ctr);
 			ctr = (ctr == wallids.size()-1)? 0 : ctr + 1;
-			block = pwi.getMinecraftWorld().getBlockAt(x, pwi.RoadHeight + 1, z);
+			block = plot.getPlotWorld().getMinecraftWorld().getBlockAt(x, plot.getPlotWorld().RoadHeight + 1, z);
 			setWall(block, currentblockid);
+		}
+	}
+		
+	public static void adjustWall(Location loc)
+	{
+		if (loc == null)
+		{
+			return;
+		}
+
+		PlotWorld pwi = plotWorlds.get(loc.getWorld());
+		if (pwi == null)
+		{
+			return;
+		}
+
+		Plot plot = pwi.getPlotAtBlockPosition(loc);
+		
+		if (plot != null)
+		{
+			adjustWall(plot);
 		}
 	}
 	
@@ -1062,10 +1026,10 @@ public class PlotManager {
 			return false;
 		}
 		
-		Pair<Location, Location> locations = plot.getPlotWorld().getMinMaxBlockLocation(plot);
+		Location baseLocation = plot.getPlotWorld().getMinBlockLocation(plot);
 		
-		if (blockLocation.getBlockX() >= locations.getLeft().getBlockX() && blockLocation.getBlockX() <= locations.getRight().getBlockX()
-		 && blockLocation.getBlockZ() >= locations.getLeft().getBlockZ() && blockLocation.getBlockZ() <= locations.getRight().getBlockZ())
+		if (blockLocation.getBlockX() >= baseLocation.getBlockX() && blockLocation.getBlockX() <= baseLocation.getBlockX() + plot.getPlotSize()
+		 && blockLocation.getBlockZ() >= baseLocation.getBlockZ() && blockLocation.getBlockZ() <= baseLocation.getBlockZ() + plot.getPlotSize())
 		{
 			return true;
 		}
@@ -1142,8 +1106,7 @@ public class PlotManager {
 			removePlot(testPlot);
 		}
 		
-		removeOwnerSign(plot);
-		removeSellSign(plot);
+		removePlotSigns(plot);
 		removeLWCProtections(plot);
 		
 		double multiFrom  = pwiFrom.getPlotBlockPositionMultiplier();
@@ -1163,7 +1126,7 @@ public class PlotManager {
 
 		Location baseFrom = plot.getWorldMinBlockLocation();
 		
-		Location baseTo   = new Location(mwiTo, Math.floor(targetPlotPosition.getPlotX() * multiTo), 0, Math.floor(targetPlotPosition.getPlotZ() * multiTo));
+		Location baseTo   = new Location(mwiTo, Math.floor(targetPlotPosition.getPlotX() * multiTo + (pwiTo.PathWidth / 2)), 0, Math.floor(targetPlotPosition.getPlotZ() * multiTo + (pwiTo.PathWidth / 2)));
 		
 		int x;
 		int y;
@@ -1241,10 +1204,8 @@ public class PlotManager {
 		PlotWorld plotWorld2 = plot2.getPlotWorld();
 				
 		// Remove signs
-		removeOwnerSign(plot1);
-		removeOwnerSign(plot2);
-		removeSellSign(plot1);
-		removeSellSign(plot2);
+		removePlotSigns(plot1);
+		removePlotSigns(plot2);
 		
 		// Remove protections
 		removeLWCProtections(plot1);
@@ -1291,9 +1252,7 @@ public class PlotManager {
 		Biome biome2;
 		BlockState blockState2;
 		ItemStack[] blockInventoryContents2;
-		
-		Block targetBlock;
-		
+
 		for (x = 0; x < plotSize; x++)
 		{
 			for (z = 0; z < plotSize; z++)
@@ -1502,22 +1461,38 @@ public class PlotManager {
 		return false;
 	}
 	
+	public static void checkPlotExpirations(CommandSender sender, PlotWorld plotWorld)
+	{
+		if (plotWorld == null)
+		{
+			sender.sendMessage(PlotMe.caption("MsgNotPlotWorld"));
+			return;
+		}
+		
+		Iterator<Plot> expireIterator = plotWorld.plotPositions.values().iterator();
+		Plot testplot;
+		while (expireIterator.hasNext())
+		{
+			testplot = expireIterator.next();
+			if (testplot != null)
+			{
+				checkPlotExpiration(testplot);
+			}
+		}
+	}
+	
 	public static void scanExpirationsExpensive()
 	{
 		expiredPlots.clear();
 
-		long currentTime = Math.round(System.currentTimeMillis() / 1000);
-
 		Iterator<Plot> expireIterator = allPlots.iterator();
 		Plot testplot;
-		
 		while (expireIterator.hasNext())
 		{
 			testplot = expireIterator.next();
-			if (!testplot.isprotected && testplot.finisheddate <= 0 && testplot.expireddate > 0 && testplot.expireddate <= currentTime)
+			if (!testplot.isProtected() && !testplot.isFinished() && testplot.isExpired())
 			{
 				PlotManager.expiredPlots.add(testplot);
-
 			}
 		}
 		
@@ -1637,11 +1612,11 @@ public class PlotManager {
 		
 		if (plot != null && isPlotWorld(plot.getMinecraftWorld()))
 		{
-			hl = plot.getPlotWorld().getCenterLocation(plot).add(0, 3, 0);
+			hl = plot.getPlotWorld().getCenterBlockLocation(plot).clone().add(0, 3, 0);
 		}
 		else
 		{
-			hl = plot.getMinecraftWorld().getSpawnLocation();
+			hl = plot.getMinecraftWorld().getSpawnLocation().clone();
 		}
 
 		return PlotMe.getAirSpawnPosition(hl);

@@ -15,43 +15,84 @@ public class PlotDatabaseUpdater
 	    											+ "`worldname` VARCHAR(64) NOT NULL UNIQUE" +
 	    										");";
     
-    final static String LAYOUT_PLAYER_TABLE	=	"CREATE TABLE IF NOT EXISTS `plotme_players` " + 
+    final static String LAYOUT_PLAYER_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_players` " + 
 	    							 			"("
 	    							 	  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
 	    							 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE"
 	    							 	  			+ "`displayname` VARCHAR(32) DEFAULT NULL" +
 	    							 	  		");";
   
-    final static String LAYOUT_PLOT_TABLE	=	"CREATE TABLE IF NOT EXISTS `plotme_plots` " +
+    final static String LAYOUT_PLOT_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plots` " +
 	    						  		 		"("
 	    						  		  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
 		    						  		  		+ "`world` UNSIGNED INTEGER,"
 		    						  		  		+ "`xpos` INTEGER,"
 		    						  		  		+ "`zpos` INTEGER,"
-		    						  		  		+ "`owner` VARCHAR(32) DEFAULT NULL,"
-		    						  		  		+ "`biome` VARCHAR(16) NOT NULL DEFAULT 'PLAINS',"
+		    						  		  		+ "`owner` UNSIGNED INTEGER DEFAULT NULL,"
+		    						  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
 		    						  		  		+ "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
 				    						  		+ "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
-				    						  		+ "`sellprice` UNSIGNED DOUBLE DEFAULT NULL,"
-				    						  		+ "`rentprice` UNSIGNED DOUBLE DEFAULT NULL,"
+				    						  		+ "`price` DOUBLE DEFAULT 0,"
 				    						  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
-				    						  		+ "`isforrent` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-				    						  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
-				    						  		+ "`isauctionned` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-				    						  		+ "`properties` BLOB, "
+				    						  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+				    						  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL,"
+				    						  		+ "`properties` BLOB DEFAULT NULL, "
 				    						  		+ "UNIQUE (world, xpos, zpos)" +
 				    						  	");";
+    
+    final static String LAYOUT_AUCTIONS_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_auctions` " +
+		 										"("
+		 											+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		 											+ "`date` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`auction` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`plot` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`player` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`amount` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`typeid` UNSIGNED SMALLINT DEFAULT NULL,"
+		 											+ "`datavalue` UNSIGNED TINYINT DEFAULT NULL," +
+		 										");";
+    
+    /*final static String LAYOUT_CHANGES_TABLE  = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_changes` " +
+		 										"("
+		 											+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		 											+ "`plot` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`relx` INTEGER NOT NULL,"
+		 											+ "`rely` INTEGER NOT NULL,"
+		 											+ "`relz` INTEGER NOT NULL,"
+		 											+ "`player` UNSIGNED INTEGER NOT NULL,"
+		 											+ "`fromblockid` UNSIGNED SMALLINT NOT NULL,"
+		 											+ "`fromblockvalue` UNSIGNED TINYINT NOT NULL DEFAULT 0,"
+		 											+ "`toblockid` UNSIGNED SMALLINT NOT NULL,"
+		 											+ "`toblockvalue` UNSIGNED TINYINT NOT NULL DEFAULT 0,"
+		 											+ "`binarydata` BLOB DEFAULT NULL" +
+		 										");";*/
 
-    final static String LAYOUT_COMMENT_TABLE=	"CREATE TABLE IF NOT EXISTS `plotme_plot_comments` " +
+    final static String LAYOUT_COMMENT_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_comments` " +
 	    									 	"("
 	    									 		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-	    									 		+ "`plot` UNSIGNED INTEGER NOT NULL INDEX,"
+	    									 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
 	    									 		+ "`player` UNSIGNED INTEGER NOT NULL,"
 	    									 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
 	    									 		+ "`comment` TEXT" +
 	    									 	");";
+    
+    /*final static String LAYOUT_ROOMS_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_rooms` " +
+		 										"("
+		 											+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		 											+ "`relx1` INTEGER NOT NULL,"
+		 											+ "`rely1` INTEGER NOT NULL,"
+		 											+ "`relz1` INTEGER NOT NULL,"
+		 											+ "`relx2` INTEGER NOT NULL,"
+		 											+ "`rely2` INTEGER NOT NULL,"
+		 											+ "`relz2` INTEGER NOT NULL,"
+		 											+ "`rentprice` DOUBLE NOT NULL DEFAULT 0,"
+		 											+ "`rentbalance` DOUBLE NOT NULL DEFAULT 0,"
+		 											+ "`rentee` UNSIGNED INTEGER DEFAULT NULL,"
+		 											+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+		 											+ "`comment` TEXT" +
+		 										");";*/
 
-    final static String LAYOUT_INFO_TABLE	=	"CREATE TABLE IF NOT EXISTS `plotme_info` " + 
+    final static String LAYOUT_INFO_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_info` " + 
     											"("
 	    								 			+ "`key` VARCHAR(32) NOT NULL PRIMARY KEY,"
 	    								 			+ "`value` TEXT DEFAULT NULL" +
