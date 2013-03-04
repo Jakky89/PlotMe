@@ -270,6 +270,11 @@ public class Plot implements Comparable<Plot>
 		}
 	}
 	
+	public int getAuctionNumber()
+	{
+		return auction;
+	}
+	
 	public int getAuctionBidsCount()
 	{
 		if (isAuctioned())
@@ -605,7 +610,6 @@ public class Plot implements Comparable<Plot>
 			PlotMeSqlManager.savePlotProperties(this);
 		}
 	}
-
 	
 	public boolean isAllowed(String playerName, boolean includeStar, boolean includeGroups)
 	{

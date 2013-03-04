@@ -1,8 +1,6 @@
 package com.worldcretornica.plotme;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.ObjectInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -13,10 +11,6 @@ import java.sql.Statement;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Biome;
-import org.bukkit.entity.Player;
-
-import com.worldcretornica.plotme.utils.Jakky89Properties;
-
 
 
 public class PlotMeSqlManager {
@@ -391,7 +385,7 @@ public class PlotMeSqlManager {
     	
     	Statement st;
 		try {
-			st = conn.createStatement();
+			st = con.createStatement();
 			ResultSet setPlots = st.executeQuery("SELECT id,worldname,xpos,zpos,playername,biome," +
 												 		"expireddate,finisheddate,sellprice," +
 												 		"isforsale,isprotected,isauctionned,properties " +
@@ -433,7 +427,7 @@ public class PlotMeSqlManager {
 	
 				PlotManager.registerPlot(plot);
 				
-				PlotMeSqlManager.loadPlotProperties(plot);
+				//PlotMeSqlManager.loadPlotProperties(plot);
 			}
 		} catch (SQLException ex) {
 			PlotMe.logger.severe(PlotMe.PREFIX + "ERROR while loading plots from database :");
@@ -519,20 +513,48 @@ public class PlotMeSqlManager {
             ps.setInt(3, plot.getPlotX());
             ps.setInt(4, plot.getPlotZ());
             ps.setInt(5, plot.getOwner().getId());
-            ps.setString(6, plot.biome.toString());
-            ps.setLong(7, plot.expireddate);
-            ps.setLong(8, plot.finisheddate);
-            ps.setDouble(9, plot.sellprice);
-            ps.setBoolean(11, plot.isforsale);
-            ps.setBoolean(13, plot.isprotected);
-            ps.setBoolean(14, plot.isauctionned);
+            ps.setString(6, plot.getBiome().toString());
+            if (plot.getExpiration() > 0)
+            {
+            	ps.setLong(7, plot.getExpiration());
+            }
+            else
+            {
+            	ps.setLong(7, (Long)null);
+            }
+            if (plot.getFinish() > 0)
+            {
+            	ps.setLong(8, plot.getFinish());
+            }
+            else
+            {
+            	ps.setLong(8, (Long)null);
+            }
+            ps.setDouble(9, plot.getPrice());
+            if (plot.isForSale())
+            {
+            	ps.setByte(11, (byte)1);
+            }
+            else
+            {
+            	ps.setByte(11, (byte)0);
+            }
+            if (plot.isProtected())
+            {
+            	ps.setByte(13, (byte)1);
+            }
+            else
+            {
+            	ps.setByte(13, (byte)0);
+            }
+            ps.setInt(14, plot.getAuctionNumber());
             
             ps.executeUpdate();
             conn.commit();
         } 
         catch (SQLException ex) 
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " EXCEPTION occurred while inserting plot data :");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while inserting plot data:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         } 
         finally 
@@ -543,12 +565,45 @@ public class PlotMeSqlManager {
                 {
                     ps.close();
                 }
-            } 
-            catch (SQLException ex) 
+            } catch (SQLException ex) {}
+        }
+    }
+    
+    public static void updatePlotCoordinates(Plot plot)
+    {
+        PreparedStatement ps = null;
+        Connection conn;
+        
+        //Plots
+        try 
+        {
+            conn = getConnection();
+
+            ps = conn.prepareStatement("UPDATE plotme_plots SET world=?, xpos=?, zpos=? WHERE id=? LIMIT 1");
+            
+            ps.setInt(1, plot.getPlotWorld().getId());
+            ps.setInt(2, plot.getPlotX());
+            ps.setInt(3, plot.getPlotZ());
+            ps.setInt(4, plot.getId());
+            
+            ps.executeUpdate();
+            conn.commit();
+                        
+        } 
+        catch (SQLException ex) 
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while updating plot coordinates:");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+        } 
+        finally 
+        {
+            try 
             {
-            	PlotMe.logger.severe(PlotMe.PREFIX + " EXCEPTION occurred while closing prepared statement :");
-            	PlotMe.logger.severe("  " + ex.getMessage());
-            }
+                if (ps != null) 
+                {
+                    ps.close();
+                }
+            } catch (SQLException ex) {}
         }
     }
     
@@ -565,7 +620,7 @@ public class PlotMeSqlManager {
             ps = conn.prepareStatement("UPDATE plotme_plots SET " + colName + "=? WHERE id=? LIMIT 1");
             
             ps.setObject(1, cellValue);
-            ps.setInt(2, plot.id);
+            ps.setInt(2, plot.getId());
             
             ps.executeUpdate();
             conn.commit();
@@ -593,7 +648,7 @@ public class PlotMeSqlManager {
         }
     }
     
-    public static void savePlotProperties(Plot plot)
+/*    public static void savePlotProperties(Plot plot)
     {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -605,7 +660,7 @@ public class PlotMeSqlManager {
 		    ps = conn.prepareStatement("UPDATE plotme_plots SET properties=? WHERE id=? LIMIT 1");
 		         
 	        // just setting the class name
-		    ps.setInt(1, plot.id);
+		    ps.setInt(1, plot.getId());
 	        ps.setObject(2, plot.properties);
 	        ps.executeUpdate();
 	        conn.commit();
@@ -630,9 +685,9 @@ public class PlotMeSqlManager {
 	            PlotMe.logger.severe("  " + ex.getMessage());
 	        }
         }
-    }
+    }*/
     
-    public static void loadPlotProperties(Plot plot)
+    /*public static void loadPlotProperties(Plot plot)
     {
         Connection con = null;
         PreparedStatement ps = null;
@@ -684,7 +739,7 @@ public class PlotMeSqlManager {
 				}
         	}
         }
-    }
+    }*/
     
     public static int getNextAuctionNumber(Plot plot)
     {
@@ -724,7 +779,7 @@ public class PlotMeSqlManager {
         return -1;
     }
 
-    public static void addPlotBid(Plot plot, Player player, double amount)
+    public static void addPlotBid(Plot plot, int playerId, double amount)
     {
     	PreparedStatement ps = null;
         Connection conn;
@@ -734,13 +789,13 @@ public class PlotMeSqlManager {
         {
             conn = getConnection();
             
-            ps = conn.prepareStatement("INSERT INTO `plotme_auctions` (auction,date,plot,player,amount) VALUES (?,?,(SELECT id FROM plotme_players WHERE playername='?'),?)");
+            ps = conn.prepareStatement("INSERT INTO `plotme_auctions` (auction,date,plot,player,amount) VALUES (?,?,(SELECT id FROM plotme_players WHERE playername='?'),?,?)");
             
-            ps.setInt(1, plot.getId());
-            ps.setInt(2, idZ);
-            ps.setString(3, player);
-            ps.setString(4, world.toLowerCase());
-            ps.setDouble(5, bid);
+            ps.setInt(1, plot.getAuctionNumber());
+            ps.setLong(2, Math.round(System.currentTimeMillis() / 1000));
+            ps.setInt(3, plot.getId());
+            ps.setInt(4, playerId);
+            ps.setDouble(5, amount);
             
             ps.executeUpdate();
             conn.commit();

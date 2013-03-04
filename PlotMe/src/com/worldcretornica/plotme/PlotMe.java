@@ -379,6 +379,8 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("DisableExplosion", true);
 			
 			cfgWorld.set("DisableIgnition", true);
+			cfgWorld.set("DisableNetherrackIgnition", false);
+			cfgWorld.set("DisableObsidianIgnition", false);
 			
 			ConfigurationSection cfgWorldEconomy = cfgWorld.createSection("economy");
 			
@@ -407,7 +409,6 @@ public class PlotMe extends JavaPlugin
 			
 			cfgWorld = cfgWorlds.createSection("ExampleWorld");
 			cfgWorld.set("InheritWorld", "Global");
-			
 		}
 		
 		Iterator<String> cfgWorldsIterator = cfgWorlds.getKeys(false).iterator();
@@ -858,6 +859,7 @@ public class PlotMe extends JavaPlugin
 		properties.put("MsgNoPlotExpired","No plots are expired");
 		properties.put("MsgExpiredPlotsPage","Expired plots page");
 		properties.put("MsgListOfPlotsWhere","List of plots where");
+		properties.put("MsgNowAllowed", "Not allowed");
 		properties.put("MsgCanBuild","can build:");
 		properties.put("MsgListOfPlotsWhereYou","List of plots where you can build:");
 		properties.put("MsgWorldEditInYourPlots","You can now only WorldEdit in your plots");

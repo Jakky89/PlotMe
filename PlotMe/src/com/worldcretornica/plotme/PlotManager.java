@@ -97,6 +97,33 @@ public class PlotManager {
 		return null;
 	}
 	
+	public static PlotWorld getPlotWorld(Location location)
+	{
+		if (location != null)
+		{
+			return plotWorlds.get(location.getWorld());
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(BlockState blockState)
+	{
+		if (blockState != null)
+		{
+			return plotWorlds.get(blockState.getWorld());
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(Block block)
+	{
+		if (block != null)
+		{
+			return plotWorlds.get(block.getWorld());
+		}
+		return null;
+	}
+	
 	public static PlotWorld getPlotWorld(String worldName)
 	{
 		if (worldName != null)

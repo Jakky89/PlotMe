@@ -13,6 +13,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
@@ -78,6 +79,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean AutoLinkPlots;
 	public boolean DisableExplosion;
 	public boolean DisableIgnition;
+	public boolean DisableNetherrackIgnition;
+	public boolean DisableObsidianIgnition;
 	
 	private HashSet<Pair<Short, Byte>> ProtectedBlocks;
 	private HashSet<Pair<Short, Byte>> PreventedItems;
@@ -279,6 +282,24 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return true;
 	}
 	
+	public boolean isPreventedItem(BlockState blockState)
+	{
+		if (blockState != null)
+		{
+			return isPreventedItem(blockState.getTypeId(), blockState.getRawData());
+		}
+		return true;
+	}
+	
+	public boolean isPreventedItem(Block block)
+	{
+		if (block != null)
+		{
+			return isPreventedItem(block.getTypeId(), block.getData());
+		}
+		return true;
+	}
+	
 	public void setPreventedItems(Set<Pair<Short, Byte>> itemSet)
 	{
 		if (itemSet != null)
@@ -436,24 +457,6 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return new PlotPosition(this, (int)Math.floor((double)(blockX / divi)), (int)Math.floor((double)(blockZ / divi)));
 	}
 	
-	
-	public boolean isOnRoad(double posX, double posZ)
-	{
-		double divi = getPlotBlockPositionMultiplier();
-		
-		double bsx = posX % divi;
-		double bsz = posZ % divi;
-		
-		double pph = (double)(PathWidth / 2);
-		
-		if (bsx <= pph || bsx >= pph + PlotSize || bsz <= pph || bsz >= pph + PlotSize)
-		{
-			return true;
-		}
-
-		return false;
-	}
-	
 	/**
 	 * TODO: NEEDS TESTING !!!
 	 */
@@ -466,6 +469,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		}
 		return null;
 	}
+
 	
 	public int getPlotPositionVectorDirection(Plot plot, double posX, double posZ)
 	{
@@ -476,6 +480,55 @@ public class PlotWorld implements Comparable<PlotWorld>
 			dir = PlotMe.getDirection(centerLocation.getX(), centerLocation.getZ(), posX, posZ);
 		}
 		return dir;
+	}
+	
+	
+	public boolean isOnRoad(double posX, double posZ)
+	{
+		double multi = getPlotBlockPositionMultiplier();
+		
+		double bsx = posX % multi;
+		double bsz = posZ % multi;
+		
+		double pph = (double)(PathWidth / 2);
+		double ppp = (double)(PlotSize + pph);
+		
+		if (bsx > pph && bsx < ppp && bsz > pph && bsz < ppp)
+		{
+			return false;
+		}
+
+		return true;
+	}
+	
+	public boolean isOnRoad(Location loc)
+	{
+		if (loc != null && loc.getWorld().equals(this.MinecraftWorld))
+		{
+			return isOnRoad(loc.getX(), loc.getZ());
+		}
+
+		return false;
+	}
+	
+	public boolean isOnRoad(BlockState blockState)
+	{
+		if (blockState != null && blockState.getWorld().equals(this.MinecraftWorld))
+		{
+			return isOnRoad(blockState.getX(), blockState.getZ());
+		}
+
+		return false;
+	}
+	
+	public boolean isOnRoad(Block block)
+	{
+		if (block != null && block.getWorld().equals(this.MinecraftWorld))
+		{
+			return isOnRoad(block.getX(), block.getZ());
+		}
+
+		return false;
 	}
 	
 	/**
@@ -489,7 +542,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		Plot plot = getPlotAtPlotPosition((int)Math.floor((double)(posX / divi)), (int)Math.floor((double)(posZ / divi)));
 		if (plot != null)
 		{
-			if (isOnRoad(posX, posZ) && AutoLinkPlots)
+			if (isOnRoad(posX, posZ))
 			{
 				if (plot.hasNeighbourPlots())
 				{
@@ -521,6 +574,10 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return null;
 	}
 	
+	public Plot getPlotAtBlockPosition(BlockState bs)
+	{
+		return getPlotAtBlockPosition(bs.getLocation());
+	}
 	
 	public Plot getPlotAtBlockPosition(Block b)
 	{

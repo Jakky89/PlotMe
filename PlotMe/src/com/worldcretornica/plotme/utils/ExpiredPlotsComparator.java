@@ -11,7 +11,7 @@ public class ExpiredPlotsComparator implements Comparator<Plot> {
 		{
 			return 0;
 		}
-		return (int)(plot1.expireddate - plot2.expireddate);
+		return (int)(plot1.getExpiration() - plot2.getExpiration());
 	}
 
 }
