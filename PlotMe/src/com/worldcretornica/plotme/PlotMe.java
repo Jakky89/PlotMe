@@ -39,7 +39,6 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.worldcretornica.plotme.Metrics.Graph;
-import com.worldcretornica.plotme.listener.PlotDenyListener;
 import com.worldcretornica.plotme.listener.PlotListener;
 import com.worldcretornica.plotme.listener.PlotWorldEditListener;
 import com.worldcretornica.plotme.utils.Pair;
@@ -68,7 +67,6 @@ public class PlotMe extends JavaPlugin
     public static String language;
     public static Boolean allowWorldTeleport;
     public static Boolean autoUpdate;
-    public static Boolean allowToDeny;
     
     public static final int DEFAULT_PLOT_AUTO_LIMIT = 100;
     public static final int DEFAULT_PLOT_SIZE = 32;
@@ -134,7 +132,6 @@ public class PlotMe extends JavaPlugin
 		update = null;
 		defaultWEAnywhere = null;
 		self = null;
-		allowToDeny = null;
 	}
 	
 	public void onEnable()
@@ -166,12 +163,7 @@ public class PlotMe extends JavaPlugin
 		{
 			usingvoxelsniper = true;
 		}
-		
-		if (allowToDeny)
-		{
-			pm.registerEvents(new PlotDenyListener(), this);
-		}
-				
+
 		getCommand("plotme").setExecutor(new PlotMeCommands(this));
 				
 		setupUpdater();
@@ -340,7 +332,6 @@ public class PlotMe extends JavaPlugin
 		allowWorldTeleport = config.getBoolean("allowWorldTeleport", true);
 		defaultWEAnywhere = config.getBoolean("defaultWEAnywhere", false);
 		autoUpdate = config.getBoolean("auto-update", false);
-		allowToDeny = config.getBoolean("allowToDeny", true);
 
 		ConfigurationSection cfgWorlds;
 		ConfigurationSection cfgWorld;
@@ -637,7 +628,6 @@ public class PlotMe extends JavaPlugin
 		config.set("allowWorldTeleport", allowWorldTeleport);
 		config.set("defaultWEAnywhere", defaultWEAnywhere);
 		config.set("auto-update", autoUpdate);
-		config.set("allowToDeny", allowToDeny);
 		
 		try 
 		{

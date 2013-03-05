@@ -40,6 +40,8 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.event.world.PortalCreateEvent;
@@ -69,8 +71,21 @@ public class PlotListener implements Listener
 		{
 			return;
 		}
-
+		
 		PlotManager.registerPlotPlayer(player);
+
+		if (PlotManager.isPlotWorld(player.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
+		{
+			Plot plot = PlotManager.getPlotAtBlockPosition(player);
+			if (plot != null)
+			{
+				if (plot.isDenied(player.getName()))
+				{
+					player.teleport(PlotManager.getPlotHome(plot));
+				}
+			}
+		}
+
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -144,6 +159,35 @@ public class PlotListener implements Listener
 		
 		player.sendMessage(PlotMe.caption("ErrCannotBuild"));
 		event.setCancelled(true);
+	}
+	
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onPlayerMove(final PlayerMoveEvent event)
+	{		
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		Location fromloc = event.getFrom();
+		Location toloc = event.getTo();
+		
+		if (fromloc == null || toloc == null || fromloc.getWorld() != toloc.getWorld() || fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ())
+		{
+			if (PlotManager.isPlotWorld(toloc.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
+			{
+				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
+				if (plot != null)
+				{
+					if (plot.isDenied(player.getName()))
+					{
+						event.setCancelled(true);
+					}
+				}
+			}
+		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -916,6 +960,33 @@ public class PlotListener implements Listener
 		event.setHatching(false);
 	}
 	
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onPlayerTeleport(final PlayerTeleportEvent event)
+	{
+		Player player = event.getPlayer();
+		if (player == null)
+		{
+			event.setCancelled(true);
+			return;
+		}
+		
+		Location fromloc = event.getFrom();
+		Location toloc = event.getTo();
+		
+		if (fromloc == null || toloc == null || fromloc.getWorld() != toloc.getWorld() || fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ())
+		{
+			if (PlotManager.isPlotWorld(toloc.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
+			{
+				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
+				if (plot != null && plot.isDenied(player.getName()))
+				{
+					event.setTo(PlotManager.getPlotHome(plot));
+				}
+			}
+		}
+	}
+
+	@EventHandler
 	public void onChunkLoad(ChunkLoadEvent event)
 	{
 		if (PlotManager.isPlotWorld(event.getWorld()))
@@ -923,12 +994,15 @@ public class PlotListener implements Listener
 			PlotWorld pwi = PlotManager.getPlotWorld(event.getWorld());
 			if (pwi != null)
 			{
-				PlotManager.loadPlots(event.getWorld(), ((event.getChunk().getX() * 16) + 8), ((event.getChunk().getZ() * 16) + 8), 8);
+				PlotManager.loadPlots(event.getWorld(), ((event.getChunk().getX() * 16) + 8), ((event.getChunk().getZ() * 16) + 8), pwi.PlotAutoLimit);
 			}
 		}
 	}
 	
-	/*public void onChunkUnload(ChunkUnloadEvent event)
+	/*
+	 * 
+	@EventHandler
+	public void onChunkUnload(ChunkUnloadEvent event)
 	{
 		if (PlotManager.isPlotWorld(event.getWorld()))
 		{
