@@ -52,17 +52,17 @@ public class PlotRoadPopulator extends BlockPopulator
 		roadheight = 64;
 	}
 	
-	public PlotRoadPopulator(PlotMapInfo pmi)
+	public PlotRoadPopulator(PlotWorld pwi)
 	{
-		plotsize = pmi.PlotSize;
-		pathsize = pmi.PathWidth;
-		wall = pmi.WallBlockValue;
-		wallid = pmi.WallBlockId;
-		floor2 = pmi.RoadMainBlockValue;
-		floor2id = pmi.RoadMainBlockId;
-		floor1 = pmi.RoadStripeBlockValue;
-		floor1id = pmi.RoadStripeBlockId;
-		roadheight = pmi.RoadHeight;
+		plotsize = pwi.PlotSize;
+		pathsize = pwi.PathWidth;
+		wall = pwi.WallBlockValue;
+		wallid = pwi.WallBlockId;
+		floor2 = pwi.RoadMainBlockValue;
+		floor2id = pwi.RoadMainBlockId;
+		floor1 = pwi.RoadStripeBlockValue;
+		floor1id = pwi.RoadStripeBlockId;
+		roadheight = pwi.RoadHeight;
 		
 		pillar = 0;
 		pillarid = 17;

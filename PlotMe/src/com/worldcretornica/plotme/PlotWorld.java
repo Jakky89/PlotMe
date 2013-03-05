@@ -81,6 +81,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean DisableIgnition;
 	public boolean DisableNetherrackIgnition;
 	public boolean DisableObsidianIgnition;
+	public boolean PreventHighFrequencyRedstoneCircuits;
 	
 	private HashSet<Pair<Short, Byte>> ProtectedBlocks;
 	private HashSet<Pair<Short, Byte>> PreventedItems;
@@ -722,6 +723,11 @@ public class PlotWorld implements Comparable<PlotWorld>
 		double z2 = (double)(z1 + PlotSize);
 		
 		return getAreaEntities(x1, z1, x2, z2, includePlayers);
+	}
+	
+	public int getPlotSize()
+	{
+		return PlotSize;
 	}
 	
 	@Override

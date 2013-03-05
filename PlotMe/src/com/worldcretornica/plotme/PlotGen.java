@@ -50,7 +50,7 @@ public class PlotGen extends ChunkGenerator {
 
 	public PlotGen(World w)
 	{
-		fetchPlotWorldProperties(PlotManager.plotWorlds.get(w.getName()));
+		fetchPlotWorldProperties(PlotManager.getPlotWorld(w));
 	}
 
 	@Override

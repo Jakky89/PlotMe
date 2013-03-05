@@ -6,7 +6,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 
-public class PlotDatabaseUpdater
+public class PlotMeDatabaseUpdater
 {
 	
     final static String LAYOUT_WORLD_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_worlds` " +
@@ -73,7 +73,7 @@ public class PlotDatabaseUpdater
 	    									 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
 	    									 		+ "`player` UNSIGNED INTEGER NOT NULL,"
 	    									 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-	    									 		+ "`comment` TEXT" +
+	    									 		+ "`message` TEXT" +
 	    									 	");";
     
     /*final static String LAYOUT_ROOMS_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_rooms` " +
@@ -98,14 +98,14 @@ public class PlotDatabaseUpdater
 	    								 			+ "`value` TEXT DEFAULT NULL" +
 	    								 		");";
 
-	public PlotDatabaseUpdater()
+	public PlotMeDatabaseUpdater()
 	{
 		
 	}
 	
 	private static Connection getConnection()
 	{
-		return PlotMeSqlManager.getConnection();
+		return PlotMeDatabaseManager.getConnection();
 	}
 	
 	public static Double getTablesVersion()
@@ -116,7 +116,7 @@ public class PlotDatabaseUpdater
 		
 		try
 		{
-			con = PlotMeSqlManager.getConnection();
+			con = PlotMeDatabaseManager.getConnection();
 			if (con == null)
 			{
 				return null;
@@ -223,7 +223,7 @@ public class PlotDatabaseUpdater
 	        	
 	        	st.addBatch("INSERT INTO `plotme_info` VALUES()");
 	        	
-	   			if (PlotMeSqlManager.batchExecuteCommitOrRollback(st))
+	   			if (PlotMeDatabaseManager.batchExecuteCommitOrRollback(st))
 	   			{
 	   				return true;
 	   			}

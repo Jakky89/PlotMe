@@ -422,7 +422,7 @@ public class PlotMeCommands implements CommandExecutor
 												PlotMe.logger.info(LOG + bidder.getName() + " bid " + String.valueOf(bid) + " on plot " + String.valueOf(plot.getId()));
 											}
 											
-											if (plot.addAuctionBid(bidder, bid))
+											if (plot.addAuctionBid(PlotMeDatabaseManager.getPlotPlayer(bidder.getName(), bidder.getDisplayName()), bid))
 											{
 												Send(bidder, C("MsgBidAccepted") + " " + f(-bid));
 											}
@@ -538,7 +538,7 @@ public class PlotMeCommands implements CommandExecutor
 												}
 											}
 											
-											PlotOwner newOwner = PlotManager.getPlotOwner(buyer);
+											PlotPlayer newOwner = PlotManager.getPlotOwner(buyer);
 											if (newOwner != null)
 											{
 												plot.setOwner(newOwner);
@@ -665,7 +665,7 @@ public class PlotMeCommands implements CommandExecutor
 									else
 									{
 										plot.enableAuctioning();
-										plot.addAuctionBid(player, bid);
+										plot.addAuctionBid(PlotMeDatabaseManager.getPlotPlayer(player.getName(), player.getDisplayName()), bid);
 										
 										Send(player, C("MsgAuctionStarted"));
 										
@@ -1093,20 +1093,20 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean donelist(Player p, String[] args) 
+	private boolean donelist(Player player, String[] args) 
 	{
-		if(PlotMe.cPerms(p, "PlotMe.admin.done"))
+		if(PlotMe.cPerms(player, "PlotMe.admin.done"))
 		{
-			PlotMapInfo pmi = PlotManager.getMap(p);
+			PlotWorld pwi = PlotManager.getPlotWorld(player);
 			
-			if(pmi == null)
+			if (pwi == null)
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 				return true;
 			}
 			else
@@ -1144,11 +1144,11 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(finishedplots.size() == 0)
 				{
-					Send(p, C("MsgNoPlotsFinished"));
+					Send(player, C("MsgNoPlotsFinished"));
 				}
 				else
 				{
-					Send(p, C("MsgFinishedPlotsPage") + " " + page + "/" + maxpage);
+					Send(player, C("MsgFinishedPlotsPage") + " " + page + "/" + maxpage);
 					
 					for(int i = (page-1) * pagesize; i < finishedplots.size() && i < (page * pagesize); i++)
 					{	
@@ -1167,18 +1167,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean done(Player p, String[] args)
+	private boolean done(Player player, String[] args)
 	{
-		if(PlotMe.cPerms(p, "PlotMe.use.done") || PlotMe.cPerms(p, "PlotMe.admin.done"))
+		if(PlotMe.cPerms(player, "PlotMe.use.done") || PlotMe.cPerms(player, "PlotMe.admin.done"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 				return true;
 			}
 			else
@@ -1187,7 +1187,7 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -1196,12 +1196,12 @@ public class PlotMeCommands implements CommandExecutor
 						Plot plot = PlotManager.getPlotById(p,id);
 						String name = p.getName();
 						
-						if(plot.owner.equalsIgnoreCase(name) || PlotMe.cPerms(p, "PlotMe.admin.done"))
+						if(plot.owner.equalsIgnoreCase(name) || PlotMe.cPerms(player, "PlotMe.admin.done"))
 						{							
 							if(plot.finished)
 							{
 								plot.setUnfinished();
-								Send(p, C("MsgUnmarkFinished"));
+								Send(player, C("MsgUnmarkFinished"));
 								
 								if(isAdv)
 									PlotMe.logger.info(LOG + name + " " + C("WordMarked") + " " + id + " " + C("WordFinished"));
@@ -1209,7 +1209,7 @@ public class PlotMeCommands implements CommandExecutor
 							else
 							{
 								plot.setFinished();
-								Send(p, C("MsgMarkFinished"));
+								Send(player, C("MsgMarkFinished"));
 								
 								if(isAdv)
 									PlotMe.logger.info(LOG + name + " " + C("WordMarked") + " " + id + " " + C("WordUnfinished"));
@@ -1218,25 +1218,25 @@ public class PlotMeCommands implements CommandExecutor
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean addtime(Player p, String[] args)
+	private boolean addtime(Player player, String[] args)
 	{
-		if(PlotMe.cPerms(p, "PlotMe.admin.addtime"))
+		if(PlotMe.cPerms(player, "PlotMe.admin.addtime"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 				return true;
 			}
 			else
@@ -1245,7 +1245,7 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -1258,7 +1258,7 @@ public class PlotMeCommands implements CommandExecutor
 							String name = p.getName();
 							
 							plot.resetExpire(PlotManager.getMap(p).DaysToExpiration);
-							Send(p, C("MsgPlotExpirationReset"));
+							Send(player, C("MsgPlotExpirationReset"));
 							
 							if(isAdv)
 								PlotMe.logger.info(LOG + name + " reset expiration on plot " + id);
@@ -1266,25 +1266,25 @@ public class PlotMeCommands implements CommandExecutor
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean expired(Player p, String[] args)
+	private boolean expired(Player player, String[] args)
 	{
-		if(PlotMe.cPerms(p, "PlotMe.admin.expired"))
+		if(PlotMe.cPerms(player, "PlotMe.admin.expired"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 				return true;
 			}
 			else
@@ -1323,11 +1323,11 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(expiredplots.size() == 0)
 				{
-					Send(p, C("MsgNoPlotExpired"));
+					Send(player, C("MsgNoPlotExpired"));
 				}
 				else
 				{
-					Send(p, C("MsgExpiredPlotsPage") + " " + page + "/" + maxpage);
+					Send(player, C("MsgExpiredPlotsPage") + " " + page + "/" + maxpage);
 					
 					for(int i = (page-1) * pagesize; i < expiredplots.size() && i < (page * pagesize); i++)
 					{	
@@ -1346,33 +1346,33 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean plotlist(Player p, String[] args)
+	private boolean plotlist(Player player, String[] args)
 	{
-		if(PlotMe.cPerms(p, "PlotMe.use.list"))
+		if(PlotMe.cPerms(player, "PlotMe.use.list"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 				return true;
 			}
 			else
 			{
 				String name;
 				
-				if(PlotMe.cPerms(p, "PlotMe.admin.list") && args.length == 2)
+				if(PlotMe.cPerms(player, "PlotMe.admin.list") && args.length == 2)
 				{
 					name = args[1];
-					Send(p, C("MsgListOfPlotsWhere") + " " + BLUE + name + RESET + " " + C("MsgCanBuild"));
+					Send(player, C("MsgListOfPlotsWhere") + " " + BLUE + name + RESET + " " + C("MsgCanBuild"));
 				}
 				else
 				{
 					name = p.getName();
-					Send(p, C("MsgListOfPlotsWhereYou"));
+					Send(player, C("MsgListOfPlotsWhereYou"));
 				}
 								
 				for(Plot plot : PlotManager.getPlots(p).values())
@@ -1452,14 +1452,14 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean weanywhere(Player p, String[] args)
+	private boolean weanywhere(Player player, String[] args)
 	{
-		if(PlotMe.cPerms(p, "PlotMe.admin.weanywhere"))
+		if(PlotMe.cPerms(player, "PlotMe.admin.weanywhere"))
 		{
 			String name = p.getName();
 			
@@ -1474,14 +1474,14 @@ public class PlotMeCommands implements CommandExecutor
 			
 			if(PlotMe.isIgnoringWELimit(p))
 			{
-				Send(p, C("MsgWorldEditAnywhere"));
+				Send(player, C("MsgWorldEditAnywhere"));
 				
 				if(isAdv)
 					PlotMe.logger.info(LOG + name + " enabled WorldEdit anywhere");
 			}
 			else
 			{
-				Send(p, C("MsgWorldEditInYourPlots"));
+				Send(player, C("MsgWorldEditInYourPlots"));
 				
 				if(isAdv)
 					PlotMe.logger.info(LOG + name + " disabled WorldEdit anywhere");
@@ -1489,12 +1489,12 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean showhelp(Player p, int page)
+	private boolean showhelp(Player player, int page)
 	{
 		int max = 4;
 		int maxpage = 0;
@@ -1503,60 +1503,60 @@ public class PlotMeCommands implements CommandExecutor
 		List<String> allowed_commands = new ArrayList<String>();
 		
 		allowed_commands.add("limit");
-		if(PlotMe.cPerms(p, "PlotMe.use.claim")) allowed_commands.add("claim");
-		if(PlotMe.cPerms(p, "PlotMe.use.claim.other")) allowed_commands.add("claim.other");
-		if(PlotMe.cPerms(p, "PlotMe.use.auto")) allowed_commands.add("auto");
-		if(PlotMe.cPerms(p, "PlotMe.use.home")) allowed_commands.add("home");
-		if(PlotMe.cPerms(p, "PlotMe.use.home.other")) allowed_commands.add("home.other");
-		if(PlotMe.cPerms(p, "PlotMe.use.info"))
+		if(PlotMe.cPerms(player, "PlotMe.use.claim")) allowed_commands.add("claim");
+		if(PlotMe.cPerms(player, "PlotMe.use.claim.other")) allowed_commands.add("claim.other");
+		if(PlotMe.cPerms(player, "PlotMe.use.auto")) allowed_commands.add("auto");
+		if(PlotMe.cPerms(player, "PlotMe.use.home")) allowed_commands.add("home");
+		if(PlotMe.cPerms(player, "PlotMe.use.home.other")) allowed_commands.add("home.other");
+		if(PlotMe.cPerms(player, "PlotMe.use.info"))
 		{
 			allowed_commands.add("info");
 			allowed_commands.add("biomeinfo");
 		}
-		if(PlotMe.cPerms(p, "PlotMe.use.comment")) allowed_commands.add("comment");
-		if(PlotMe.cPerms(p, "PlotMe.use.comments")) allowed_commands.add("comments");
-		if(PlotMe.cPerms(p, "PlotMe.use.list")) allowed_commands.add("list");
-		if(PlotMe.cPerms(p, "PlotMe.use.biome"))
+		if(PlotMe.cPerms(player, "PlotMe.use.comment")) allowed_commands.add("comment");
+		if(PlotMe.cPerms(player, "PlotMe.use.comments")) allowed_commands.add("comments");
+		if(PlotMe.cPerms(player, "PlotMe.use.list")) allowed_commands.add("list");
+		if(PlotMe.cPerms(player, "PlotMe.use.biome"))
 		{
 			allowed_commands.add("biome");
 			allowed_commands.add("biomelist");
 		}
-		if(PlotMe.cPerms(p, "PlotMe.use.done") || 
-				PlotMe.cPerms(p, "PlotMe.admin.done")) allowed_commands.add("done");
-		if(PlotMe.cPerms(p, "PlotMe.admin.done")) allowed_commands.add("donelist");
-		if(PlotMe.cPerms(p, "PlotMe.admin.tp")) allowed_commands.add("tp");
-		if(PlotMe.cPerms(p, "PlotMe.admin.id")) allowed_commands.add("id");
-		if(PlotMe.cPerms(p, "PlotMe.use.clear") || 
-				PlotMe.cPerms(p, "PlotMe.admin.clear")) allowed_commands.add("clear");
-		if(PlotMe.cPerms(p, "PlotMe.admin.dispose") || 
-				PlotMe.cPerms(p, "PlotMe.use.dispose")) allowed_commands.add("dispose");
-		if(PlotMe.cPerms(p, "PlotMe.admin.reset")) allowed_commands.add("reset");
-		if(PlotMe.cPerms(p, "PlotMe.use.add") || 
-				PlotMe.cPerms(p, "PlotMe.admin.add")) allowed_commands.add("add");
-		if(PlotMe.cPerms(p, "PlotMe.use.remove") || 
-				PlotMe.cPerms(p, "PlotMe.admin.remove")) allowed_commands.add("remove");
+		if(PlotMe.cPerms(player, "PlotMe.use.done") || 
+				PlotMe.cPerms(player, "PlotMe.admin.done")) allowed_commands.add("done");
+		if(PlotMe.cPerms(player, "PlotMe.admin.done")) allowed_commands.add("donelist");
+		if(PlotMe.cPerms(player, "PlotMe.admin.tp")) allowed_commands.add("tp");
+		if(PlotMe.cPerms(player, "PlotMe.admin.id")) allowed_commands.add("id");
+		if(PlotMe.cPerms(player, "PlotMe.use.clear") || 
+				PlotMe.cPerms(player, "PlotMe.admin.clear")) allowed_commands.add("clear");
+		if(PlotMe.cPerms(player, "PlotMe.admin.dispose") || 
+				PlotMe.cPerms(player, "PlotMe.use.dispose")) allowed_commands.add("dispose");
+		if(PlotMe.cPerms(player, "PlotMe.admin.reset")) allowed_commands.add("reset");
+		if(PlotMe.cPerms(player, "PlotMe.use.add") || 
+				PlotMe.cPerms(player, "PlotMe.admin.add")) allowed_commands.add("add");
+		if(PlotMe.cPerms(player, "PlotMe.use.remove") || 
+				PlotMe.cPerms(player, "PlotMe.admin.remove")) allowed_commands.add("remove");
 		if(PlotMe.allowToDeny)
 		{
-			if(PlotMe.cPerms(p, "PlotMe.use.deny") || 
-					PlotMe.cPerms(p, "PlotMe.admin.deny")) allowed_commands.add("deny");
-			if(PlotMe.cPerms(p, "PlotMe.use.undeny") || 
-					PlotMe.cPerms(p, "PlotMe.admin.undeny")) allowed_commands.add("undeny");
+			if(PlotMe.cPerms(player, "PlotMe.use.deny") || 
+					PlotMe.cPerms(player, "PlotMe.admin.deny")) allowed_commands.add("deny");
+			if(PlotMe.cPerms(player, "PlotMe.use.undeny") || 
+					PlotMe.cPerms(player, "PlotMe.admin.undeny")) allowed_commands.add("undeny");
 		}
-		if(PlotMe.cPerms(p, "PlotMe.admin.setowner")) allowed_commands.add("setowner");
-		if(PlotMe.cPerms(p, "PlotMe.admin.move")) allowed_commands.add("move");
-		if(PlotMe.cPerms(p, "PlotMe.admin.weanywhere")) allowed_commands.add("weanywhere");
-		if(PlotMe.cPerms(p, "PlotMe.admin.reload")) allowed_commands.add("reload");
-		if(PlotMe.cPerms(p, "PlotMe.admin.list")) allowed_commands.add("listother");
-		if(PlotMe.cPerms(p, "PlotMe.admin.expired")) allowed_commands.add("expired");
-		if(PlotMe.cPerms(p, "PlotMe.admin.addtime")) allowed_commands.add("addtime");
-		if(PlotMe.cPerms(p, "PlotMe.admin.resetexpired")) allowed_commands.add("resetexpired");
+		if(PlotMe.cPerms(player, "PlotMe.admin.setowner")) allowed_commands.add("setowner");
+		if(PlotMe.cPerms(player, "PlotMe.admin.move")) allowed_commands.add("move");
+		if(PlotMe.cPerms(player, "PlotMe.admin.weanywhere")) allowed_commands.add("weanywhere");
+		if(PlotMe.cPerms(player, "PlotMe.admin.reload")) allowed_commands.add("reload");
+		if(PlotMe.cPerms(player, "PlotMe.admin.list")) allowed_commands.add("listother");
+		if(PlotMe.cPerms(player, "PlotMe.admin.expired")) allowed_commands.add("expired");
+		if(PlotMe.cPerms(player, "PlotMe.admin.addtime")) allowed_commands.add("addtime");
+		if(PlotMe.cPerms(player, "PlotMe.admin.resetexpired")) allowed_commands.add("resetexpired");
 		
-		PlotMapInfo pmi = PlotManager.getMap(p);
+		PlotWorld pwi = PlotManager.getPlotWorld(player);
 		
 		if(PlotManager.isPlotWorld(p) && ecoon)
 		{
-			if(PlotMe.cPerms(p, "PlotMe.use.buy")) allowed_commands.add("buy");
-			if(PlotMe.cPerms(p, "PlotMe.use.sell")) 
+			if(PlotMe.cPerms(player, "PlotMe.use.buy")) allowed_commands.add("buy");
+			if(PlotMe.cPerms(player, "PlotMe.use.sell")) 
 			{
 				allowed_commands.add("sell");
 				if(pmi.CanSellToBank)
@@ -1564,8 +1564,8 @@ public class PlotMeCommands implements CommandExecutor
 					allowed_commands.add("sellbank");
 				}
 			}
-			if(PlotMe.cPerms(p, "PlotMe.use.auction")) allowed_commands.add("auction");
-			if(PlotMe.cPerms(p, "PlotMe.use.bid")) allowed_commands.add("bid");
+			if(PlotMe.cPerms(player, "PlotMe.use.auction")) allowed_commands.add("auction");
+			if(PlotMe.cPerms(player, "PlotMe.use.bid")) allowed_commands.add("bid");
 		}
 		
 		maxpage = (int) Math.ceil((double) allowed_commands.size() / max);
@@ -1851,13 +1851,13 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean tp(Player p, String[] args)
+	private boolean tp(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.tp"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.tp"))
 		{
 			if(!PlotManager.isPlotWorld(p) && !PlotMe.allowWorldTeleport)
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -1868,9 +1868,9 @@ public class PlotMeCommands implements CommandExecutor
 					if(!PlotManager.isValidId(id))
 					{
 						if(PlotMe.allowWorldTeleport)
-							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> [" + C("WordWorld") + "] " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
+							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> [" + C("WordWorld") + "] " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
 						else
-							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
+							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
 						return true;
 					}
 					else
@@ -1897,7 +1897,7 @@ public class PlotMeCommands implements CommandExecutor
 						
 						if(w == null || !PlotManager.isPlotWorld(w))
 						{
-							Send(p, RED + C("MsgNoPlotworldFound"));
+							Send(player, RED + C("MsgNoPlotworldFound"));
 						}
 						else
 						{
@@ -1911,26 +1911,26 @@ public class PlotMeCommands implements CommandExecutor
 				else
 				{
 					if(PlotMe.allowWorldTeleport)
-						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> [" + C("WordWorld") + "] " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
+						Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> [" + C("WordWorld") + "] " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
 					else
-						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
+						Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean auto(Player p, String[] args)
+	private boolean auto(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.auto"))
+		if (PlotMe.cPerms(player, "PlotMe.use.auto"))
 		{			
 			if(!PlotManager.isPlotWorld(p) && !PlotMe.allowWorldTeleport)
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -1949,7 +1949,7 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(w == null || !PlotManager.isPlotWorld(w))
 					{
-						Send(p, RED + args[1] + " " + C("MsgWorldNotPlot"));
+						Send(player, RED + args[1] + " " + C("MsgWorldNotPlot"));
 						return true;
 					}
 				}
@@ -1960,16 +1960,16 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(w == null)
 				{
-					Send(p, RED + C("MsgNoPlotworldFound"));
+					Send(player, RED + C("MsgNoPlotworldFound"));
 				}
 				else
 				{
-					if(PlotManager.getNbOwnedPlot(p, w) >= PlotMe.getPlotLimit(p) && !PlotMe.cPerms(p, "PlotMe.admin"))
-						Send(p, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
+					if(PlotManager.getNbOwnedPlot(p, w) >= PlotMe.getPlotLimit(p) && !PlotMe.cPerms(player, "PlotMe.admin"))
+						Send(player, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
 								PlotManager.getNbOwnedPlot(p, w) + "/" + PlotMe.getPlotLimit(p) + "). " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
 					else
 					{
-						PlotMapInfo pmi = PlotManager.getMap(w);
+						PlotWorld pwi = PlotManager.getMap(w);
 						int limit = pmi.PlotAutoLimit;
 						
 						for(int i = 0; i < limit; i++)
@@ -1997,14 +1997,14 @@ public class PlotMeCommands implements CommandExecutor
 												
 												if(!er.transactionSuccess())
 												{
-													Send(p, RED + er.errorMessage);
+													Send(player, RED + er.errorMessage);
 													warn(er.errorMessage);
 													return true;
 												}
 											}
 											else
 											{
-												Send(p, RED + C("MsgNotEnoughAuto") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+												Send(player, RED + C("MsgNotEnoughAuto") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 												return true;
 											}
 										}
@@ -2016,7 +2016,7 @@ public class PlotMeCommands implements CommandExecutor
 										p.teleport(new Location(w, PlotManager.bottomX(plot.id, w) + (PlotManager.topX(plot.id, w) - 
 												PlotManager.bottomX(plot.id, w))/2, pmi.RoadHeight + 2, PlotManager.bottomZ(plot.id, w) - 2));
 			
-										Send(p, C("MsgThisPlotYours") + " " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
+										Send(player, C("MsgThisPlotYours") + " " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
 										
 										if(isAdv)
 											PlotMe.logger.info(LOG + name + " " + C("MsgClaimedPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
@@ -2027,25 +2027,25 @@ public class PlotMeCommands implements CommandExecutor
 							}
 						}
 					
-						Send(p, RED + C("MsgNoPlotFound1") + " " + (limit^2) + " " + C("MsgNoPlotFound2"));
+						Send(player, RED + C("MsgNoPlotFound1") + " " + (limit^2) + " " + C("MsgNoPlotFound2"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 
-	private boolean claim(Player p, String[] args)
+	private boolean claim(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.claim") || PlotMe.cPerms(p, "PlotMe.admin.claim.other"))
+		if (PlotMe.cPerms(player, "PlotMe.use.claim") || PlotMe.cPerms(player, "PlotMe.admin.claim.other"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{		
@@ -2053,11 +2053,11 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgCannotClaimRoad"));
+					Send(player, RED + C("MsgCannotClaimRoad"));
 				}
 				else if(!PlotManager.isPlotAvailable(id, p))
 				{
-					Send(p, RED + C("MsgThisPlotOwned"));
+					Send(player, RED + C("MsgThisPlotOwned"));
 				}
 				else
 				{
@@ -2065,7 +2065,7 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(args.length == 2)
 					{
-						if(PlotMe.cPerms(p, "PlotMe.admin.claim.other"))
+						if(PlotMe.cPerms(player, "PlotMe.admin.claim.other"))
 						{
 							playername = args[1];
 						}
@@ -2075,13 +2075,13 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(playername == p.getName() && plotlimit != -1 && PlotManager.getNbOwnedPlot(p) >= plotlimit)
 					{
-						Send(p, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
+						Send(player, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
 								PlotManager.getNbOwnedPlot(p) + "/" + PlotMe.getPlotLimit(p) + "). " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
 					}
 					else
 					{
 						World w = p.getWorld();
-						PlotMapInfo pmi = PlotManager.getMap(w);
+						PlotWorld pwi = PlotManager.getMap(w);
 						
 						double price = 0;
 						
@@ -2096,14 +2096,14 @@ public class PlotMeCommands implements CommandExecutor
 								
 								if(!er.transactionSuccess())
 								{
-									Send(p, RED + er.errorMessage);
+									Send(player, RED + er.errorMessage);
 									warn(er.errorMessage);
 									return true;
 								}
 							}
 							else
 							{
-								Send(p, RED + C("MsgNotEnoughBuy") + " " + C("WordMissing") + " " + RESET + (price - balance) + RED + " " + PlotMe.economy.currencyNamePlural());
+								Send(player, RED + C("MsgNotEnoughBuy") + " " + C("WordMissing") + " " + RESET + (price - balance) + RED + " " + PlotMe.economy.currencyNamePlural());
 								return true;
 							}
 						}
@@ -2113,14 +2113,14 @@ public class PlotMeCommands implements CommandExecutor
 						//PlotManager.adjustLinkedPlots(id, w);
 		
 						if(plot == null)
-							Send(p, RED + C("ErrCreatingPlotAt") + " " + id);
+							Send(player, RED + C("ErrCreatingPlotAt") + " " + id);
 						else
 						{
 							if(playername.equalsIgnoreCase(p.getName()))
 							{
-								Send(p, C("MsgThisPlotYours") + " " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
+								Send(player, C("MsgThisPlotYours") + " " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
 							}else{
-								Send(p, C("MsgThisPlotIsNow") + " " + playername + C("WordPossessive") + ". " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
+								Send(player, C("MsgThisPlotIsNow") + " " + playername + C("WordPossessive") + ". " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
 							}
 							
 							if(isAdv)
@@ -2132,18 +2132,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean home(Player p, String[] args)
+	private boolean home(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.home") || PlotMe.cPerms(p, "PlotMe.admin.home.other"))
+		if (PlotMe.cPerms(player, "PlotMe.use.home") || PlotMe.cPerms(player, "PlotMe.admin.home.other"))
 		{
 			if(!PlotManager.isPlotWorld(p) && !PlotMe.allowWorldTeleport)
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -2166,7 +2166,7 @@ public class PlotMeCommands implements CommandExecutor
 					try{
 						if(args[0].split(":").length == 1 || args[0].split(":")[1].isEmpty())
 						{
-							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandHome") + ":# " + 
+							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandHome") + ":# " + 
 									RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandHome") + ":1");
 							return true;
 						}
@@ -2176,7 +2176,7 @@ public class PlotMeCommands implements CommandExecutor
 						}
 					}catch(Exception ex)
 					{
-						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandHome") + ":# " + 
+						Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandHome") + ":# " + 
 								RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandHome") + ":1");
 						return true;
 					}
@@ -2186,7 +2186,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(Bukkit.getWorld(args[1]) == null)
 					{
-						if(PlotMe.cPerms(p, "PlotMe.admin.home.other"))
+						if(PlotMe.cPerms(player, "PlotMe.admin.home.other"))
 						{
 							playername = args[1];
 						}
@@ -2201,7 +2201,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(Bukkit.getWorld(args[2]) == null)
 					{
-						Send(p, RED + args[2] + C("MsgWorldNotPlot"));
+						Send(player, RED + args[2] + C("MsgWorldNotPlot"));
 						return true;
 					}
 					else
@@ -2212,7 +2212,7 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(!PlotManager.isPlotWorld(w))
 				{
-					Send(p, RED + args[2] + C("MsgWorldNotPlot"));
+					Send(player, RED + args[2] + C("MsgWorldNotPlot"));
 				}
 				else
 				{
@@ -2224,7 +2224,7 @@ public class PlotMeCommands implements CommandExecutor
 						{
 							if(i == 0)
 							{							
-								PlotMapInfo pmi = PlotManager.getMap(w);
+								PlotWorld pwi = PlotManager.getMap(w);
 								
 								double price = 0;
 														
@@ -2239,13 +2239,13 @@ public class PlotMeCommands implements CommandExecutor
 										
 										if(!er.transactionSuccess())
 										{
-											Send(p, RED + er.errorMessage);
+											Send(player, RED + er.errorMessage);
 											return true;
 										}
 									}
 									else
 									{
-										Send(p, RED + C("MsgNotEnoughTp") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+										Send(player, RED + C("MsgNotEnoughTp") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 										return true;
 									}
 								}
@@ -2253,7 +2253,7 @@ public class PlotMeCommands implements CommandExecutor
 								p.teleport(PlotManager.getPlotHome(w, plot));
 								
 								if(price != 0)
-									Send(p, f(-price));
+									Send(player, f(-price));
 								
 								return true;
 							}else{
@@ -2268,18 +2268,18 @@ public class PlotMeCommands implements CommandExecutor
 						{
 							if(!playername.equalsIgnoreCase(p.getName()))
 							{
-								Send(p, RED + playername + " " + C("MsgDoesNotHavePlot") + " #" + nb);
+								Send(player, RED + playername + " " + C("MsgDoesNotHavePlot") + " #" + nb);
 							}else{
-								Send(p, RED + C("MsgPlotNotFound") + " #" + nb);
+								Send(player, RED + C("MsgPlotNotFound") + " #" + nb);
 							}
 						}
 						else if(!playername.equalsIgnoreCase(p.getName()))
 						{
-							Send(p, RED + playername + " " + C("MsgDoesNotHavePlot"));
+							Send(player, RED + playername + " " + C("MsgDoesNotHavePlot"));
 						}
 						else
 						{
-							Send(p, RED + C("MsgYouHaveNoPlot"));
+							Send(player, RED + C("MsgYouHaveNoPlot"));
 						}
 					}
 				}
@@ -2287,18 +2287,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean info(Player p, String[] args)
+	private boolean info(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.info"))
+		if (PlotMe.cPerms(player, "PlotMe.use.info"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -2306,7 +2306,7 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -2351,31 +2351,31 @@ public class PlotMeCommands implements CommandExecutor
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean comment(Player p, String[] args)
+	private boolean comment(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.comment"))
+		if (PlotMe.cPerms(player, "PlotMe.use.comment"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				if(args.length < 2)
 				{
-					Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandComment") + " <" + C("WordText") + ">");
+					Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandComment") + " <" + C("WordText") + ">");
 				}
 				else
 				{
@@ -2383,14 +2383,14 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(id.isEmpty())
 					{
-						Send(p, RED + C("MsgNoPlotFound"));
+						Send(player, RED + C("MsgNoPlotFound"));
 					}
 					else
 					{
 						if(!PlotManager.isPlotAvailable(id, p))
 						{
 							World w = p.getWorld();
-							PlotMapInfo pmi = PlotManager.getMap(w);
+							PlotWorld pwi = PlotManager.getMap(w);
 							String playername = p.getName();
 							
 							double price = 0;
@@ -2406,14 +2406,14 @@ public class PlotMeCommands implements CommandExecutor
 									
 									if(!er.transactionSuccess())
 									{
-										Send(p, RED + er.errorMessage);
+										Send(player, RED + er.errorMessage);
 										warn(er.errorMessage);
 										return true;
 									}
 								}
 								else
 								{
-									Send(p, RED + C("MsgNotEnoughComment") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+									Send(player, RED + C("MsgNotEnoughComment") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 									return true;
 								}
 							}
@@ -2430,14 +2430,14 @@ public class PlotMeCommands implements CommandExecutor
 							plot.comments.add(comment);
 							PlotMeSqlManager.addPlotComment(comment, plot.comments.size(), PlotManager.getIdX(id), PlotManager.getIdZ(id), plot.world);
 							
-							Send(p, C("MsgCommentAdded") + " " + f(-price));
+							Send(player, C("MsgCommentAdded") + " " + f(-price));
 							
 							if(isAdv)
 								PlotMe.logger.info(LOG + playername + " " + C("MsgCommentedPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
 						}
 						else
 						{
-							Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+							Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 						}
 					}
 				}
@@ -2445,18 +2445,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean comments(Player p, String[] args)
+	private boolean comments(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.comments"))
+		if (PlotMe.cPerms(player, "PlotMe.use.comments"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -2466,7 +2466,7 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if(id.isEmpty())
 					{
-						Send(p, RED + C("MsgNoPlotFound"));
+						Send(player, RED + C("MsgNoPlotFound"));
 					}
 					else
 					{
@@ -2474,15 +2474,15 @@ public class PlotMeCommands implements CommandExecutor
 						{
 							Plot plot = PlotManager.getPlotById(p,id);
 							
-							if(plot.owner.equalsIgnoreCase(p.getName()) || plot.isAllowed(p.getName()) || PlotMe.cPerms(p, "PlotMe.admin"))
+							if(plot.owner.equalsIgnoreCase(p.getName()) || plot.isAllowed(p.getName()) || PlotMe.cPerms(player, "PlotMe.admin"))
 							{
 								if(plot.comments.size() == 0)
 								{
-									Send(p, C("MsgNoComments"));
+									Send(player, C("MsgNoComments"));
 								}
 								else
 								{
-									Send(p, C("MsgYouHave") + " " + 
+									Send(player, C("MsgYouHave") + " " + 
 											BLUE + plot.comments.size() + RESET + " " + C("MsgComments"));
 									
 									for(String[] comment : plot.comments)
@@ -2495,12 +2495,12 @@ public class PlotMeCommands implements CommandExecutor
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedViewComments"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedViewComments"));
 							}
 						}
 						else
 						{
-							Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+							Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 						}
 					}
 				}
@@ -2513,13 +2513,13 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean biome(Player p, String[] args)
+	private boolean biome(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.use.biome"))
+		if (PlotMe.cPerms(player, "PlotMe.use.biome"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -2548,16 +2548,16 @@ public class PlotMeCommands implements CommandExecutor
 							
 							if(biome == null)
 							{
-								Send(p, RED + args[1] + RESET + " " + C("MsgIsInvalidBiome"));
+								Send(player, RED + args[1] + RESET + " " + C("MsgIsInvalidBiome"));
 							}
 							else
 							{
 								Plot plot = PlotManager.getPlotById(p,id);
 								String playername = p.getName();
 								
-								if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin"))
+								if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin"))
 								{
-									PlotMapInfo pmi = PlotManager.getMap(w);
+									PlotWorld pwi = PlotManager.getMap(w);
 									
 									double price = 0;
 									
@@ -2572,21 +2572,21 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(!er.transactionSuccess())
 											{
-												Send(p, RED + er.errorMessage);
+												Send(player, RED + er.errorMessage);
 												warn(er.errorMessage);
 												return true;
 											}
 										}
 										else
 										{
-											Send(p, RED + C("MsgNotEnoughBiome") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+											Send(player, RED + C("MsgNotEnoughBiome") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 											return true;
 										}
 									}
 									
 									PlotManager.setBiome(w, id, plot, biome);
 								
-									Send(p, C("MsgBiomeSet") + " " + ChatColor.BLUE + FormatBiome(biome.name()) + " " + f(-price));
+									Send(player, C("MsgBiomeSet") + " " + ChatColor.BLUE + FormatBiome(biome.name()) + " " + f(-price));
 									
 									if(isAdv)
 									{
@@ -2596,7 +2596,7 @@ public class PlotMeCommands implements CommandExecutor
 								}
 								else
 								{
-									Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedBiome"));
+									Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedBiome"));
 								}
 							}
 						}
@@ -2604,28 +2604,28 @@ public class PlotMeCommands implements CommandExecutor
 						{
 							Plot plot = PlotMe.plotmaps.get(w.getName().toLowerCase()).plots.get(id);
 							
-							Send(p, C("MsgPlotUsingBiome") + " " + ChatColor.BLUE + FormatBiome(plot.biome.name()));
+							Send(player, C("MsgPlotUsingBiome") + " " + ChatColor.BLUE + FormatBiome(plot.biome.name()));
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean biomelist(CommandSender s, String[] args)
+	private boolean biomelist(CommandSender sender, String[] args)
 	{
-		if (!(s instanceof Player) || PlotMe.cPerms((Player) s, "PlotMe.use.biome"))
+		if (!(sender instanceof Player) || PlotMe.cPerms((Player)sender, "PlotMe.use.biome"))
 		{
-			Send(s, C("WordBiomes") + " : ");
+			Send(sender, C("WordBiomes") + " : ");
 			
 			//int i = 0;
 			StringBuilder line = new StringBuilder();
@@ -2700,18 +2700,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(s, RED + C("MsgPermissionDenied"));
+			Send(sender, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean reset(Player p, String[] args)
+	private boolean reset(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.reset"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.reset"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -2719,13 +2719,13 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(plot == null)
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
 					if(plot.protect)
 					{
-						Send(p, RED + C("MsgPlotProtectedCannotReset"));
+						Send(player, RED + C("MsgPlotProtectedCannotReset"));
 					}
 					else
 					{
@@ -2748,7 +2748,7 @@ public class PlotMeCommands implements CommandExecutor
 									
 									if(!er.transactionSuccess())
 									{
-										Send(p, er.errorMessage);
+										Send(player, er.errorMessage);
 										warn(er.errorMessage);
 									}
 									else
@@ -2765,7 +2765,7 @@ public class PlotMeCommands implements CommandExecutor
 								}
 							}
 							
-							PlotMapInfo pmi = PlotManager.getMap(p);
+							PlotWorld pwi = PlotManager.getPlotWorld(player);
 							
 							if(pmi.RefundClaimPriceOnReset)
 							{
@@ -2773,7 +2773,7 @@ public class PlotMeCommands implements CommandExecutor
 								
 								if(!er.transactionSuccess())
 								{
-									Send(p, RED + er.errorMessage);
+									Send(player, RED + er.errorMessage);
 									warn(er.errorMessage);
 									return true;
 								}
@@ -2803,7 +2803,7 @@ public class PlotMeCommands implements CommandExecutor
 						
 						PlotMeSqlManager.deletePlot(PlotManager.getIdX(id), PlotManager.getIdZ(id), w.getName().toLowerCase());
 						
-						Send(p, C("MsgPlotReset"));
+						Send(player, C("MsgPlotReset"));
 						
 						if(isAdv)
 							PlotMe.logger.info(LOG + name + " " + C("MsgResetPlot") + " " + id);
@@ -2813,25 +2813,25 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean clear(Player p, String[] args)
+	private boolean clear(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.clear") || PlotMe.cPerms(p, "PlotMe.use.clear"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.clear") || PlotMe.cPerms(player, "PlotMe.use.clear"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -2841,17 +2841,17 @@ public class PlotMeCommands implements CommandExecutor
 						
 						if(plot.protect)
 						{
-							Send(p, RED + C("MsgPlotProtectedCannotClear"));
+							Send(player, RED + C("MsgPlotProtectedCannotClear"));
 						}
 						else
 						{
 							String playername = p.getName();
 							
-							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin.clear"))
+							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin.clear"))
 							{
 								World w = p.getWorld();
 								
-								PlotMapInfo pmi = PlotManager.getMap(w);
+								PlotWorld pwi = PlotManager.getMap(w);
 								
 								double price = 0;
 								
@@ -2866,14 +2866,14 @@ public class PlotMeCommands implements CommandExecutor
 										
 										if(!er.transactionSuccess())
 										{
-											Send(p, RED + er.errorMessage);
+											Send(player, RED + er.errorMessage);
 											warn(er.errorMessage);
 											return true;
 										}
 									}
 									else
 									{
-										Send(p, RED + C("MsgNotEnoughClear") + " " + C("WordMissing") + " " + RESET + (price - balance) + RED + " " + PlotMe.economy.currencyNamePlural());
+										Send(player, RED + C("MsgNotEnoughClear") + " " + C("WordMissing") + " " + RESET + (price - balance) + RED + " " + PlotMe.economy.currencyNamePlural());
 										return true;
 									}
 								}						
@@ -2882,45 +2882,45 @@ public class PlotMeCommands implements CommandExecutor
 								//RemoveLWC(w, plot, p);
 								//PlotManager.regen(w, plot);
 								
-								Send(p, C("MsgPlotCleared") + " " + f(-price));
+								Send(player, C("MsgPlotCleared") + " " + f(-price));
 								
 								if(isAdv)
 									PlotMe.logger.info(LOG + playername + " " + C("MsgClearedPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedClear"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedClear"));
 							}
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean add(Player p, String[] args)
+	private boolean add(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.add") || PlotMe.cPerms(p, "PlotMe.use.add"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.add") || PlotMe.cPerms(player, "PlotMe.use.add"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -2928,7 +2928,7 @@ public class PlotMeCommands implements CommandExecutor
 					{
 						if(args.length < 2 || args[1].isEmpty())
 						{
-							Send(p, C("WordUsage") + " " + RED + "/plotme " + C("CommandAdd") + " <" + C("WordPlayer") + ">");
+							Send(player, C("WordUsage") + " " + RED + "/plotme " + C("CommandAdd") + " <" + C("WordPlayer") + ">");
 						}
 						else
 						{
@@ -2937,17 +2937,17 @@ public class PlotMeCommands implements CommandExecutor
 							String playername = p.getName();
 							String allowed = args[1];
 							
-							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin.add"))
+							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin.add"))
 							{
 								if(plot.isAllowed(allowed))
 								{
-									Send(p, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgAlreadyAllowed"));
+									Send(player, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgAlreadyAllowed"));
 								}
 								else
 								{
 									World w = p.getWorld();
 									
-									PlotMapInfo pmi = PlotManager.getMap(w);
+									PlotWorld pwi = PlotManager.getMap(w);
 									
 									double price = 0;
 									
@@ -2962,21 +2962,21 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(!er.transactionSuccess())
 											{
-												Send(p, RED + er.errorMessage);
+												Send(player, RED + er.errorMessage);
 												warn(er.errorMessage);
 												return true;
 											}
 										}
 										else
 										{
-											Send(p, RED + C("MsgNotEnoughAdd") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+											Send(player, RED + C("MsgNotEnoughAdd") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 											return true;
 										}
 									}
 									
 									plot.addAllowed(args[1]);
 									
-									Send(p, C("WordPlayer") + " " + RED + allowed + RESET + " " + C("MsgNowAllowed") + " " + f(-price));
+									Send(player, C("WordPlayer") + " " + RED + allowed + RESET + " " + C("MsgNowAllowed") + " " + f(-price));
 									
 									if(isAdv)
 										PlotMe.logger.info(LOG + playername + " " + C("MsgAddedPlayer") + " " + allowed + " " + C("MsgToPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
@@ -2984,38 +2984,38 @@ public class PlotMeCommands implements CommandExecutor
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedAdd"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedAdd"));
 							}
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean deny(Player p, String[] args)
+	private boolean deny(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.deny") || PlotMe.cPerms(p, "PlotMe.use.deny"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.deny") || PlotMe.cPerms(player, "PlotMe.use.deny"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -3023,7 +3023,7 @@ public class PlotMeCommands implements CommandExecutor
 					{
 						if(args.length < 2 || args[1].isEmpty())
 						{
-							Send(p, C("WordUsage") + " " + RED + "/plotme " + C("CommandDeny") + " <" + C("WordPlayer") + ">");
+							Send(player, C("WordUsage") + " " + RED + "/plotme " + C("CommandDeny") + " <" + C("WordPlayer") + ">");
 						}
 						else
 						{
@@ -3032,17 +3032,17 @@ public class PlotMeCommands implements CommandExecutor
 							String playername = p.getName();
 							String denied = args[1];
 							
-							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin.deny"))
+							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin.deny"))
 							{
 								if(plot.isDenied(denied))
 								{
-									Send(p, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgAlreadyDenied"));
+									Send(player, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgAlreadyDenied"));
 								}
 								else
 								{
 									World w = p.getWorld();
 									
-									PlotMapInfo pmi = PlotManager.getMap(w);
+									PlotWorld pwi = PlotManager.getMap(w);
 									
 									double price = 0;
 									
@@ -3057,14 +3057,14 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(!er.transactionSuccess())
 											{
-												Send(p, RED + er.errorMessage);
+												Send(player, RED + er.errorMessage);
 												warn(er.errorMessage);
 												return true;
 											}
 										}
 										else
 										{
-											Send(p, RED + C("MsgNotEnoughDeny") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+											Send(player, RED + C("MsgNotEnoughDeny") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 											return true;
 										}
 									}
@@ -3099,7 +3099,7 @@ public class PlotMeCommands implements CommandExecutor
 										}
 									}
 									
-									Send(p, C("WordPlayer") + " " + RED + denied + RESET + " " + C("MsgNowDenied") + " " + f(-price));
+									Send(player, C("WordPlayer") + " " + RED + denied + RESET + " " + C("MsgNowDenied") + " " + f(-price));
 									
 									if(isAdv)
 										PlotMe.logger.info(LOG + playername + " " + C("MsgDeniedPlayer") + " " + denied + " " + C("MsgToPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
@@ -3107,38 +3107,38 @@ public class PlotMeCommands implements CommandExecutor
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedDeny"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedDeny"));
 							}
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean remove(Player p, String[] args)
+	private boolean remove(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.remove") || PlotMe.cPerms(p, "PlotMe.use.remove"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.remove") || PlotMe.cPerms(player, "PlotMe.use.remove"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -3146,7 +3146,7 @@ public class PlotMeCommands implements CommandExecutor
 					{
 						if(args.length < 2 || args[1].isEmpty())
 						{
-							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandRemove") + " <" + C("WordPlayer") + ">");
+							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandRemove") + " <" + C("WordPlayer") + ">");
 						}
 						else
 						{
@@ -3154,14 +3154,14 @@ public class PlotMeCommands implements CommandExecutor
 							String playername = p.getName();
 							String allowed = args[1];
 							
-							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin.remove"))
+							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin.remove"))
 							{
 								if(plot.isAllowed(allowed))
 								{
 									
 									World w = p.getWorld();
 									
-									PlotMapInfo pmi = PlotManager.getMap(w);
+									PlotWorld pwi = PlotManager.getMap(w);
 									
 									double price = 0;
 									
@@ -3176,64 +3176,64 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(!er.transactionSuccess())
 											{
-												Send(p, RED + er.errorMessage);
+												Send(player, RED + er.errorMessage);
 												warn(er.errorMessage);
 												return true;
 											}
 										}
 										else
 										{
-											Send(p, RED + C("MsgNotEnoughRemove") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+											Send(player, RED + C("MsgNotEnoughRemove") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 											return true;
 										}
 									}
 									
 									plot.removeAllowed(allowed);
 																	
-									Send(p, C("WordPlayer") + " " + RED + allowed + RESET + " " + C("WorldRemoved") + ". " + f(-price));
+									Send(player, C("WordPlayer") + " " + RED + allowed + RESET + " " + C("WorldRemoved") + ". " + f(-price));
 									
 									if(isAdv)
 										PlotMe.logger.info(LOG + playername + " " + C("MsgRemovedPlayer") + " " + allowed + " " + C("MsgFromPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
 								}
 								else
 								{
-									Send(p, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgWasNotAllowed"));
+									Send(player, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgWasNotAllowed"));
 								}
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedRemove"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedRemove"));
 							}
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean undeny(Player p, String[] args)
+	private boolean undeny(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.undeny") || PlotMe.cPerms(p, "PlotMe.use.undeny"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.undeny") || PlotMe.cPerms(player, "PlotMe.use.undeny"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -3241,7 +3241,7 @@ public class PlotMeCommands implements CommandExecutor
 					{
 						if(args.length < 2 || args[1].isEmpty())
 						{
-							Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandUndeny") + " <" + C("WordPlayer") + ">");
+							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandUndeny") + " <" + C("WordPlayer") + ">");
 						}
 						else
 						{
@@ -3249,14 +3249,14 @@ public class PlotMeCommands implements CommandExecutor
 							String playername = p.getName();
 							String denied = args[1];
 							
-							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(p, "PlotMe.admin.undeny"))
+							if(plot.owner.equalsIgnoreCase(playername) || PlotMe.cPerms(player, "PlotMe.admin.undeny"))
 							{
 								if(plot.isDenied(denied))
 								{
 									
 									World w = p.getWorld();
 									
-									PlotMapInfo pmi = PlotManager.getMap(w);
+									PlotWorld pwi = PlotManager.getMap(w);
 									
 									double price = 0;
 									
@@ -3271,70 +3271,70 @@ public class PlotMeCommands implements CommandExecutor
 											
 											if(!er.transactionSuccess())
 											{
-												Send(p, RED + er.errorMessage);
+												Send(player, RED + er.errorMessage);
 												warn(er.errorMessage);
 												return true;
 											}
 										}
 										else
 										{
-											Send(p, RED + C("MsgNotEnoughUndeny") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
+											Send(player, RED + C("MsgNotEnoughUndeny") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
 											return true;
 										}
 									}
 									
 									plot.removeDenied(denied);
 																	
-									Send(p, C("WordPlayer") + " " + RED + denied + RESET + " " + C("MsgNowUndenied") + " " + f(-price));
+									Send(player, C("WordPlayer") + " " + RED + denied + RESET + " " + C("MsgNowUndenied") + " " + f(-price));
 									
 									if(isAdv)
 										PlotMe.logger.info(LOG + playername + " " + C("MsgUndeniedPlayer") + " " + denied + " " + C("MsgFromPlot") + " " + id + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
 								}
 								else
 								{
-									Send(p, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgWasNotDenied"));
+									Send(player, C("WordPlayer") + " " + RED + args[1] + RESET + " " + C("MsgWasNotDenied"));
 								}
 							}
 							else
 							{
-								Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedUndeny"));
+								Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgNotYoursNotAllowedUndeny"));
 							}
 						}
 					}
 					else
 					{
-						Send(p, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
+						Send(player, RED + C("MsgThisPlot") + "(" + id + ") " + C("MsgHasNoOwner"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean setowner(Player p, String[] args)
+	private boolean setowner(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.setowner"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.setowner"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
 				String id = PlotManager.getPlotId(p.getLocation());
 				if(id.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
 					if(args.length < 2 || args[1].isEmpty())
 					{
-						Send(p, C("WordUsage") + ": " + RED + "/plotme " + C("CommandSetowner") + " <" + C("WordPlayer") + ">");
+						Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandSetowner") + " <" + C("WordPlayer") + ">");
 					}
 					else
 					{
@@ -3346,7 +3346,7 @@ public class PlotMeCommands implements CommandExecutor
 						{								
 							Plot plot = PlotManager.getPlotById(p,id);
 							
-							PlotMapInfo pmi = PlotManager.getMap(p);
+							PlotWorld pwi = PlotManager.getPlotWorld(player);
 							oldowner = plot.owner;
 							
 							if(PlotManager.isEconomyEnabled(p))
@@ -3357,7 +3357,7 @@ public class PlotMeCommands implements CommandExecutor
 									
 									if(!er.transactionSuccess())
 									{
-										Send(p, RED + er.errorMessage);
+										Send(player, RED + er.errorMessage);
 										warn(er.errorMessage);
 										return true;
 									}
@@ -3380,7 +3380,7 @@ public class PlotMeCommands implements CommandExecutor
 									
 									if(!er.transactionSuccess())
 									{
-										Send(p, er.errorMessage);
+										Send(player, er.errorMessage);
 										warn(er.errorMessage);
 									}
 									else
@@ -3420,7 +3420,7 @@ public class PlotMeCommands implements CommandExecutor
 							PlotManager.createPlot(p.getWorld(), id,newowner);
 						}
 						
-						Send(p, C("MsgOwnerChangedTo") + " " + RED + newowner);
+						Send(player, C("MsgOwnerChangedTo") + " " + RED + newowner);
 						
 						if(isAdv)
 							PlotMe.logger.info(LOG + playername + " " + C("MsgChangedOwnerOf") + " " + id + " " + C("WordFrom") + " " + oldowner + " " + C("WordTo") + " " + newowner);
@@ -3430,18 +3430,18 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
 	
-	private boolean id(Player p, String[] args)
+	private boolean id(Player player, String[] args)
 	{
-		if (PlotMe.cPerms(p, "PlotMe.admin.id"))
+		if (PlotMe.cPerms(player, "PlotMe.admin.id"))
 		{
 			if(!PlotManager.isPlotWorld(p))
 			{
-				Send(p, RED + C("MsgNotPlotWorld"));
+				Send(player, RED + C("MsgNotPlotWorld"));
 			}
 			else
 			{
@@ -3449,7 +3449,7 @@ public class PlotMeCommands implements CommandExecutor
 				
 				if(plotid.isEmpty())
 				{
-					Send(p, RED + C("MsgNoPlotFound"));
+					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
@@ -3465,7 +3465,7 @@ public class PlotMeCommands implements CommandExecutor
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
@@ -3492,7 +3492,7 @@ public class PlotMeCommands implements CommandExecutor
 					
 					if (!PlotManager.isValidId(plot1) || !PlotManager.isValidId(plot2))
 					{
-						Send(p, C("WordUsage") + ": " + RED + "/plot " + C("CommandMove") + " <" + C("WordIdFrom") + "> <" + C("WordIdTo") + "> " + 
+						Send(player, C("WordUsage") + ": " + RED + "/plot " + C("CommandMove") + " <" + C("WordIdFrom") + "> <" + C("WordIdTo") + "> " + 
 								RESET + C("WordExample") + ": " + RED + "/plot " + C("CommandMove") + " 0;1 2;-1");
 						return true;
 					}
@@ -3500,20 +3500,20 @@ public class PlotMeCommands implements CommandExecutor
 					{
 						if (PlotManager.movePlot(plot1, plot2))
 						{
-							Send(p, C("MsgPlotMovedSuccess"));
+							Send(player, C("MsgPlotMovedSuccess"));
 							
 							if(isAdv)
 								PlotMe.logger.info(LOG + p.getName() + " " + C("MsgExchangedPlot") + " " + plot1 + " " + C("MsgAndPlot") + " " + plot2);
 						}
 						else
-							Send(p, RED + C("ErrMovingPlot"));
+							Send(player, RED + C("ErrMovingPlot"));
 					}
 				}
 			}
 		}
 		else
 		{
-			Send(p, RED + C("MsgPermissionDenied"));
+			Send(player, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}

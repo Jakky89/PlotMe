@@ -90,6 +90,8 @@ public class PlotMe extends JavaPlugin
     public static Boolean usinglwc = false;
     public static Boolean usingvoxelsniper = false;
     
+    public static PlotPlayer bankOwner;
+    
     private static HashSet<String> playersignoringwelimit = null;
     private static HashMap<String, String> captions;
     
@@ -102,7 +104,7 @@ public class PlotMe extends JavaPlugin
     
 	public void onDisable()
 	{	
-		PlotMeSqlManager.closeConnection();
+		PlotMeDatabaseManager.closeConnection();
 		NAME = null;
 		PREFIX = null;
 		VERSION = null;
@@ -381,6 +383,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("DisableIgnition", true);
 			cfgWorld.set("DisableNetherrackIgnition", false);
 			cfgWorld.set("DisableObsidianIgnition", false);
+			cfgWorld.set("PreventHighFrequencyRedstoneCircuits", true);
 			
 			ConfigurationSection cfgWorldEconomy = cfgWorld.createSection("economy");
 			
@@ -445,39 +448,42 @@ public class PlotMe extends JavaPlugin
 				}
 			}
 			
-			PlotWorld tmpPlotWorld = PlotMeSqlManager.getPlotWorld(bukkitWorld);
+			PlotWorld tmpPlotWorld = PlotMeDatabaseManager.getPlotWorld(bukkitWorld);
 			if (tmpPlotWorld == null)
 			{
 				logger.warning(PREFIX + "Id of world \"" + cfgWorldName + "\" could not be loaded from or created in database!");
 				continue;
 			}
 			
-			tmpPlotWorld.PlotAutoLimit			= cfgCurrWorld.getInt("PlotAutoLimit",	DEFAULT_PLOT_AUTO_LIMIT);
-			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PathWidth",		DEFAULT_PATH_WIDTH);
-			tmpPlotWorld.PlotAutoLimit 			= cfgCurrWorld.getInt("PlotSize",		DEFAULT_PLOT_SIZE);
+			tmpPlotWorld.PlotAutoLimit							= cfgCurrWorld.getInt(					"PlotAutoLimit",			DEFAULT_PLOT_AUTO_LIMIT);
+			tmpPlotWorld.PlotAutoLimit 							= cfgCurrWorld.getInt(					"PathWidth",				DEFAULT_PATH_WIDTH);
+			tmpPlotWorld.PlotAutoLimit 							= cfgCurrWorld.getInt(					"PlotSize",					DEFAULT_PLOT_SIZE);
 			
-			tmpPlotWorld.BottomBlockId 			= getBlockId(cfgCurrWorld,				"BottomBlockId",		"7:0");
-			tmpPlotWorld.BottomBlockValue 		= getBlockValue(cfgCurrWorld,			"BottomBlockId",		"7:0");
-			tmpPlotWorld.WallBlockId 			= getBlockId(cfgCurrWorld,				"WallBlockId",			"44:0");
-			tmpPlotWorld.WallBlockValue			= getBlockValue(cfgCurrWorld,			"WallBlockId",			"44:0");
-			tmpPlotWorld.ProtectedWallBlockId   = getBlockId(cfgCurrWorld,				"ProtectedWallBlockId",	"44:4");
-			tmpPlotWorld.ProtectedWallBlockValue= getBlockValue(cfgCurrWorld,			"ProtectedWallBlockId",	"44:4");
-			tmpPlotWorld.ForSaleWallBlockId 	= getBlockId(cfgCurrWorld,				"ForSaleWallBlockId",	"44:1");
-			tmpPlotWorld.ForSaleWallBlockValue 	= getBlockValue(cfgCurrWorld,			"ForSaleWallBlockId",	"44:1");
-			tmpPlotWorld.AuctionWallBlockId		= getBlockId(cfgCurrWorld,				"AuctionWallBlockId",	"44:1");
-			tmpPlotWorld.AuctionWallBlockValue	= getBlockValue(cfgCurrWorld,			"AuctionWallBlockId",	"44:1");
-			tmpPlotWorld.PlotFloorBlockId 		= getBlockId(cfgCurrWorld,				"PlotFloorBlockId",		"2:0");
-			tmpPlotWorld.PlotFloorBlockValue 	= getBlockValue(cfgCurrWorld,			"PlotFloorBlockId",		"2:0");
-			tmpPlotWorld.PlotFillingBlockId		= getBlockId(cfgCurrWorld,				"PlotFillingBlockId", 	"3:0");
-			tmpPlotWorld.PlotFillingBlockValue 	= getBlockValue(cfgCurrWorld,			"PlotFillingBlockId",	"3:0");
-			tmpPlotWorld.RoadMainBlockId		= getBlockId(cfgCurrWorld,				"RoadMainBlockId",		"5:0");
-			tmpPlotWorld.RoadMainBlockValue		= getBlockValue(cfgCurrWorld,			"RoadMainBlockId",		"5:0");
-			tmpPlotWorld.RoadStripeBlockId		= getBlockId(cfgCurrWorld,				"RoadStripeBlockId",	"5:2");
-			tmpPlotWorld.RoadStripeBlockValue	= getBlockValue(cfgCurrWorld,			"RoadStripeBlockId",	"5:2");
+			tmpPlotWorld.BottomBlockId 							= getBlockId(cfgCurrWorld,				"BottomBlockId",			"7:0");
+			tmpPlotWorld.BottomBlockValue 						= getBlockValue(cfgCurrWorld,			"BottomBlockId",			"7:0");
+			tmpPlotWorld.WallBlockId 							= getBlockId(cfgCurrWorld,				"WallBlockId",				"44:0");
+			tmpPlotWorld.WallBlockValue							= getBlockValue(cfgCurrWorld,			"WallBlockId",				"44:0");
+			tmpPlotWorld.ProtectedWallBlockId   				= getBlockId(cfgCurrWorld,				"ProtectedWallBlockId",		"44:4");
+			tmpPlotWorld.ProtectedWallBlockValue				= getBlockValue(cfgCurrWorld,			"ProtectedWallBlockId",		"44:4");
+			tmpPlotWorld.ForSaleWallBlockId 					= getBlockId(cfgCurrWorld,				"ForSaleWallBlockId",		"44:1");
+			tmpPlotWorld.ForSaleWallBlockValue 					= getBlockValue(cfgCurrWorld,			"ForSaleWallBlockId",		"44:1");
+			tmpPlotWorld.AuctionWallBlockId						= getBlockId(cfgCurrWorld,				"AuctionWallBlockId",		"44:1");
+			tmpPlotWorld.AuctionWallBlockValue					= getBlockValue(cfgCurrWorld,			"AuctionWallBlockId",		"44:1");
+			tmpPlotWorld.PlotFloorBlockId 						= getBlockId(cfgCurrWorld,				"PlotFloorBlockId",			"2:0");
+			tmpPlotWorld.PlotFloorBlockValue 					= getBlockValue(cfgCurrWorld,			"PlotFloorBlockId",			"2:0");
+			tmpPlotWorld.PlotFillingBlockId						= getBlockId(cfgCurrWorld,				"PlotFillingBlockId", 		"3:0");
+			tmpPlotWorld.PlotFillingBlockValue 					= getBlockValue(cfgCurrWorld,			"PlotFillingBlockId",		"3:0");
+			tmpPlotWorld.RoadMainBlockId						= getBlockId(cfgCurrWorld,				"RoadMainBlockId",			"5:0");
+			tmpPlotWorld.RoadMainBlockValue						= getBlockValue(cfgCurrWorld,			"RoadMainBlockId",			"5:0");
+			tmpPlotWorld.RoadStripeBlockId						= getBlockId(cfgCurrWorld,				"RoadStripeBlockId",		"5:2");
+			tmpPlotWorld.RoadStripeBlockValue					= getBlockValue(cfgCurrWorld,			"RoadStripeBlockId",		"5:2");
 
-			tmpPlotWorld.AutoLinkPlots			= cfgCurrWorld.getBoolean("AutoLinkPlots",			true);
-			tmpPlotWorld.DisableExplosion 		= cfgCurrWorld.getBoolean("DisableExplosion",		true);
-			tmpPlotWorld.DisableIgnition 		= cfgCurrWorld.getBoolean("DisableIgnition",		true);
+			tmpPlotWorld.AutoLinkPlots							= cfgCurrWorld.getBoolean("AutoLinkPlots",							true);
+			tmpPlotWorld.DisableExplosion 						= cfgCurrWorld.getBoolean("DisableExplosion",						true);
+			tmpPlotWorld.DisableIgnition 						= cfgCurrWorld.getBoolean("DisableIgnition",						true);
+			tmpPlotWorld.DisableNetherrackIgnition				= cfgCurrWorld.getBoolean("DisableNetherrackIgnition",				false);
+			tmpPlotWorld.DisableObsidianIgnition				= cfgCurrWorld.getBoolean("DisableObsidianIgnition",				false);
+			tmpPlotWorld.PreventHighFrequencyRedstoneCircuits	= cfgCurrWorld.getBoolean("PreventHighFrequencyRedstoneCircuits",	true);
 			
 			
 			tmpPlotWorld.RoadHeight				= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
@@ -589,6 +595,9 @@ public class PlotMe extends JavaPlugin
 			cfgCurrWorld.set("AutoLinkPlots", tmpPlotWorld.AutoLinkPlots);
 			cfgCurrWorld.set("DisableExplosion", tmpPlotWorld.DisableExplosion);
 			cfgCurrWorld.set("DisableIgnition", tmpPlotWorld.DisableIgnition);
+			cfgCurrWorld.set("DisableNetherrackIgnition", false);
+			cfgCurrWorld.set("DisableObsidianIgnition", false);
+			cfgCurrWorld.set("PreventHighFrequencyRedstoneCircuits", true);
 			
 			economysection = cfgCurrWorld.createSection("economy");
 			
@@ -618,7 +627,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorlds.set(cfgWorldName, cfgCurrWorld);
 
 			
-			PlotMeSqlManager.loadPlots(tmpPlotWorld, tmpPlotWorld.getMinecraftWorld().getSpawnLocation(), 16);
+			PlotMeDatabaseManager.loadPlots(tmpPlotWorld, tmpPlotWorld.getMinecraftWorld().getSpawnLocation(), 16);
 			
 			PlotManager.registerPlotWorld(tmpPlotWorld);
 		}
@@ -655,7 +664,7 @@ public class PlotMe extends JavaPlugin
         {
             economy = economyProvider.getProvider();
             
-            PlotOwner bankOwner = new PlotOwner(0, "$BANK$");
+            bankOwner = new PlotPlayer(0, "BANK");
         }
     }
 	

@@ -9,8 +9,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
-import org.bukkit.block.Dispenser;
-import org.bukkit.entity.Creature;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -20,7 +18,6 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockFormEvent;
 import org.bukkit.event.block.BlockFromToEvent;
@@ -33,7 +30,6 @@ import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
-import org.bukkit.event.entity.EntityInteractEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
@@ -42,19 +38,23 @@ import org.bukkit.event.player.PlayerEggThrowEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.StructureGrowEvent;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.Vector;
 
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
-import com.worldcretornica.plotme.PlotMapInfo;
 import com.worldcretornica.plotme.PlotMe;
 import com.worldcretornica.plotme.PlotWorld;
 import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotListener implements Listener 
 {
+	
+	HashMap<Block, Pair<Integer, Long>> redstoneCurrentHitCounts;
+	
+	public PlotListener()
+	{
+		redstoneCurrentHitCounts = new HashMap<Block, Pair<Integer, Long>>();
+	}
 
 	
 	@EventHandler(priority = EventPriority.HIGH)
@@ -147,19 +147,57 @@ public class PlotListener implements Listener
 		player.sendMessage(PlotMe.caption("ErrCannotBuild"));
 		event.setCancelled(true);
     }
-	
-	/**
-	 * TODO: check and destruct to fast redstone circuits
-	 */
-	
-	/*@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockRedstoneChange(BlockRedstoneEvent event)
 	{
 		Block block = event.getBlock();
-        if (block == null) {
-            return;
-        }
-    }*/
+		if (!PlotManager.isPlotWorld(block))
+		{
+			return;
+		}
+		PlotWorld pwi = PlotManager.getPlotWorld(block);
+		if (pwi != null)
+		{
+			if (!pwi.PreventHighFrequencyRedstoneCircuits)
+			{
+				return;
+			}
+			
+			Plot plot = pwi.getPlotAtBlockPosition(block);
+			if (plot != null)
+			{
+				Pair<Integer, Long> newHitCount = null;
+				long currentTime = Math.round(System.currentTimeMillis() / 1000);
+				Pair<Integer, Long> oldHitCount = redstoneCurrentHitCounts.get(block);
+				if (oldHitCount != null)
+				{
+					if (currentTime > (oldHitCount.getRight() - 1))
+					{
+						if (oldHitCount.getLeft() < 5)
+						{
+							newHitCount = new Pair<Integer, Long>(oldHitCount.getLeft() + 1, currentTime);
+						}
+						else
+						{
+							event.setNewCurrent(0);
+							redstoneCurrentHitCounts.remove(block);
+							block.breakNaturally();
+							return;
+						}
+					}
+				}
+				else
+				{
+					newHitCount = new Pair<Integer, Long>(0, currentTime);
+				}
+				if (newHitCount != null)
+				{
+					redstoneCurrentHitCounts.put(block, newHitCount);
+				}
+			}
+		}
+    }
 	
 	/*@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBlockDispense(BlockDispenseEvent event)
@@ -569,6 +607,7 @@ public class PlotListener implements Listener
 		PlotWorld pwi = PlotManager.getPlotWorld(location);
 		if (pwi == null)
 		{
+			event.setCancelled(true);
 			return;
 		}
 		
@@ -580,9 +619,7 @@ public class PlotListener implements Listener
 				return;
 			}
 		}
-		
-		String playerName = player.getName();
-		
+
 		if (event.isFromBonemeal() && pwi.isPreventedItem(351, (byte)15))
 		{
 			event.setCancelled(true);
@@ -609,7 +646,7 @@ public class PlotListener implements Listener
 		while (bsIterator.hasNext())
 		{
 			bs = bsIterator.next();
-			if (pwi.isOnRoad(bs.getX(), bs.getZ()))
+			if (pwi.isOnRoad(bs))
 			{
 				event.setCancelled(true);
 				return;
@@ -617,9 +654,9 @@ public class PlotListener implements Listener
 			overplot = pwi.getPlotAtBlockPosition(bs);
 			if (overplot != null)
 			{
-				if (playerName != null && !playerName.isEmpty())
+				if (player != null && player.getName() != null)
 				{
-					if (!fromplot.isAllowed(playerName,  true,  true) || !overplot.isAllowed(playerName, true, true))
+					if (!fromplot.isAllowed(player.getName(),  true,  true) || !overplot.isAllowed(player.getName(), true, true))
 					{
 						event.setCancelled(true);
 						return;

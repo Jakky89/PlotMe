@@ -34,10 +34,10 @@ public class PlotWorldEditListener implements Listener {
 		}
 		else if(from.getBlockX() != to.getBlockX() || from.getBlockZ() != to.getBlockZ())
 		{
-			String idFrom = PlotManager.getPlotId(from);
-			String idTo = PlotManager.getPlotId(to);
+			Plot plotFrom = PlotManager.getPlotAtBlockPosition(from);
+			Plot plotTo = PlotManager.getPlotAtBlockPosition(to);
 			
-			if(!idFrom.equalsIgnoreCase(idTo))
+			if(!plotFrom.equals(plotTo))
 			{
 				changemask = true;
 			}
@@ -94,11 +94,12 @@ public class PlotWorldEditListener implements Listener {
 			if(event.getMessage().startsWith("//gmask"))
 			{
 				event.setCancelled(true);
-			}else if(event.getMessage().startsWith("//up"))
+			}
+			else if(event.getMessage().startsWith("//up"))
 			{
-				Plot plot = PlotManager.getPlotById(p);
+				Plot plot = PlotManager.getPlotAtBlockPosition(p);
 				
-				if(plot == null || !plot.isAllowed(p.getName()))
+				if(plot == null || !plot.isAllowed(p.getName(), true, true))
 				{
 					event.setCancelled(true);
 				}
@@ -117,9 +118,9 @@ public class PlotWorldEditListener implements Listener {
 					&& p.getItemInHand() != null && p.getItemInHand().getType() != Material.AIR)
 			{
 				Block b = event.getClickedBlock();
-				Plot plot = PlotManager.getPlotById(b);
+				Plot plot = PlotManager.getPlotAtBlockPosition(p);
 				
-				if(plot != null && plot.isAllowed(p.getName()))
+				if(plot != null && plot.isAllowed(p.getName(), true, true))
 					PlotWorldEdit.setMask(p, b.getLocation());
 				else
 					event.setCancelled(true);

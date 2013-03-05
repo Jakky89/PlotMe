@@ -37,8 +37,8 @@ public class PlotManager {
 
     // Maps bukkit worlds to PlotWorld instances 
 	public static Map<World, PlotWorld> plotWorlds;
-	// Maps player names to PlotOwner instances 
-	public static Map<String, PlotOwner> plotOwners;
+	// Maps player names to PlotMePlayer instances 
+	public static Map<String, PlotPlayer> plotPlayers;
 	public static Set<Plot> allPlots;
 	public static List<Plot> expiredPlots;
 	
@@ -51,7 +51,7 @@ public class PlotManager {
 	public PlotManager()
 	{
 		plotWorlds = new HashMap<World, PlotWorld>();
-		plotOwners = new HashMap<String, PlotOwner>();
+		plotPlayers = new HashMap<String, PlotPlayer>();
 		
 		expiredPlots = new LinkedList<Plot>();
 		expiredPlotsCheckTaskId = null;
@@ -65,27 +65,51 @@ public class PlotManager {
 			return false;
 		}
 		
-		if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
+		if (!plotWorlds.containsKey(plotWorld.getMinecraftWorld()))
 		{
-			return true;
+			if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
+			{
+				return true;
+			}
 		}
 		
 		return false;
 	}
 	
-	public static boolean registerPlotOwner(PlotOwner plotOwner)
+	public static void registerPlotPlayer(PlotPlayer plotPlayer)
 	{
-		if (plotOwner == null || plotOwner.getId() < 0)
+		if (plotPlayer == null || plotPlayer.getId() < 0 || plotPlayer.getRealName().isEmpty())
+		{
+			return;
+		}
+		
+		if (!plotPlayers.containsKey(plotPlayer.getRealName()))
+		{
+			plotPlayers.put(plotPlayer.getRealName(), plotPlayer);
+		}
+	}
+	
+	public static boolean registerPlotPlayer(Player bukkitPlayer)
+	{
+		if (bukkitPlayer == null)
 		{
 			return false;
 		}
 		
-		if (plotOwners.put(plotOwner.getRealName(), plotOwner) == null)
+		if (!plotPlayers.containsKey(bukkitPlayer.getName()))
 		{
-			return true;
+			plotPlayers.put(bukkitPlayer.getName(), PlotMeDatabaseManager.getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName()));
 		}
-		
 		return false;
+	}
+	
+	public static void unregisterPlotPlayer(PlotPlayer plotPlayer)
+	{
+		if (plotPlayer == null || plotPlayer.getId() <= 0 || plotPlayer.getRealName().isEmpty())
+		{
+			return;
+		}
+		plotPlayers.remove(plotPlayer.getRealName());
 	}
 	
 	public static PlotWorld getPlotWorld(World minecraftWorld)
@@ -102,6 +126,15 @@ public class PlotManager {
 		if (location != null)
 		{
 			return plotWorlds.get(location.getWorld());
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(Player bukkitPlayer)
+	{
+		if (bukkitPlayer != null)
+		{
+			return plotWorlds.get(bukkitPlayer.getWorld());
 		}
 		return null;
 	}
@@ -133,11 +166,11 @@ public class PlotManager {
 		return null;
 	}
 	
-	public static PlotOwner getPlotOwner(String ownerName)
+	public static PlotPlayer getPlotOwner(String playerName)
 	{
-		if (ownerName != null && !ownerName.isEmpty())
+		if (playerName != null && !playerName.isEmpty())
 		{
-			return plotOwners.get(ownerName);
+			return plotPlayers.get(playerName);
 		}
 		return null;
 	}
@@ -724,13 +757,13 @@ public class PlotManager {
 		}
 	}
 	
-	public static PlotOwner getOnlinePlotOwner(Player bukkitPlayer)
+	public static PlotPlayer getOnlinePlotOwner(Player bukkitPlayer)
 	{
 		if (bukkitPlayer == null)
 		{
 			return null;
 		}
-		return plotOwners.get(bukkitPlayer.getName());
+		return plotPlayers.get(bukkitPlayer.getName());
 	}
 
 	public static void removePlotSigns(Plot plot)
@@ -917,7 +950,7 @@ public class PlotManager {
 	public static void removePlot(Plot plot)
 	{
 		clearPlot(plot);
-		PlotMeSqlManager.removePlot(plot);
+		PlotMeDatabaseManager.removePlot(plot);
 		allPlots.remove(plot);
 	}
 	
@@ -1117,6 +1150,9 @@ public class PlotManager {
 		return tmpList;
 	}
 	
+	/**
+	 * TODO: move lwc protections
+	 */
 	public static boolean moveOverwritePlot(Plot plot, PlotPosition targetPlotPosition)
 	{
 		if (plot == null || plot.getMinecraftWorld() == null || targetPlotPosition == null || targetPlotPosition.getMinecraftWorld() == null)
@@ -1220,6 +1256,9 @@ public class PlotManager {
 		return true;
 	}
 	
+	/**
+	 * TODO: move lwc protections
+	 */
 	public static boolean swapPlots(Plot plot1, Plot plot2)
 	{
 		if (plot1 == null || plot2 == null || plot1.getMinecraftWorld() == null || plot2.getMinecraftWorld() == null)
@@ -1234,9 +1273,7 @@ public class PlotManager {
 		removePlotSigns(plot1);
 		removePlotSigns(plot2);
 		
-		// Remove protections
-		removeLWCProtections(plot1);
-		removeLWCProtections(plot2);
+		LWC lwc = com.griefcraft.lwc.LWC.getInstance();
 		
 		// Take a snapshot of entities (also including players -> will be more fun when players standing on plot will move with it ;) )
 
@@ -1262,7 +1299,10 @@ public class PlotManager {
 
 		Location baseLocation1 = plot1.getWorldMinBlockLocation();
 		Location baseLocation2 = plot2.getWorldMinBlockLocation();
-
+		
+		Protection lwcprotection1;
+		Protection lwcprotection2;
+		
 		int x;
 		int y;
 		int z;
@@ -1288,7 +1328,7 @@ public class PlotManager {
 				{
 					if (rhd != 0)
 					{
-						if (y + Math.abs(rhd) >= maxY1 || y + Math.abs(rhd) >= maxY2 || y - Math.abs(rhd) < 1)
+						if (y + Math.abs(rhd) >= maxY1 || y + Math.abs(rhd) >= maxY2 || y - Math.abs(rhd) < 0)
 						{
 							break inner2;
 						}
@@ -1297,7 +1337,7 @@ public class PlotManager {
 					// Get block data copies
 					
 					// Plot 1
-					block1 = plot1.getMinecraftWorld().getBlockAt(baseLocation1.getBlockX() + x, y, baseLocation1.getBlockZ() + z);
+					block1 = minecraftWorld1.getBlockAt(baseLocation1.getBlockX() + x, y, baseLocation1.getBlockZ() + z);
 					biome1 = block1.getBiome();
 					blockState1 = block1.getState();
 					if (block1 instanceof InventoryHolder)
@@ -1318,9 +1358,10 @@ public class PlotManager {
 					{
 						block1.setTypeIdAndData(plotWorld1.BottomBlockId, plotWorld1.BottomBlockValue, false);
 					}
+					lwcprotection1 = lwc.findProtection(block1);
 					
 					// Plot 2
-					block2 = plot2.getMinecraftWorld().getBlockAt(baseLocation2.getBlockX() + x, y, baseLocation2.getBlockZ() + z);
+					block2 = minecraftWorld2.getBlockAt(baseLocation2.getBlockX() + x, y, baseLocation2.getBlockZ() + z);
 					biome2 = block2.getBiome();
 					blockState2 = block2.getState();
 					if (block2 instanceof InventoryHolder)
@@ -1341,7 +1382,8 @@ public class PlotManager {
 					{
 						block2.setTypeIdAndData(plotWorld2.BottomBlockId, plotWorld2.BottomBlockValue, false);
 					}
-					
+					lwcprotection2 = lwc.findProtection(block2);
+
 					block2.setBiome(biome1);
 					block2.setTypeIdAndData(blockState1.getTypeId(), blockState1.getRawData(), false);
 					
@@ -1388,13 +1430,8 @@ public class PlotManager {
 			tmpEntity.teleport(new Location(minecraftWorld1, (tmpLoc.getX() - baseLocation2.getX()) + baseLocation1.getX() + phd, tmpLoc.getY() - rhd, (tmpLoc.getZ() - baseLocation2.getZ()) + baseLocation1.getX() + phd));
 		}
 
-		PlotMeSqlManager.updatePlotData(plot1, "xpos", plot2.getPlotX());
-		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotZ());
-		PlotMeSqlManager.updatePlotData(plot1, "zpos", plot2.getPlotWorld().getId());
-		
-		PlotMeSqlManager.updatePlotData(plot2, "xpos", plot1.getPlotX());
-		PlotMeSqlManager.updatePlotData(plot2, "zpos", plot1.getPlotZ());
-		PlotMeSqlManager.updatePlotData(plot2, "zpos", plot1.getPlotWorld().getId());
+		PlotMeDatabaseManager.updatePlotPosition(plot1);
+		PlotMeDatabaseManager.updatePlotPosition(plot2);
 
 		return true;
 	}
@@ -1656,21 +1693,14 @@ public class PlotManager {
 			return;
 		}
 
-		Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		final Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
 
-		final int x1 = locations.getLeft().getBlockX();
-		final int y1 = locations.getLeft().getBlockY();
-    	final int z1 = locations.getLeft().getBlockZ();
-    	final int x2 = locations.getRight().getBlockX();
-    	final int y2 = locations.getRight().getBlockY();
-    	final int z2 = locations.getRight().getBlockZ();
-    	
 		Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new Runnable() 
 		{	
 			public void run() 
 			{
 				LWC lwc = com.griefcraft.lwc.LWC.getInstance();
-				List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.getMinecraftWorld().getName(), x1, x2, y1, y2, z1, z2);
+				List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.getMinecraftWorld().getName(), locations.getLeft().getBlockX(), locations.getRight().getBlockX(), locations.getLeft().getBlockY(), locations.getRight().getBlockY(), locations.getLeft().getBlockZ(), locations.getRight().getBlockZ());
 				if (protections != null && protections.size()>0)
 				{
 					Protection tmpp;
