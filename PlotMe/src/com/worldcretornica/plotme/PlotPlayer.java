@@ -16,8 +16,9 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	private Player player;
 	private String realname;
 	private String displayname;
+	private Integer lastonline;
 	private Set<Plot> ownplots;
-
+	private Set<PlotGroup> plotgroups;
 	
 	public PlotPlayer(int playerId, String playerName)
 	{
@@ -26,8 +27,32 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		realname = playerName;
 		displayname = playerName;
 		ownplots = null;
+		lastonline = null;
 		PlotManager.registerPlotPlayer(this);
 	}
+	
+	public PlotPlayer(int playerId, String playerName, int lastOnlineTime)
+	{
+		id = playerId;
+		player = null;
+		realname = playerName;
+		displayname = playerName;
+		ownplots = null;
+		lastonline = lastOnlineTime;
+		PlotManager.registerPlotPlayer(this);
+	}
+	
+	public PlotPlayer(int playerId, String playerName, String displayName, int lastOnlineTime)
+	{
+		id = playerId;
+		player = null;
+		realname = playerName;
+		displayname = displayName;
+		ownplots = null;
+		lastonline = lastOnlineTime;
+		PlotManager.registerPlotPlayer(this);
+	}
+	
 	public PlotPlayer(int playerId, String playerName, String displayName)
 	{
 		id = playerId;
@@ -35,17 +60,27 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		realname = playerName;
 		displayname = displayName;
 		ownplots = null;
+		lastonline = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
 	public PlotPlayer(int ownerId, Player minecraftPlayer)
 	{
 		id = ownerId;
-		player = minecraftPlayer;
-		realname = minecraftPlayer.getName();
-		displayname = minecraftPlayer.getDisplayName();
+		setMinecraftPlayer(minecraftPlayer);
 		ownplots = null;
 		PlotManager.registerPlotPlayer(this);
+	}
+	
+	public void refreshLastOnlineTime()
+	{
+		int newLastOnline = Math.round(System.currentTimeMillis() / 1000);
+		if (newLastOnline == lastonline)
+		{
+			return;
+		}
+		lastonline = newLastOnline;
+		PlotDatabase.updateData(id, "players", "lastonline", lastonline);
 	}
 	
 	public void setMinecraftPlayer(Player minecraftPlayer)
@@ -53,6 +88,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		player = minecraftPlayer;
 		realname = minecraftPlayer.getName();
 		displayname = minecraftPlayer.getDisplayName();
+		refreshLastOnlineTime();
 	}
 	
 	public int getId()
@@ -60,7 +96,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		return id;
 	}
 	
-	public String getRealName()
+	public String getName()
 	{
 		return realname;
 	}
@@ -70,13 +106,23 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		return displayname;
 	}
 	
+	public void setDisplayName(String newDisplayName)
+	{
+		if (!newDisplayName.equals(displayname))
+		{
+			displayname = newDisplayName;
+			PlotDatabase.updateData(id, "players", "displayname", newDisplayName);
+		}
+	}
+	
 	public void addOwnPlot(Plot plot)
 	{
 		if (ownplots == null)
 		{
 			ownplots = new HashSet<Plot>();
 		}
-		this.ownplots.add(plot);
+		ownplots.add(plot);
+		plot.setOwner(this);
 	}
 	
 	public void removeOwnPlot(Plot plot)
@@ -85,7 +131,20 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		{
 			return;
 		}
-		this.ownplots.remove(plot);
+		ownplots.remove(plot);
+		plot.unsetOwner();
+	}
+	
+	public void addToPlotGroup(PlotGroup plotGroup)
+	{
+		plotgroups.add(plotGroup);
+		plotGroup.addPlotPlayer(this);
+	}
+	
+	public void removeFromPlotGroup(PlotGroup plotGroup)
+	{
+		plotgroups.remove(plotGroup);
+		plotGroup.removePlotPlayer(this);
 	}
 	
 	public int ownPlotsCount()
@@ -106,7 +165,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	    if (!(o instanceof PlotPlayer)) {
 	    	return false;
 	    }
-		if (this.id == ((PlotPlayer)o).id)
+		if (this.id == ((PlotPlayer)o).getId())
 		{
 			return true;
 		}
@@ -115,7 +174,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	
 	@Override
 	public int compareTo(PlotPlayer po) {
-		return this.id - po.getId();
+		return id - po.getId();
 	}
 	
 }

@@ -422,7 +422,7 @@ public class PlotMeCommands implements CommandExecutor
 												PlotMe.logger.info(LOG + bidder.getName() + " bid " + String.valueOf(bid) + " on plot " + String.valueOf(plot.getId()));
 											}
 											
-											if (plot.addAuctionBid(PlotMeDatabaseManager.getPlotPlayer(bidder.getName(), bidder.getDisplayName()), bid))
+											if (plot.addAuctionBid(PlotDatabase.getPlotPlayer(bidder.getName(), bidder.getDisplayName()), bid))
 											{
 												Send(bidder, C("MsgBidAccepted") + " " + f(-bid));
 											}
@@ -665,7 +665,7 @@ public class PlotMeCommands implements CommandExecutor
 									else
 									{
 										plot.enableAuctioning();
-										plot.addAuctionBid(PlotMeDatabaseManager.getPlotPlayer(player.getName(), player.getDisplayName()), bid);
+										plot.addAuctionBid(PlotDatabase.getPlotPlayer(player.getName(), player.getDisplayName()), bid);
 										
 										Send(player, C("MsgAuctionStarted"));
 										

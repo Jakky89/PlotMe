@@ -47,7 +47,7 @@ public class Plot implements Comparable<Plot>
 	
 	public Plot(int plotId, PlotPosition plotPosition)
 	{
-		id = 0;
+		id = plotId;
 		owner = null;
 		properties = null;
 		biome = Biome.PLAINS;
@@ -163,7 +163,7 @@ public class Plot implements Comparable<Plot>
 		{
 			return position.getPlotWorld().PlotSize;
 		}
-		return -1;
+		return 0;
 	}
 	
 	public boolean hasNeighbourPlots()
@@ -320,9 +320,9 @@ public class Plot implements Comparable<Plot>
 
 		if (auctionbids == null || bidAmount > auctionbids.get(0).getMoneyAmount())
 		{
-			auctionbids.add(0, new PlotAuctionBid(auction, bidder.getRealName(), bidAmount));
+			auctionbids.add(0, new PlotAuctionBid(auction, bidder.getName(), bidAmount));
 			PlotManager.actualizePlotSigns(this);
-			PlotMeDatabaseManager.addPlotBid(this, bidder, bidAmount);
+			PlotDatabase.addPlotBid(this, bidder, bidAmount);
 			return true;
 		}
 		return false;
@@ -335,7 +335,7 @@ public class Plot implements Comparable<Plot>
 			isforsale = true;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotMeDatabaseManager.updatePlotData(this, "isforsale", 1);
+			PlotDatabase.updateData(id, "plots", "isforsale", 1);
 		}
 	}
 	
@@ -346,7 +346,7 @@ public class Plot implements Comparable<Plot>
 			isforsale = false;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotMeDatabaseManager.updatePlotData(this, "isforsale", 0);
+			PlotDatabase.updateData(id, "plots", "isforsale", 0);
 		}
 	}
 	
@@ -364,11 +364,11 @@ public class Plot implements Comparable<Plot>
 			PlotManager.adjustWall(this);
 			if (!isprotected)
 			{
-				PlotMeDatabaseManager.updatePlotData(this, "isprotected", 0);
+				PlotDatabase.updateData(id, "plots", "isprotected", 0);
 			}
 			else
 			{
-				PlotMeDatabaseManager.updatePlotData(this, "isprotected", 1);
+				PlotDatabase.updateData(id, "plots", "isprotected", 1);
 			}
 		}
 	}
@@ -388,7 +388,7 @@ public class Plot implements Comparable<Plot>
 				expireddate = newDate;
 				PlotManager.checkPlotExpiration(this);
 				PlotManager.actualizePlotSigns(this);
-				PlotMeDatabaseManager.updatePlotData(this, "expireddate", newDate);
+				PlotDatabase.updateData(id, "plots", "expireddate", newDate);
 			}
 		}
 	}
@@ -407,17 +407,17 @@ public class Plot implements Comparable<Plot>
 	
 	public void disableExpiration()
 	{
-		expireddate = -1;
+		expireddate = 0;
 		PlotManager.actualizePlotSigns(this);
 		PlotManager.adjustWall(this);
-		PlotMeDatabaseManager.updatePlotData(this, "expireddate", null);
+		PlotDatabase.updateData(id, "plots", "expireddate", null);
 	}
 	
 	public long getExpiration()
 	{
 		if (finisheddate > 0 || isprotected || isforsale)
 		{
-			return -1;
+			return 0;
 		}
 		return expireddate;
 	}
@@ -446,18 +446,18 @@ public class Plot implements Comparable<Plot>
 			finisheddate = currentTime;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotMeDatabaseManager.updatePlotData(this, "finisheddate", currentTime);
+			PlotDatabase.updateData(id, "plots", "finisheddate", currentTime);
 		}
 	}
 	
 	public void setUnfinished()
 	{
-		if (finisheddate != -1)
+		if (finisheddate > 0)
 		{
-			finisheddate = -1;
+			finisheddate = 0;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotMeDatabaseManager.updatePlotData(this, "finisheddate", null);
+			PlotDatabase.updateData(id, "plots", "finisheddate", null);
 		}
 	}
 	
@@ -485,7 +485,7 @@ public class Plot implements Comparable<Plot>
 		if (bio != null && biome != bio)
 		{
 			biome = bio;
-			PlotMeDatabaseManager.updatePlotData(this, "biome", bio.toString());
+			PlotDatabase.updateData(id, "plots", "biome", bio.toString());
 			return true;
 		}
 		return false;
@@ -496,20 +496,11 @@ public class Plot implements Comparable<Plot>
 		setBiome(Biome.valueOf(newBiome));
 	}
 	
-	public String getOwnerDisplayName()
-	{
-		if (owner != null)
-		{
-			return owner.getDisplayName();
-		}
-		return null;
-	}
-	
 	public String getOwnerRealName()
 	{
 		if (owner != null)
 		{
-			return owner.getRealName();
+			return owner.getName();
 		}
 		return null;
 	}
@@ -525,7 +516,17 @@ public class Plot implements Comparable<Plot>
 		{
 			owner = newOwner;
 			PlotManager.actualizePlotSigns(this);
-			PlotMeDatabaseManager.updatePlotData(this, "owner", owner.getId());
+			PlotDatabase.updateData(id, "plots", "owner", owner.getId());
+		}
+	}
+	
+	public void unsetOwner()
+	{
+		if (owner != null)
+		{
+			owner.removeOwnPlot(this);
+			owner = null;
+			PlotDatabase.updateData(id, "plots", "owner", null);
 		}
 	}
 	
@@ -535,7 +536,7 @@ public class Plot implements Comparable<Plot>
 		{
 			price = newPrice;
 			PlotManager.actualizePlotSigns(this);
-			PlotMeDatabaseManager.updatePlotData(this, "isforsale", price);
+			PlotDatabase.updateData(id, "plots", "isforsale", price);
 		}
 	}
 	
@@ -570,7 +571,7 @@ public class Plot implements Comparable<Plot>
 			auction = 0;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotMeDatabaseManager.updatePlotData(this, "auction", 0);
+			PlotDatabase.updateData(id, "plots", "auction", 0);
 			return true;
 		}
 		return false;
@@ -581,12 +582,12 @@ public class Plot implements Comparable<Plot>
 		if (auction < 1)
 		{
 			auctionbids.clear();
-			auction = PlotMeDatabaseManager.getNextAuctionNumber(this);
+			auction = PlotDatabase.getNextAuctionNumber();
 			if (auction >= 1)
 			{
 				PlotManager.actualizePlotSigns(this);
 				PlotManager.adjustWall(this);
-				PlotMeDatabaseManager.updatePlotData(this, "auction", auction);
+				PlotDatabase.updateData(id, "plots", "auction", auction);
 				return true;
 			}
 		}
@@ -627,7 +628,7 @@ public class Plot implements Comparable<Plot>
 		property = property.toLowerCase();
 		if (properties.setValue(property, value))
 		{
-			PlotMeDatabaseManager.updatePlotData(this, "properties", properties);
+			PlotDatabase.updateJakky89Properties(id, "plots", "properties", properties);
 		}
 	}
 	
@@ -636,7 +637,7 @@ public class Plot implements Comparable<Plot>
 		return properties;
 	}
 	
-	public boolean isAllowed(String playerName, boolean includeStar, boolean includeGroups)
+	public boolean isAllowed(String playerName)
 	{
 		if (playerName == null || playerName.isEmpty())
 		{
@@ -647,13 +648,13 @@ public class Plot implements Comparable<Plot>
 		if (player != null)
 		{
 			playerName = player.getName();
-			if (owner != null && !owner.getRealName().isEmpty())
+			if (owner != null && !owner.getName().isEmpty())
 			{
-				if (owner.equals(playerName) || (includeStar && owner.equals("*")))
+				if (owner.equals(playerName) || owner.equals("*"))
 				{
 					return true;
 				}
-				if (includeGroups && owner.getRealName().length()>6 && player.hasPermission("plotme.group." + owner.getRealName().substring(6)))
+				if (owner.getName().length()>6 && owner.getName().startsWith("group:") && player.hasPermission("plotme.group." + owner.getName().substring(6)))
 				{
 					return true;
 				}
@@ -666,7 +667,7 @@ public class Plot implements Comparable<Plot>
 			Jakky89Properties rightsAllowed = rights.getProperties("allowed");
 			if (rightsAllowed != null)
 			{
-				if (includeStar && rightsAllowed.getBoolean("*")==true)
+				if (rightsAllowed.getBoolean("*")==true)
 				{
 					return true;
 				}
@@ -676,23 +677,20 @@ public class Plot implements Comparable<Plot>
 					{
 						return true;
 					}
-					if (includeStar && rightsAllowed.isStringInHashSet("players", "*"))
+					if (rightsAllowed.isStringInHashSet("players", "*"))
 					{
 						return true;
 					}
-					if (includeGroups)
+					Set<String> allowedGroups = rightsAllowed.getStringHashSet("groups");
+					if (allowedGroups != null)
 					{
-						Set<String> allowedGroups = rightsAllowed.getStringHashSet("groups");
-						if (allowedGroups != null)
+						Iterator<String> agi = allowedGroups.iterator();
+						while (agi.hasNext())
 						{
-							Iterator<String> agi = allowedGroups.iterator();
-							while (agi.hasNext())
+							String groupName = agi.next();
+							if (player.hasPermission("plotme.group." + groupName))
 							{
-								String groupName = agi.next();
-								if (player.hasPermission("plotme.group." + groupName))
-								{
-									return true;
-								}
+								return true;
 							}
 						}
 					}
@@ -702,7 +700,7 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 	
-	public boolean isDenied(String playerName, boolean includeStar, boolean includeGroups)
+	public boolean isDenied(String playerName)
 	{
 		if (playerName == null || playerName.isEmpty())
 		{
@@ -713,13 +711,13 @@ public class Plot implements Comparable<Plot>
 		if (player != null)
 		{
 			playerName = player.getName();
-			if (owner != null && !owner.getRealName().isEmpty())
+			if (owner != null && !owner.getName().isEmpty())
 			{
-				if (owner.equals(playerName) || (includeStar && owner.equals("*")))
+				if (owner.equals(playerName) || owner.equals("*"))
 				{
 					return false;
 				}
-				if (includeGroups && owner.getRealName().length()>6 && player.hasPermission("plotme.group." + owner.getRealName().substring(6)))
+				if (owner.getName().length()>6 && owner.getName().startsWith("group:") && player.hasPermission("plotme.group." + owner.getName().substring(6)))
 				{
 					return false;
 				}
@@ -732,7 +730,7 @@ public class Plot implements Comparable<Plot>
 			Jakky89Properties rightsDenied = rights.getProperties("denied");
 			if (rightsDenied != null)
 			{
-				if (includeStar && rightsDenied.getBoolean("*")==true)
+				if (rightsDenied.getBoolean("*")==true)
 				{
 					return true;
 				}
@@ -742,23 +740,20 @@ public class Plot implements Comparable<Plot>
 					{
 						return true;
 					}
-					if (includeStar && rightsDenied.isStringInHashSet("players", "*"))
+					if (rightsDenied.isStringInHashSet("players", "*"))
 					{
 						return true;
 					}
-					if (includeGroups)
+					Set<String> deniedGroups = rightsDenied.getStringHashSet("groups");
+					if (deniedGroups != null)
 					{
-						Set<String> deniedGroups = rightsDenied.getStringHashSet("groups");
-						if (deniedGroups != null)
+						Iterator<String> dgi = deniedGroups.iterator();
+						while (dgi.hasNext())
 						{
-							Iterator<String> dgi = deniedGroups.iterator();
-							while (dgi.hasNext())
+							String groupName = dgi.next();
+							if (player.hasPermission("plotme.group." + groupName))
 							{
-								String groupName = dgi.next();
-								if (player.hasPermission("plotme.group." + groupName))
-								{
-									return false;
-								}
+								return false;
 							}
 						}
 					}
@@ -768,12 +763,20 @@ public class Plot implements Comparable<Plot>
 
 		return true;
 	}
-
-	public void updatePlotData(String field, Object value)
-	{
-		PlotMeDatabaseManager.updatePlotData(this, field, value);
-	}
 	
+	public boolean isAvailable()
+	{
+		if (owner == null)
+		{
+			if (id > 0 && !isFinished() && (isForSale() || auction > 0) && !isExpired())
+			{
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
 	@Override
 	public boolean equals(Object o)
 	{

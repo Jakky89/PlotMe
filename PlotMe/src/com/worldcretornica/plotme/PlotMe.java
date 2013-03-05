@@ -104,7 +104,7 @@ public class PlotMe extends JavaPlugin
     
 	public void onDisable()
 	{	
-		PlotMeDatabaseManager.closeConnection();
+		PlotDatabase.closeConnection();
 		NAME = null;
 		PREFIX = null;
 		VERSION = null;
@@ -135,8 +135,6 @@ public class PlotMe extends JavaPlugin
 		defaultWEAnywhere = null;
 		self = null;
 		allowToDeny = null;
-		
-		
 	}
 	
 	public void onEnable()
@@ -383,7 +381,6 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("DisableIgnition", true);
 			cfgWorld.set("DisableNetherrackIgnition", false);
 			cfgWorld.set("DisableObsidianIgnition", false);
-			cfgWorld.set("PreventHighFrequencyRedstoneCircuits", true);
 			
 			ConfigurationSection cfgWorldEconomy = cfgWorld.createSection("economy");
 			
@@ -448,7 +445,7 @@ public class PlotMe extends JavaPlugin
 				}
 			}
 			
-			PlotWorld tmpPlotWorld = PlotMeDatabaseManager.getPlotWorld(bukkitWorld);
+			PlotWorld tmpPlotWorld = PlotDatabase.getPlotWorld(bukkitWorld);
 			if (tmpPlotWorld == null)
 			{
 				logger.warning(PREFIX + "Id of world \"" + cfgWorldName + "\" could not be loaded from or created in database!");
@@ -483,8 +480,7 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.DisableIgnition 						= cfgCurrWorld.getBoolean("DisableIgnition",						true);
 			tmpPlotWorld.DisableNetherrackIgnition				= cfgCurrWorld.getBoolean("DisableNetherrackIgnition",				false);
 			tmpPlotWorld.DisableObsidianIgnition				= cfgCurrWorld.getBoolean("DisableObsidianIgnition",				false);
-			tmpPlotWorld.PreventHighFrequencyRedstoneCircuits	= cfgCurrWorld.getBoolean("PreventHighFrequencyRedstoneCircuits",	true);
-			
+	
 			
 			tmpPlotWorld.RoadHeight				= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
 			if (tmpPlotWorld.RoadHeight > 250)
@@ -597,7 +593,6 @@ public class PlotMe extends JavaPlugin
 			cfgCurrWorld.set("DisableIgnition", tmpPlotWorld.DisableIgnition);
 			cfgCurrWorld.set("DisableNetherrackIgnition", false);
 			cfgCurrWorld.set("DisableObsidianIgnition", false);
-			cfgCurrWorld.set("PreventHighFrequencyRedstoneCircuits", true);
 			
 			economysection = cfgCurrWorld.createSection("economy");
 			
@@ -627,7 +622,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorlds.set(cfgWorldName, cfgCurrWorld);
 
 			
-			PlotMeDatabaseManager.loadPlots(tmpPlotWorld, tmpPlotWorld.getMinecraftWorld().getSpawnLocation(), 16);
+			PlotDatabase.loadPlots(tmpPlotWorld, tmpPlotWorld.getMinecraftWorld().getSpawnLocation(), 16);
 			
 			PlotManager.registerPlotWorld(tmpPlotWorld);
 		}
@@ -700,39 +695,31 @@ public class PlotMe extends JavaPlugin
 			return playersignoringwelimit.contains(p.getName());
 	}
 		
-	public static int getPlotLimit(Player p)
+	public static int getPlotLimit(Player player)
 	{
-		int max = -2;
+		int ctr = 255;
 		
-		int maxlimit = 255;
-		
-		if(p.hasPermission("plotme.limit.*"))
+		if (player.hasPermission("plotme.limit.*") || cPerms(player, "plotme.admin"))
 		{
 			return -1;
 		}
-		else
-		{
-			for(int ctr = 0; ctr < maxlimit; ctr++)
-			{
-				if(p.hasPermission("plotme.limit." + ctr))
-				{
-					max = ctr;
-				}
-			}
 		
+		while (ctr>1 && !player.hasPermission("plotme.limit." + String.valueOf(ctr)))
+		{
+			ctr--;
+		}
+			
+		if (player.hasPermission("plotme.limit." + String.valueOf(ctr)))
+		{
+			return ctr;
 		}
 		
-		if(max == -2)
+		if (cPerms(player, "plotme.use"))
 		{
-			if(cPerms(p, "plotme.admin"))
-				return -1;
-			else if(cPerms(p, "plotme.use"))
-				return 1;
-			else
-				return 0;
+			return 1;
 		}
 		
-		return max;
+		return 0;
 	}
 	
 	public static Location getAirSpawnPosition(Location loc)
@@ -790,7 +777,7 @@ public class PlotMe extends JavaPlugin
 	private void loadCaptions()
 	{
 		File filelang = new File(this.getDataFolder(), "caption-english.yml");
-		
+	
 		TreeMap<String, String> properties = new TreeMap<String, String>();
 		properties.put("MsgDeletedExpiredPlots", "Deleted expired plot");
 		properties.put("MsgDoesNotExistOrNotLoaded","does not exist or is not loaded.");
@@ -1088,13 +1075,13 @@ public class PlotMe extends JavaPlugin
 		    Yaml yaml = new Yaml();
 		    Object obj = yaml.load(input);
 		
-		    if(obj instanceof LinkedHashMap<?, ?>)
+		    if (obj instanceof LinkedHashMap<?, ?>)
 		    {
 				@SuppressWarnings("unchecked")
 				LinkedHashMap<String, String> data = (LinkedHashMap<String, String>) obj;
 							    
 			    captions = new HashMap<String, String>();
-				for(String key : data.keySet())
+				for (String key : data.keySet())
 				{
 					captions.put(key, data.get(key));
 				}

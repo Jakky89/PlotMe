@@ -35,11 +35,15 @@ import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
 public class PlotManager {
 
-    // Maps bukkit worlds to PlotWorld instances 
-	public static Map<World, PlotWorld> plotWorlds;
+    // Maps bukkits world names to PlotWorld instances
+	public static Map<String, PlotWorld> plotWorlds;
+	public static Map<String, Boolean> enabledWorlds;
 	// Maps player names to PlotMePlayer instances 
 	public static Map<String, PlotPlayer> plotPlayers;
-	public static Set<Plot> allPlots;
+	public static List<PlotGroup> plotGroups;
+	private static boolean plotGroupsSorted;
+	public static List<Plot> allPlots;
+	public static boolean allPlotsSorted;
 	public static List<Plot> expiredPlots;
 	
 	public static Long lastExpiredPlotDeletion;
@@ -50,12 +54,37 @@ public class PlotManager {
 	
 	public PlotManager()
 	{
-		plotWorlds = new HashMap<World, PlotWorld>();
+		plotWorlds = new HashMap<String, PlotWorld>();
+		
 		plotPlayers = new HashMap<String, PlotPlayer>();
 		
+		plotGroups = new ArrayList<PlotGroup>();
+		plotGroupsSorted = false;
+		
+		allPlots = new ArrayList<Plot>();
+		allPlotsSorted = false;
 		expiredPlots = new LinkedList<Plot>();
+		
 		expiredPlotsCheckTaskId = null;
 		nextExpiredPlotsCheck = null;
+	}
+	
+	public static void enablePlotWorld(String worldName)
+	{
+		if (worldName == null || worldName.isEmpty())
+		{
+			return;
+		}
+		enabledWorlds.put(worldName, true);
+	}
+	
+	public static void disablePlotWorld(String worldName)
+	{
+		if (worldName == null || worldName.isEmpty())
+		{
+			return;
+		}
+		enabledWorlds.put(worldName, false);
 	}
 	
 	public static boolean registerPlotWorld(PlotWorld plotWorld)
@@ -67,7 +96,7 @@ public class PlotManager {
 		
 		if (!plotWorlds.containsKey(plotWorld.getMinecraftWorld()))
 		{
-			if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
+			if (plotWorlds.put(plotWorld.getMinecraftWorld().getName(), plotWorld) == null)
 			{
 				return true;
 			}
@@ -78,45 +107,140 @@ public class PlotManager {
 	
 	public static void registerPlotPlayer(PlotPlayer plotPlayer)
 	{
-		if (plotPlayer == null || plotPlayer.getId() < 0 || plotPlayer.getRealName().isEmpty())
+		if (plotPlayer == null || plotPlayer.getId() < 0 || plotPlayer.getName().isEmpty())
 		{
 			return;
 		}
 		
-		if (!plotPlayers.containsKey(plotPlayer.getRealName()))
+		if (!plotPlayers.containsKey(plotPlayer.getName()))
 		{
-			plotPlayers.put(plotPlayer.getRealName(), plotPlayer);
+			plotPlayers.put(plotPlayer.getName(), plotPlayer);
 		}
 	}
 	
-	public static boolean registerPlotPlayer(Player bukkitPlayer)
+	public static void registerPlotPlayer(String playerName, String displayName)
+	{
+		if (playerName == null || playerName.isEmpty())
+		{
+			return;
+		}
+		
+		if (!plotPlayers.containsKey(playerName))
+		{
+			plotPlayers.put(playerName, PlotDatabase.getPlotPlayer(playerName, displayName));
+		}
+	}
+	
+	public static void registerPlotPlayer(Player bukkitPlayer)
 	{
 		if (bukkitPlayer == null)
 		{
-			return false;
+			return;
 		}
 		
 		if (!plotPlayers.containsKey(bukkitPlayer.getName()))
 		{
-			plotPlayers.put(bukkitPlayer.getName(), PlotMeDatabaseManager.getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName()));
+			plotPlayers.put(bukkitPlayer.getName(), PlotDatabase.getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName()));
 		}
-		return false;
 	}
 	
 	public static void unregisterPlotPlayer(PlotPlayer plotPlayer)
 	{
-		if (plotPlayer == null || plotPlayer.getId() <= 0 || plotPlayer.getRealName().isEmpty())
+		if (plotPlayer == null || plotPlayer.getId() <= 0 || plotPlayer.getName().isEmpty())
 		{
 			return;
 		}
-		plotPlayers.remove(plotPlayer.getRealName());
+		plotPlayers.remove(plotPlayer.getName());
 	}
 	
-	public static PlotWorld getPlotWorld(World minecraftWorld)
+	public static void unregisterPlotPlayer(String playerName)
 	{
-		if (minecraftWorld != null)
+		if (playerName == null)
 		{
-			return plotWorlds.get(minecraftWorld);
+			return;
+		}
+		plotPlayers.remove(playerName);
+	}
+	
+	public static void unregisterPlotPlayer(Player bukkitPlayer)
+	{
+		if (bukkitPlayer == null)
+		{
+			return;
+		}
+		plotPlayers.remove(bukkitPlayer.getName());
+	}
+	
+	public static int getPlotGroupIndex(int plotGroupId)
+	{
+		if (plotGroupId < 0)
+		{
+			return -1;
+		}
+		
+		if (!plotGroupsSorted)
+		{
+			Collections.sort(plotGroups);
+			plotGroupsSorted = true;
+		}
+		
+        int low = 0;
+        int high = plotGroups.size() - 1;
+        int mid;
+
+        while ( low <= high )
+        {
+            mid = ( low + high ) / 2;
+            if ( plotGroups.get( mid ).getId() < plotGroupId )
+            {
+                low = mid + 1;
+            }
+            else if( plotGroups.get( mid ).getId() > plotGroupId )
+            {
+                high = mid - 1;
+            }
+            else
+            {
+                return mid;
+            }
+        }
+        
+        return -1;
+	}
+	
+	public static void registerPlotGroup(PlotGroup plotGroup)
+	{
+		if (plotGroup == null || plotGroup.getId() < 0)
+		{
+			return;
+		}
+		
+		if (getPlotGroupIndex(plotGroup.getId()) < 0)
+		{
+			plotGroups.add(plotGroup);
+		}
+
+	}
+	
+	public static PlotWorld getPlotWorld(String worldName)
+	{
+		if (worldName != null && isPlotWorld(worldName))
+		{
+
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(World bukkitWorld)
+	{
+		if (bukkitWorld != null && isPlotWorld(bukkitWorld))
+		{
+			PlotWorld tmppwi = plotWorlds.get(bukkitWorld.getName());
+			if (tmppwi == null)
+			{
+				tmppwi = PlotDatabase.getPlotWorld(bukkitWorld);
+	    	}
+			return tmppwi;
 		}
 		return null;
 	}
@@ -125,7 +249,7 @@ public class PlotManager {
 	{
 		if (location != null)
 		{
-			return plotWorlds.get(location.getWorld());
+			return getPlotWorld(location.getWorld());
 		}
 		return null;
 	}
@@ -134,7 +258,7 @@ public class PlotManager {
 	{
 		if (bukkitPlayer != null)
 		{
-			return plotWorlds.get(bukkitPlayer.getWorld());
+			return getPlotWorld(bukkitPlayer.getWorld());
 		}
 		return null;
 	}
@@ -143,7 +267,7 @@ public class PlotManager {
 	{
 		if (blockState != null)
 		{
-			return plotWorlds.get(blockState.getWorld());
+			return getPlotWorld(blockState.getWorld());
 		}
 		return null;
 	}
@@ -152,26 +276,95 @@ public class PlotManager {
 	{
 		if (block != null)
 		{
-			return plotWorlds.get(block.getWorld());
+			return getPlotWorld(block.getWorld());
 		}
 		return null;
 	}
 	
-	public static PlotWorld getPlotWorld(String worldName)
+	public static PlotWorld getPlotWorld(int plotWorldId)
 	{
-		if (worldName != null)
+		if (plotWorldId < 1)
 		{
-			return plotWorlds.get(Bukkit.getServer().getWorld(worldName));
+			return null;
 		}
+
+		Iterator<PlotWorld> plotWorldsIterator = plotWorlds.values().iterator();
+		PlotWorld testpwi;
+		
+		while (plotWorldsIterator.hasNext())
+		{
+			testpwi = plotWorldsIterator.next();
+			if (testpwi.getId() == plotWorldId)
+			{
+				return testpwi;
+			}
+		}
+		
 		return null;
 	}
 	
-	public static PlotPlayer getPlotOwner(String playerName)
+	public static void loadPlots(World bukkitWorld, final int centerBlockX, final int centerBlockZ, int blockRange)
+	{
+		PlotWorld pwi = getPlotWorld(bukkitWorld);
+		
+		double multi = pwi.getPlotBlockPositionMultiplier();
+		
+    	final int minX = (int)Math.floor((centerBlockX - (blockRange / 2)) / multi);
+    	final int minZ = (int)Math.floor((centerBlockZ - (blockRange / 2)) / multi);
+    	final int maxX = (int)Math.ceil((centerBlockX + (blockRange / 2)) / multi);
+    	final int maxZ = (int)Math.ceil((centerBlockX + (blockRange / 2)) / multi);
+    	
+    	for (int x=minX; x<maxX; x++)
+    	{
+    		for (int z=minZ; z<maxZ; z++)
+    		{
+    			if (pwi.getPlotAtPlotPosition(x, z) == null)
+    			{
+    				PlotDatabase.loadPlots(pwi, x, z, (int)Math.round(blockRange / multi));
+    				return;
+    			}
+    		}
+    	}
+	}
+	
+	public static PlotPlayer getPlotPlayer(String playerName)
 	{
 		if (playerName != null && !playerName.isEmpty())
 		{
-			return plotPlayers.get(playerName);
+			PlotPlayer tmpppi = plotPlayers.get(playerName);
+			if (tmpppi != null)
+			{
+				Player bukkitPlayer = Bukkit.getPlayerExact(tmpppi.getName());
+				if (bukkitPlayer != null)
+				{
+					tmpppi.setDisplayName(bukkitPlayer.getDisplayName());
+					plotPlayers.put(playerName, tmpppi);
+				}
+				return tmpppi;
+			}
 		}
+		return null;
+	}
+	
+	public static PlotPlayer getPlotPlayer(int plotPlayerId)
+	{
+		if (plotPlayerId < 0)
+		{
+			return null;
+		}
+		
+		Iterator<PlotPlayer> plotPlayersIterator = plotPlayers.values().iterator();
+		PlotPlayer testppi;
+		
+		while (plotPlayersIterator.hasNext())
+		{
+			testppi = plotPlayersIterator.next();
+			if (testppi.getId() == plotPlayerId)
+			{
+				return testppi;
+			}
+		}
+		
 		return null;
 	}
 	
@@ -220,40 +413,83 @@ public class PlotManager {
 		}
 	}
 	
-	public static boolean registerPlot(Plot plot)
+	public static int getPlotIndex(int plotId)
+	{
+		if (plotId < 1)
+		{
+			return -1;
+		}
+		
+		if (!allPlotsSorted)
+		{
+			Collections.sort(allPlots);
+			allPlotsSorted = true;
+		}
+		
+        int low = 0;
+        int high = allPlots.size() - 1;
+        int mid;
+
+        while ( low <= high )
+        {
+            mid = ( low + high ) / 2;
+            if ( allPlots.get( mid ).getId() < plotId )
+            {
+                low = mid + 1;
+            }
+            else if( allPlots.get( mid ).getId() > plotId )
+            {
+                high = mid - 1;
+            }
+            else
+            {
+                return mid;
+            }
+        }
+        
+        return -1;
+	}
+
+	public static Plot getPlot(int plotId)
+	{
+		int plotIndex = getPlotIndex(plotId);
+		
+		if (plotIndex >= 0)
+		{
+			return allPlots.get(plotIndex);
+		}
+
+        return null;
+	}
+	
+	public static void registerPlot(Plot plot)
 	{
 		if (plot == null || plot.getId() <= 0 || plot.getPlotPosition() == null || plot.getPlotWorld() == null || (plot.getExpiration() > 0 && plot.getExpiration() < (System.currentTimeMillis()/1000)))
 		{
-			return false;
+			return;
 		}
 		
 		PlotWorld pwi = plot.getPlotWorld();
 		if (pwi == null)
 		{
-			return false;
+			return;
 		}
 
+		if (getPlotIndex(plot.getId()) >= 0)
+		{
+			return;
+		}
+		
 		if (pwi.registerPlot(plot))
 		{
 			allPlots.add(plot);
+			allPlotsSorted = false;
 			checkPlotExpiration(plot);
 			actualizePlotSigns(plot);
-			return true;
 		}
-		
-		return false;
-	}
-	
-	public static Location getPlotBlockTop(Plot plot)
-	{
-		double multi = plot.getPlotWorld().getPlotBlockPositionMultiplier();
-		
-		int maxX    = (int)Math.ceil(plot.getPlotPosition().x * multi);
-		int maxZ    = (int)Math.ceil(plot.getPlotPosition().z * multi);
 
-		return new Location(plot.getMinecraftWorld(), maxX, plot.getMinecraftWorld().getMaxHeight(), maxZ);
 	}
-	
+
 	public static Plot getPlotAtBlockPosition(PlotWorld plotWorld, Location blockLocation)
 	{
 		if (plotWorld == null || blockLocation == null || !blockLocation.getWorld().equals(plotWorld.getMinecraftWorld())) {
@@ -526,7 +762,7 @@ public class PlotManager {
 		}
 		
 		Plot plp = pwi.getPlotAtPlotPosition(plotPosition);
-		if (plp == null)
+		if (plp != null && plp.isAvailable())
 		{
 			return true;
 		}
@@ -548,7 +784,7 @@ public class PlotManager {
 		}
 			
 		Plot plp = pwi.getPlotAtPlotPosition(plotX, plotZ);
-		if (plp == null)
+		if (plp != null && plp.isAvailable())
 		{
 			return true;
 		}
@@ -635,7 +871,7 @@ public class PlotManager {
 					}
 					else
 					{
-						tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.getOwner().getRealName();
+						tmpOwnerCaption = PlotMe.caption("SignOwner") + plot.getOwner().getName();
 					}
 					if (tmpOwnerCaption.length() > 16)
 					{
@@ -950,8 +1186,13 @@ public class PlotManager {
 	public static void removePlot(Plot plot)
 	{
 		clearPlot(plot);
-		PlotMeDatabaseManager.removePlot(plot);
-		allPlots.remove(plot);
+		PlotDatabase.removePlot(plot);
+
+		int plotIndex = getPlotIndex(plot.getId());
+		if (plotIndex >= 0)
+		{
+			allPlots.remove( plotIndex );
+		}
 	}
 	
 	public static void adjustWall(Plot plot)
@@ -1430,8 +1671,8 @@ public class PlotManager {
 			tmpEntity.teleport(new Location(minecraftWorld1, (tmpLoc.getX() - baseLocation2.getX()) + baseLocation1.getX() + phd, tmpLoc.getY() - rhd, (tmpLoc.getZ() - baseLocation2.getZ()) + baseLocation1.getX() + phd));
 		}
 
-		PlotMeDatabaseManager.updatePlotPosition(plot1);
-		PlotMeDatabaseManager.updatePlotPosition(plot2);
+		PlotDatabase.updatePlotPosition(plot1);
+		PlotDatabase.updatePlotPosition(plot2);
 
 		return true;
 	}
@@ -1440,66 +1681,80 @@ public class PlotManager {
 	{
 		if (worldName != null)
 		{
-			return PlotManager.plotWorlds.containsKey(worldName);
-		}
-		return false;
-	}
-	
-	public static boolean isPlotWorld(World w)
-	{
-		if (w != null)
-		{
-			return isPlotWorld(w.getName());
-		}
-		return false;
-	}
-	
-
-	
-	public static boolean isPlotWorld(Location l)
-	{
-		if (l != null)
-		{
-			return isPlotWorld(l.getWorld());
-		}
-		return false;
-	}
-	
-	public static boolean isPlotWorld(Player p)
-	{
-		if (p != null)
-		{
-			return isPlotWorld(p.getWorld());
-		}
-		return false;
-	}
-	
-	public static boolean isPlotWorld(Block b)
-	{
-		if (b != null)
-		{
-			return isPlotWorld(b.getWorld());
-		}
-		return false;
-	}
-	
-	public static boolean isPlotWorld(BlockState b)
-	{
-		if  (b != null)
-		{
-			return isPlotWorld(b.getWorld());
-		}
-		return false;
-	}
-
-	public static boolean isEconomyEnabled(World w)
-	{
-		if (w != null)
-		{
-			PlotWorld pwi = plotWorlds.get(w);
-			if (pwi != null)
+			Boolean pwe = enabledWorlds.get(worldName);
+			if (pwe != null && pwe == true)
 			{
-				return pwi.UseEconomy;
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(World bukkitWorld)
+	{
+		if (bukkitWorld != null)
+		{
+			return isPlotWorld(bukkitWorld.getName());
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(PlotWorld plotWorld)
+	{
+		if (plotWorld != null)
+		{
+			return isPlotWorld(plotWorld.getName());
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(Location location)
+	{
+		if (location != null)
+		{
+			return isPlotWorld(location.getWorld());
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(Player player)
+	{
+		if (player != null)
+		{
+			return isPlotWorld(player.getWorld());
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(Block block)
+	{
+		if (block != null)
+		{
+			return isPlotWorld(block.getWorld());
+		}
+		return false;
+	}
+	
+	public static boolean isPlotWorld(BlockState blockState)
+	{
+		if  (blockState != null)
+		{
+			return isPlotWorld(blockState.getWorld());
+		}
+		return false;
+	}
+
+	public static boolean isEconomyEnabled(World world)
+	{
+		if (world != null)
+		{
+			if (isPlotWorld(world))
+			{
+				PlotWorld pwi = plotWorlds.get(world);
+				if (pwi != null)
+				{
+					return pwi.UseEconomy;
+				}
 			}
 		}
 		return false;
@@ -1507,27 +1762,27 @@ public class PlotManager {
 	
 
 	
-	public static boolean isEconomyEnabled(Player p)
+	public static boolean isEconomyEnabled(Player player)
 	{
-		if (p != null)
+		if (player != null)
 		{
-			return isEconomyEnabled(p.getWorld());
+			return isEconomyEnabled(player.getWorld());
 		}
 		return false;
 	}
 	
-	public static boolean isEconomyEnabled(Block b)
+	public static boolean isEconomyEnabled(Block block)
 	{
-		if (b != null)
+		if (block != null)
 		{
-			return isEconomyEnabled(b.getWorld());
+			return isEconomyEnabled(block.getWorld());
 		}
 		return false;
 	}
 	
-	public static void checkPlotExpirations(CommandSender sender, PlotWorld plotWorld)
+	public static void checkPlotExpirationsManually(CommandSender sender, PlotWorld plotWorld)
 	{
-		if (plotWorld == null)
+		if (!isPlotWorld(plotWorld))
 		{
 			sender.sendMessage(PlotMe.caption("MsgNotPlotWorld"));
 			return;
@@ -1543,6 +1798,7 @@ public class PlotManager {
 				checkPlotExpiration(testplot);
 			}
 		}
+		
 	}
 	
 	public static void scanExpirationsExpensive()

@@ -26,7 +26,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	private int id;
 	
-	private World MinecraftWorld;
+	private World bukkitWorld;
 
 	public int PlotSize;
 	public int PlotAutoLimit;
@@ -81,7 +81,6 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean DisableIgnition;
 	public boolean DisableNetherrackIgnition;
 	public boolean DisableObsidianIgnition;
-	public boolean PreventHighFrequencyRedstoneCircuits;
 	
 	private HashSet<Pair<Short, Byte>> ProtectedBlocks;
 	private HashSet<Pair<Short, Byte>> PreventedItems;
@@ -92,7 +91,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public PlotWorld()
 	{
 		id = -1;
-		MinecraftWorld = null;
+		bukkitWorld = null;
 		plotPositions = new HashMap<PlotPosition, Plot>();
 		ProtectedBlocks = null;
 		PreventedItems = null;
@@ -101,7 +100,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public PlotWorld(World minecraftWorld)
 	{
 		id = -1;
-		MinecraftWorld = minecraftWorld;
+		bukkitWorld = minecraftWorld;
 		plotPositions = new HashMap<PlotPosition, Plot>();
 		ProtectedBlocks = null;
 		PreventedItems = null;
@@ -110,7 +109,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public PlotWorld(int worldId, World minecraftWorld)
 	{
 		id = worldId;
-		MinecraftWorld = minecraftWorld;
+		bukkitWorld = minecraftWorld;
 		plotPositions = new HashMap<PlotPosition, Plot>();
 		ProtectedBlocks = null;
 		PreventedItems = null;
@@ -123,14 +122,14 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public World getMinecraftWorld()
 	{
-		return MinecraftWorld;
+		return bukkitWorld;
 	}
 	
 	public String getWorldName()
 	{
-		if (MinecraftWorld != null)
+		if (bukkitWorld != null)
 		{
-			return MinecraftWorld.getName();
+			return bukkitWorld.getName();
 		}
 		return null;
 	}
@@ -466,7 +465,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		if (plot != null && plot.getPlotWorld().equals(this))
 		{
 			Location baseLocation = getMinBlockLocation(plot);
-			return new Location(MinecraftWorld, ((double)baseLocation.getBlockX() + (double)(PlotSize / 2)), RoadHeight, ((double)baseLocation.getBlockZ() + (double)(PlotSize / 2)));
+			return new Location(bukkitWorld, ((double)baseLocation.getBlockX() + (double)(PlotSize / 2)), RoadHeight, ((double)baseLocation.getBlockZ() + (double)(PlotSize / 2)));
 		}
 		return null;
 	}
@@ -504,7 +503,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public boolean isOnRoad(Location loc)
 	{
-		if (loc != null && loc.getWorld().equals(this.MinecraftWorld))
+		if (loc != null && loc.getWorld().equals(bukkitWorld))
 		{
 			return isOnRoad(loc.getX(), loc.getZ());
 		}
@@ -514,7 +513,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public boolean isOnRoad(BlockState blockState)
 	{
-		if (blockState != null && blockState.getWorld().equals(this.MinecraftWorld))
+		if (blockState != null && blockState.getWorld().equals(bukkitWorld))
 		{
 			return isOnRoad(blockState.getX(), blockState.getZ());
 		}
@@ -524,7 +523,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public boolean isOnRoad(Block block)
 	{
-		if (block != null && block.getWorld().equals(this.MinecraftWorld))
+		if (block != null && block.getWorld().equals(bukkitWorld))
 		{
 			return isOnRoad(block.getX(), block.getZ());
 		}
@@ -594,19 +593,19 @@ public class PlotWorld implements Comparable<PlotWorld>
 		int locx = (int)Math.floor((double)(plot.getPlotX() * multi) + pph);
 		int locz = (int)Math.floor((double)(plot.getPlotZ() * multi) + pph);
 		
-		return new Location(MinecraftWorld, locx, 1, locz);
+		return new Location(bukkitWorld, locx, 1, locz);
 	}
 	
 	public Location getMaxBlockLocation(Plot plot)
 	{
 		Location baseLocation = getMinBlockLocation(plot);
-		return new Location(MinecraftWorld, baseLocation.getBlockX() + PlotSize, MinecraftWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize);
+		return new Location(bukkitWorld, baseLocation.getBlockX() + PlotSize, bukkitWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize);
 	}
 	
 	public Pair<Location, Location> getMinMaxBlockLocation(Plot plot)
 	{
 		Location baseLocation = getMinBlockLocation(plot);
-		return new Pair<Location, Location>(new Location(MinecraftWorld, baseLocation.getBlockX(), 1, baseLocation.getBlockZ()), new Location(MinecraftWorld, baseLocation.getBlockX() + PlotSize, MinecraftWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize));
+		return new Pair<Location, Location>(new Location(bukkitWorld, baseLocation.getBlockX(), 1, baseLocation.getBlockZ()), new Location(bukkitWorld, baseLocation.getBlockX() + PlotSize, bukkitWorld.getMaxHeight(), baseLocation.getBlockZ() + PlotSize));
 	}
 	
 	/**
@@ -621,7 +620,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		
 		PlotMe.logger.info(PlotMe.PREFIX + "DEBUG: centerBlockX " + String.valueOf(blockx) + "  centerBlockZ " + String.valueOf(blockz));
 		
-		return MinecraftWorld.getBlockAt(blockx, RoadHeight, blockz);
+		return bukkitWorld.getBlockAt(blockx, RoadHeight, blockz);
 	}
 	
 	public Block getCenterBlock(Plot plot)
@@ -682,7 +681,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		{			
 			for (int cz = minChunkZ; cz <= maxChunkZ; cz++)
 			{
-				Chunk chunk = MinecraftWorld.getChunkAt(cx, cz);
+				Chunk chunk = bukkitWorld.getChunkAt(cx, cz);
 				if (chunk != null)
 				{
 					Entity[] entities = chunk.getEntities();
@@ -710,7 +709,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public List<Entity> getSinglePlotEntities(Plot plot, boolean includePlayers)
 	{
-		if (MinecraftWorld == null || plot == null || !plot.getPlotWorld().equals(this))
+		if (bukkitWorld == null || plot == null || !plot.getPlotWorld().equals(this))
 		{
 			return null;
 		}
@@ -728,6 +727,15 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public int getPlotSize()
 	{
 		return PlotSize;
+	}
+	
+	public String getName()
+	{
+		if (bukkitWorld != null)
+		{
+			return bukkitWorld.getName();
+		}
+		return null;
 	}
 	
 	@Override

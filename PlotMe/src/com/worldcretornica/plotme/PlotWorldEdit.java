@@ -41,11 +41,10 @@ public class PlotWorldEdit {
 			return;
 		}
 	
-		if (plot.isAllowed(player.getName(), true, true))
+		if (plot.isAllowed(player.getName()))
 		{
 			Vector pos1 = new Vector(locations.getLeft().getBlockX(), locations.getLeft().getBlockY(), locations.getLeft().getBlockZ());
 			Vector pos2 = new Vector(locations.getRight().getBlockX(), locations.getRight().getBlockY(), locations.getRight().getBlockZ());
-			
 		
 			BukkitPlayer bukkitplayer = PlotMe.worldedit.wrapPlayer(player);
 			LocalWorld localworld = bukkitplayer.getWorld();
