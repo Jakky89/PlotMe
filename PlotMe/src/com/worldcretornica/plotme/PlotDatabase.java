@@ -1115,6 +1115,7 @@ public class PlotDatabase {
 			}
 
 			PreparedStatement ps;
+			ps = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (world,xpos,zpos) VALUES (?,?,?)", Statement.RETURN_GENERATED_KEYS);
 			for (int x=minX; x<maxX; x++)
 			{
 				for (int z=minZ; z<maxZ; z++)
@@ -1122,7 +1123,6 @@ public class PlotDatabase {
 					plotpos = new PlotPosition(plotWorld, x, z);
 					if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
 					{
-						ps = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (world,xpos,zpos) VALUES (?,?,?)", Statement.RETURN_GENERATED_KEYS);
 						ps.setInt(1, plotWorld.getId());
 						ps.setInt(2, x);
 						ps.setInt(3, z);
@@ -1173,8 +1173,6 @@ public class PlotDatabase {
     
     public static List<Plot> getFinishedPlots()
     {
-    	PlotWorld tmpWorld;
-
     	con = getConnection();
     	if (con == null)
     	{
@@ -1243,7 +1241,7 @@ public class PlotDatabase {
 				plot = new Plot(
 					id,
 					plotpos,
-    				getPlotPlayer(rs.getString(5), ""),
+    				getPlotPlayer(rs.getString(5), null),
     				Biome.valueOf(rs.getString(6)),
     				rs.getLong(7),
     				rs.getLong(8),

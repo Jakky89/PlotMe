@@ -424,10 +424,16 @@ public class Plot implements Comparable<Plot>
 	
 	public boolean isExpired()
 	{
+		if (finisheddate > 0 || isprotected || isforsale)
+		{
+			return false;
+		}
+		
 		if (expireddate > 0 && expireddate <= Math.round(System.currentTimeMillis()/1000))
 		{
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -496,7 +502,16 @@ public class Plot implements Comparable<Plot>
 		setBiome(Biome.valueOf(newBiome));
 	}
 	
-	public String getOwnerRealName()
+	public String getOwnerDisplayName()
+	{
+		if (owner != null)
+		{
+			return owner.getDisplayName();
+		}
+		return null;
+	}
+	
+	public String getOwnerName()
 	{
 		if (owner != null)
 		{
@@ -798,6 +813,12 @@ public class Plot implements Comparable<Plot>
 	public int compareTo(Plot plot2)
 	{
 		return this.id-plot2.id;
+	}
+	
+	@Override
+	public String toString()
+	{
+		return "PLOT"+String.valueOf(id);
 	}
 	
 	/*private static Map<String, Double> sortByValues(final Map<String, Double> map) 

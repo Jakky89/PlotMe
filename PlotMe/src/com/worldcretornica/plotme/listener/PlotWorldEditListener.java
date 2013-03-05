@@ -99,7 +99,7 @@ public class PlotWorldEditListener implements Listener {
 			{
 				Plot plot = PlotManager.getPlotAtBlockPosition(p);
 				
-				if(plot == null || !plot.isAllowed(p.getName(), true, true))
+				if(plot == null || !plot.isAllowed(p.getName()))
 				{
 					event.setCancelled(true);
 				}
@@ -120,7 +120,7 @@ public class PlotWorldEditListener implements Listener {
 				Block b = event.getClickedBlock();
 				Plot plot = PlotManager.getPlotAtBlockPosition(p);
 				
-				if(plot != null && plot.isAllowed(p.getName(), true, true))
+				if(plot != null && plot.isAllowed(p.getName()))
 					PlotWorldEdit.setMask(p, b.getLocation());
 				else
 					event.setCancelled(true);

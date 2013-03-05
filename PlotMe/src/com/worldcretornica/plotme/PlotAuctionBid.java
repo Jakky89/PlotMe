@@ -6,8 +6,8 @@ import org.bukkit.entity.Player;
 
 public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 
-	private String realplayername;
-	private String playerdisplayname;
+	private String playername;
+	private String displayname;
 	private int auctionnumber;
 	private Double moneyamount;
 	private long date;
@@ -15,8 +15,8 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 	public PlotAuctionBid(int auctionNumber, Player minecraftPlayer, Double moneyAmount)
 	{
 		auctionnumber = auctionNumber;
-		realplayername = minecraftPlayer.getName();
-		playerdisplayname = minecraftPlayer.getDisplayName();
+		playername = minecraftPlayer.getName();
+		displayname = minecraftPlayer.getDisplayName();
 		moneyamount = moneyAmount;
 		date = Math.round(System.currentTimeMillis() / 1000);
 	}
@@ -24,8 +24,8 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 	public PlotAuctionBid(int auctionNumber, String playerName, Double moneyAmount)
 	{
 		auctionnumber = auctionNumber;
-		realplayername = playerName;
-		playerdisplayname = playerName;
+		playername = playerName;
+		displayname = playerName;
 		moneyamount = moneyAmount;
 		date = Math.round(System.currentTimeMillis() / 1000);
 	}
@@ -33,8 +33,8 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 	public PlotAuctionBid(int auctionNumber, String playerName, String displayName, Double moneyAmount)
 	{
 		auctionnumber = auctionNumber;
-		realplayername = playerName;
-		playerdisplayname = displayName;
+		playername = playerName;
+		displayname = displayName;
 		moneyamount = moneyAmount;
 		date = Math.round(System.currentTimeMillis() / 1000);
 	}
@@ -44,14 +44,14 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 		return auctionnumber;
 	}
 	
-	public String getBidderRealPlayerName()
+	public String getBidderName()
 	{
-		return realplayername;
+		return playername;
 	}
 	
 	public String getBidderDisplayName()
 	{
-		return playerdisplayname;
+		return displayname;
 	}
 
 	public double getMoneyAmount()

@@ -147,7 +147,12 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		plotGroup.removePlotPlayer(this);
 	}
 	
-	public int ownPlotsCount()
+	public Player getPlayer()
+	{
+		return player;
+	}
+	
+	public int getOwnPlotsCount()
 	{
 		if (ownplots == null || ownplots.isEmpty())
 		{
@@ -175,6 +180,12 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	@Override
 	public int compareTo(PlotPlayer po) {
 		return id - po.getId();
+	}
+	
+	@Override
+	public String toString()
+	{
+		return "PLOTPLAYER" + String.valueOf(id);
 	}
 	
 }

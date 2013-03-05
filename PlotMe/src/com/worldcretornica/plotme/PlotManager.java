@@ -222,15 +222,6 @@ public class PlotManager {
 
 	}
 	
-	public static PlotWorld getPlotWorld(String worldName)
-	{
-		if (worldName != null && isPlotWorld(worldName))
-		{
-
-		}
-		return null;
-	}
-	
 	public static PlotWorld getPlotWorld(World bukkitWorld)
 	{
 		if (bukkitWorld != null && isPlotWorld(bukkitWorld))
@@ -241,6 +232,15 @@ public class PlotManager {
 				tmppwi = PlotDatabase.getPlotWorld(bukkitWorld);
 	    	}
 			return tmppwi;
+		}
+		return null;
+	}
+	
+	public static PlotWorld getPlotWorld(String worldName)
+	{
+		if (worldName != null)
+		{
+			return getPlotWorld(Bukkit.getWorld(worldName));
 		}
 		return null;
 	}
@@ -325,6 +325,25 @@ public class PlotManager {
     			}
     		}
     	}
+	}
+	
+	public static PlotPlayer getPlotPlayer(Player bukkitPlayer)
+	{
+		if (bukkitPlayer != null)
+		{
+			PlotPlayer tmpppi = plotPlayers.get(bukkitPlayer.getName());
+			if (tmpppi == null)
+			{
+				tmpppi = PlotDatabase.getPlotPlayer(bukkitPlayer);
+				plotPlayers.put(bukkitPlayer.getName(), tmpppi);
+			}
+			if (tmpppi != null)
+			{
+				tmpppi.setDisplayName(bukkitPlayer.getDisplayName());
+				return tmpppi;
+			}
+		}
+		return null;
 	}
 	
 	public static PlotPlayer getPlotPlayer(String playerName)
@@ -1500,7 +1519,7 @@ public class PlotManager {
 	/**
 	 * TODO: move lwc protections
 	 */
-	public static boolean swapPlots(Plot plot1, Plot plot2)
+	public static boolean movePlots(Plot plot1, Plot plot2)
 	{
 		if (plot1 == null || plot2 == null || plot1.getMinecraftWorld() == null || plot2.getMinecraftWorld() == null)
 		{
@@ -1793,7 +1812,7 @@ public class PlotManager {
 		while (expireIterator.hasNext())
 		{
 			testplot = expireIterator.next();
-			if (testplot != null)
+			if (testplot != null && testplot.getPlotWorld().equals(plotWorld))
 			{
 				checkPlotExpiration(testplot);
 			}

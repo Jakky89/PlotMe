@@ -802,7 +802,7 @@ public class PlotListener implements Listener
 				Plot plot = pwi.getPlotAtBlockPosition(block);
 				if (plot != null)
 				{
-					if (plot.getOwnerRealName() == player.getName() || plot.isAllowed(player.getName()))
+					if (plot.getOwnerName() == player.getName() || plot.isAllowed(player.getName()))
 					{
 						plot.resetExpiration(pwi.DaysToExpiration);
 						return;

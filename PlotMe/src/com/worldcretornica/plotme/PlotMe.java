@@ -649,7 +649,7 @@ public class PlotMe extends JavaPlugin
         {
             economy = economyProvider.getProvider();
             
-            bankOwner = new PlotPlayer(0, "BANK");
+            bankOwner = new PlotPlayer(0, "$Bank$");
         }
     }
 	
@@ -773,8 +773,10 @@ public class PlotMe extends JavaPlugin
 		properties.put("MsgDoesNotExistOrNotLoaded","does not exist or is not loaded.");
 		properties.put("MsgNotPlotWorld", "This is not a plot world.");
 		properties.put("MsgInvalidPageNumber", "Invalid page number!");
+		properties.put("MsgInvalidNumber", "Invalid number!");
 		properties.put("MsgPermissionDenied", "Permission denied");
 		properties.put("MsgNoPlotFound", "No plot found");
+		properties.put("MsgPlayerDataError", "Player data could not be loaded!");
 		properties.put("MsgCannotBidOwnPlot", "You cannot bid on your own plot.");
 		properties.put("MsgCannotBuyOwnPlot", "You cannot buy your own plot.");
 		properties.put("MsgCannotClaimRoad", "You cannot claim the road.");
@@ -841,6 +843,8 @@ public class PlotMe extends JavaPlugin
 		properties.put("MsgFinishedPlotsPage","Finished plots page");
 		properties.put("MsgUnmarkFinished","Plot is no longer marked finished.");
 		properties.put("MsgMarkFinished","Plot is now marked finished.");
+		properties.put("MsgMovingSourcePlotMarked", "Marked as source plot.");
+		properties.put("MsgMovingDestinationPlotMarked", "Marked as destination plot.");
 		properties.put("MsgPlotExpirationReset","Plot expiration reset");
 		properties.put("MsgNoPlotExpired","No plots are expired");
 		properties.put("MsgExpiredPlotsPage","Expired plots page");
@@ -1030,6 +1034,8 @@ public class PlotMe extends JavaPlugin
 		properties.put("CommandUndeny", "undeny");
 		properties.put("CommandSetowner", "setowner");
 		properties.put("CommandMove", "move");
+		properties.put("CommandMoveFrom", "from");
+		properties.put("CommandMoveTo", "to");
 		properties.put("CommandWEAnywhere", "weanywhere");
 		properties.put("CommandList", "list");
 		properties.put("CommandExpired", "expired");
