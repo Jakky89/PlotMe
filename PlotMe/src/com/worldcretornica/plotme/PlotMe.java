@@ -264,16 +264,16 @@ public class PlotMe extends JavaPlugin
 		}
 	}
 	
-	public static Pair<Short, Byte> getItemIdValue(String itemstr)
+	public static Pair<Integer, Byte> getItemIdValue(String itemstr)
 	{
 		 int dpp = itemstr.indexOf(':');
 		 if (dpp > 0)
 		 {
-			 return new Pair<Short, Byte>(Short.valueOf(itemstr.substring(0, dpp)), Byte.valueOf(itemstr.substring(dpp)));
+			 return new Pair<Integer, Byte>(Integer.valueOf(itemstr.substring(0, dpp)), Byte.valueOf(itemstr.substring(dpp)));
 		 }
 		 else
 		 {
-			 return new Pair<Short, Byte>(Short.valueOf(itemstr.substring(0, dpp)), null);
+			 return new Pair<Integer, Byte>(Integer.valueOf(itemstr.substring(0, dpp)), null);
 		 }
 	}
 	

@@ -64,7 +64,6 @@ public class PlotAuctionBid implements Comparator<PlotAuctionBid> {
 		return date;
 	}
 	
-	
 	@Override
 	public int compare(PlotAuctionBid bid1, PlotAuctionBid bid2) {
 		return (int)Math.round((bid2.moneyamount - bid1.moneyamount) * 1000);

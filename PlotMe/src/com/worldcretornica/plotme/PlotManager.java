@@ -36,7 +36,7 @@ import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 public class PlotManager {
 
     // Maps bukkits world names to PlotWorld instances
-	public static Map<String, PlotWorld> plotWorlds;
+	public static Map<World, PlotWorld> plotWorlds;
 	public static Map<String, Boolean> enabledWorlds;
 	// Maps player names to PlotMePlayer instances 
 	public static Map<String, PlotPlayer> plotPlayers;
@@ -44,7 +44,10 @@ public class PlotManager {
 	private static boolean plotGroupsSorted;
 	public static List<Plot> allPlots;
 	public static boolean allPlotsSorted;
+	
 	public static List<Plot> expiredPlots;
+
+	public static Set<Plot> donePlots;
 	
 	public static Long lastExpiredPlotDeletion;
 	public static int expiredPlotDeletionsProcessed;
@@ -54,7 +57,7 @@ public class PlotManager {
 	
 	public PlotManager()
 	{
-		plotWorlds = new HashMap<String, PlotWorld>();
+		plotWorlds = new HashMap<World, PlotWorld>();
 		
 		plotPlayers = new HashMap<String, PlotPlayer>();
 		
@@ -96,7 +99,7 @@ public class PlotManager {
 		
 		if (!plotWorlds.containsKey(plotWorld.getMinecraftWorld()))
 		{
-			if (plotWorlds.put(plotWorld.getMinecraftWorld().getName(), plotWorld) == null)
+			if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
 			{
 				return true;
 			}
@@ -226,7 +229,7 @@ public class PlotManager {
 	{
 		if (bukkitWorld != null && isPlotWorld(bukkitWorld))
 		{
-			PlotWorld tmppwi = plotWorlds.get(bukkitWorld.getName());
+			PlotWorld tmppwi = plotWorlds.get(bukkitWorld);
 			if (tmppwi == null)
 			{
 				tmppwi = PlotDatabase.getPlotWorld(bukkitWorld);
@@ -382,6 +385,34 @@ public class PlotManager {
 			{
 				return testppi;
 			}
+		}
+		
+		return null;
+	}
+	
+	public static List<Player> getPlayersInPlot(Plot plot)
+	{
+		if (plot == null)
+		{
+			return null;
+		}
+		
+		List<Player> tmplist = new ArrayList<Player>();
+		
+		Plot testplot;
+		Player[] onlineplayers = Bukkit.getOnlinePlayers();
+		if (onlineplayers.length > 0)
+		{
+			for (Player pl : onlineplayers)
+			{
+				testplot = getPlotAtBlockPosition(pl);
+				if (testplot != null && testplot.equals(plot))
+				{
+					tmplist.add(pl);
+				}
+			}
+			
+			return tmplist;
 		}
 		
 		return null;
@@ -1759,6 +1790,22 @@ public class PlotManager {
 		if  (blockState != null)
 		{
 			return isPlotWorld(blockState.getWorld());
+		}
+		return false;
+	}
+	
+	public static boolean isEconomyEnabled(Plot plot)
+	{
+		if (plot != null)
+		{
+			if (isPlotWorld(plot.getMinecraftWorld()))
+			{
+				PlotWorld pwi = plotWorlds.get(plot.getMinecraftWorld());
+				if (pwi != null)
+				{
+					return pwi.UseEconomy;
+				}
+			}
 		}
 		return false;
 	}

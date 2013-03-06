@@ -48,6 +48,7 @@ public class Plot implements Comparable<Plot>
 	public Plot(int plotId, PlotPosition plotPosition)
 	{
 		id = plotId;
+		position = plotPosition;
 		owner = null;
 		properties = null;
 		biome = Biome.PLAINS;
@@ -66,11 +67,12 @@ public class Plot implements Comparable<Plot>
 	}
 	
 	public Plot(int plotId, PlotPosition plotPosition, PlotPlayer plotOwner, Biome plotBiome, long plotExpiredDate,
-				long plotFinishedDate, double plotPrice, boolean plotIsForSale, boolean plotIsProtected, Jakky89Properties plotProperties)
+				long plotFinishedDate, double plotPrice, boolean plotIsForSale, boolean plotIsProtected)
 	{
 		id = plotId;
 		position = plotPosition;
 		owner = plotOwner;
+		properties = null;
 		if (owner != null)
 		{
 			owner.addOwnPlot(this);
@@ -89,7 +91,7 @@ public class Plot implements Comparable<Plot>
 		{
 			plotPosition.getPlotWorld().refreshNeighbours(this);
 		}
-		properties = plotProperties;
+		
 	}
 
 	public int getId()
@@ -306,6 +308,16 @@ public class Plot implements Comparable<Plot>
 		return null;
 	}
 	
+	public PlotAuctionBid getHighestAuctionBid()
+	{
+		if (auctionbids == null || auctionbids.isEmpty())
+		{
+			return null;
+		}
+		
+		return (PlotAuctionBid)((LinkedList<PlotAuctionBid>)auctionbids).getFirst();
+	}
+	
 	public boolean addAuctionBid(PlotPlayer bidder, Double bidAmount)
 	{
 		if (auction < 1)
@@ -318,13 +330,14 @@ public class Plot implements Comparable<Plot>
 			auctionbids = new LinkedList<PlotAuctionBid>();
 		}
 
-		if (auctionbids == null || bidAmount > auctionbids.get(0).getMoneyAmount())
+		PlotAuctionBid highestbid = getHighestAuctionBid();
+		if (highestbid == null || bidAmount > highestbid.getMoneyAmount())
 		{
-			auctionbids.add(0, new PlotAuctionBid(auction, bidder.getName(), bidAmount));
+			((LinkedList<PlotAuctionBid>)auctionbids).addFirst(new PlotAuctionBid(auction, bidder.getName(), bidAmount));
 			PlotManager.actualizePlotSigns(this);
-			PlotDatabase.addPlotBid(this, bidder, bidAmount);
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -626,30 +639,15 @@ public class Plot implements Comparable<Plot>
 		}
 		return 0;
 	}
-	
-	public String[] getComment(int i)
-	{
-		@SuppressWarnings("unchecked")
-		HashMap<Integer, Jakky89Properties> comments = (HashMap<Integer, Jakky89Properties>)properties.getValue("comments");
-		if (comments != null)
-		{
-			return (String[])comments.get(i).getValue("texts");
-		}
-		return null;
-	}
-	
-	public void setProperty(String property, Object value)
-	{
-		property = property.toLowerCase();
-		if (properties.setValue(property, value))
-		{
-			PlotDatabase.updateJakky89Properties(id, "plots", "properties", properties);
-		}
-	}
-	
+
 	public Jakky89Properties getProperties()
 	{
 		return properties;
+	}
+	
+	public void setProperties(Jakky89Properties newProperties)
+	{
+		properties = newProperties;
 	}
 	
 	public boolean isAllowed(String playerName)
@@ -790,6 +788,46 @@ public class Plot implements Comparable<Plot>
 		}
 		
 		return false;
+	}
+	
+	public List<Pair<String, String>> getComments()
+	{
+		return properties.getLinkedStringPairList("comments");
+	}
+	
+	public Pair<String, String> getComment(int commentIndex)
+	{
+		List<Pair<String, String>> allcomments = getComments();
+		if (allcomments != null && allcomments.size() > 0 && commentIndex >= 0 && commentIndex < allcomments.size())
+		{
+			return allcomments.get(commentIndex);
+		}
+		return null;
+	}
+	
+	public void addComment(String commentAuthor, String commentText)
+	{
+		List<Pair<String, String>> allcomments = properties.getLinkedStringPairList("comments");
+
+		Pair<String, String> newcomment = new Pair<String, String>(commentAuthor, commentText);
+		
+		// check if it is no spam
+		if (allcomments != null && allcomments.size() > 0)
+		{
+			Pair<String, String> oldcomment;
+			Iterator<Pair<String, String>> commentIterator = allcomments.iterator();
+			while (commentIterator.hasNext())
+			{
+				oldcomment = commentIterator.next();
+				if (oldcomment.equals(newcomment))
+				{
+					commentIterator.remove();
+					break;
+				}
+			}
+		}
+		
+		((LinkedList<Pair<String, String>>)allcomments).addFirst(newcomment);
 	}
 
 	@Override

@@ -1,6 +1,9 @@
 package com.worldcretornica.plotme.utils;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -120,6 +123,61 @@ public class Jakky89Properties {
 		return 0;
 	}
 
+	@SuppressWarnings("unchecked")
+	public List<String> getStringArrayList(String pkey)
+	{
+		Object pval = getValue(pkey);
+		if (pval != null && (pval instanceof ArrayList))
+		{
+			return (ArrayList<String>)pval;
+		}
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<String> getLinkedStringList(String pkey)
+	{
+		Object pval = getValue(pkey);
+		if (pval != null && (pval instanceof ArrayList))
+		{
+			return (ArrayList<String>)pval;
+		}
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<Pair<String, String>> getStringPairArrayList(String pkey)
+	{
+		Object pval = getValue(pkey);
+		if (pval != null && (pval instanceof ArrayList))
+		{
+			return (ArrayList<Pair<String, String>>)pval;
+		}
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public List<Pair<String, String>> getLinkedStringPairList(String pkey)
+	{
+		Object pval = getValue(pkey);
+		if (pval != null && (pval instanceof LinkedList))
+		{
+			return (LinkedList<Pair<String, String>>)pval;
+		}
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
+	public HashMap<String, String> getStringHashMap(String pkey)
+	{
+		Object pval = getValue(pkey);
+		if (pval != null && (pval instanceof HashMap))
+		{
+			return (HashMap<String, String>)pval;
+		}
+		return null;
+	}
+	
 	@SuppressWarnings("unchecked")
 	public HashSet<String> getStringHashSet(String pkey)
 	{

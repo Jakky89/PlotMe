@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -54,7 +56,7 @@ public class PlotMeCommands implements CommandExecutor
 	
 	public boolean canExecuteAdminCommands(CommandSender sender)
 	{
-		if ((sender instanceof ConsoleCommandSender) || (sender instanceof RemoteConsoleCommandSender) || (PlotMe.opPermissions && sender.isOp()))
+		if ((sender instanceof ConsoleCommandSender) || (sender instanceof RemoteConsoleCommandSender) || PlotMe.cPerms(sender, "plotme.admin") || (PlotMe.opPermissions && sender.isOp()))
 		{
 			return true;
 		}
@@ -64,62 +66,51 @@ public class PlotMeCommands implements CommandExecutor
 	public boolean onCommand(CommandSender sender, Command command, String start, String[] args)
 	{
 		String cmd = start.toLowerCase();
-		if (cmd.equals("plotme") || cmd.equals("plot") || cmd.equals("p"))
+		if (cmd.equals("plot") || cmd.equals("plotme") || cmd.equals("p"))
 		{
-			if (sender instanceof Player)
+			if (args.length == 0)
 			{
-				Player player = (Player)sender;
+				return showhelp(sender, 1);
+			}
+			else if (args.length >= 1)
+			{
+				String arg0 = args[0].toString().toLowerCase();
 				
-				if (args.length == 0)
+				if (arg0.equals(C("CommandHelp")))
 				{
-					return showhelp(player, 1);
-				}
-				else
-				{
-					String arg0 = args[0].toString().toLowerCase();
 					int ipage = -1;
 					
-					try  
-					{  
-						ipage = Integer.parseInt( arg0 );  
-					}  
-					catch (NumberFormatException ex) {
-						player.sendMessage(C("MsgInvalidPageNumber"));
+					if (args.length >= 2)
+					{
+						String arg1 = args[1].toString().toLowerCase();
+						ipage = -1;
+						
+						try  
+						{  
+							ipage = Integer.parseInt( arg1 );  
+						}  
+						catch (NumberFormatException ex)
+						{
+							sender.sendMessage(C("MsgInvalidPageNumber"));
+						}
 					}
-
+					
 					if (ipage != -1)
 					{
-						return showhelp(player, ipage);
+						return showhelp(sender, ipage);
 					}
 					else
 					{
-						if (arg0.equals(C("CommandHelp")))
-						{
-							ipage = -1;
-							
-							if (args.length > 1)
-							{
-								String arg1 = args[1].toString().toLowerCase();
-								ipage = -1;
-								
-								try  
-								{  
-									ipage = Integer.parseInt( arg1 );  
-								}  
-								catch (NumberFormatException ex) {
-									player.sendMessage(C("MsgInvalidPageNumber"));
-								}
-							}
-							
-							if (ipage != -1)
-							{
-								return showhelp(player, ipage);
-							}
-							else
-							{
-								return showhelp(player, 1);
-							}
-						}
+						return showhelp(sender, 1);
+					}
+					
+				}
+				else
+				{
+					if (sender instanceof Player)
+					{
+						Player player = (Player)sender;
+	
 						if (arg0.equals(C("CommandClaim")))
 						{
 							return claim(player, args);
@@ -136,9 +127,25 @@ public class PlotMeCommands implements CommandExecutor
 						{
 							return comment(player, args);
 						}
-						if (arg0.equals(C("CommandComments")) || arg0.equals("c"))
+						if (arg0.equals(C("CommandTp")))
 						{
-							return comments(player, args);
+							return tp(player, args);
+						}
+						if (arg0.equals(C("CommandBuy")))
+						{
+							return buy(player, args);
+						}
+						if (arg0.equals(C("CommandBid")))
+						{
+							return bid(player, args);
+						}
+						if (arg0.startsWith(C("CommandHome")) || arg0.startsWith("h"))
+						{
+							return home(player, args);
+						}
+						if (arg0.equals(C("CommandSell")))
+						{
+							return sell(player, args);
 						}
 						if (arg0.equals(C("CommandBiome")) || arg0.equals("b"))
 						{
@@ -146,15 +153,7 @@ public class PlotMeCommands implements CommandExecutor
 						}
 						if (arg0.equals(C("CommandBiomelist")))
 						{
-							return biomelist(player, args);
-						}
-						if (arg0.equals(C("CommandId")))
-						{
-							return id(player, args);
-						}
-						if (arg0.equals(C("CommandTp")))
-						{
-							return tp(player, args);
+							return biomelist(sender, args);
 						}
 						if (arg0.equals(C("CommandClear")))
 						{
@@ -186,69 +185,62 @@ public class PlotMeCommands implements CommandExecutor
 						}
 						if (arg0.equals(C("CommandMove")) || arg0.equals("m"))
 						{
-							return move(player, args);
-						}
-						if (arg0.equals("reload"))
-						{
-							return reload(sender, args);
+							return move(sender, args);
 						}
 						if (arg0.equals(C("CommandWEAnywhere")))
 						{
 							return weanywhere(player, args);
 						}
-						if (arg0.equals(C("CommandList")))
-						{
-							return plotlist(player, args);
-						}
-						if (arg0.equals(C("CommandExpired")))
-						{
-							return expired(player, args);
-						}
-						if (arg0.equals(C("CommandAddtime")))
-						{
-							return addtime(player, args);
-						}
-						if (arg0.equals(C("CommandDone")))
-						{
-							return done(player, args);
-						}
-						if (arg0.equals(C("CommandDoneList")))
-						{
-							return donelist(player, args);
-						}
 						if (arg0.equals(C("CommandProtect")))
 						{
 							return protect(player, args);
 						}
-						if (arg0.equals(C("CommandSell")))
-						{
-							return sell(player, args);
-						}
-						if (arg0.equals(C("CommandDispose")))
-						{
-							return dispose(player, args);
-						}
-						if (arg0.equals(C("CommandAuction")))
-						{
-							return auction(player, args);
-						}
-						if (arg0.equals(C("CommandBuy")))
-						{
-							return buy(player, args);
-						}
-						if (arg0.equals(C("CommandBid")))
-						{
-							return bid(player, args);
-						}
-						if (arg0.startsWith(C("CommandHome")) || arg0.startsWith("h"))
-						{
-							return home(player, args);
-						}
-						if (arg0.equals(C("CommandResetExpired")))
-						{
-							return resetexpired(player, args);
-						}
 					}
+				}
+
+				if (arg0.equals(C("CommandComments")) || arg0.equals("c"))
+				{
+					return comments(sender, args);
+				}
+				if (arg0.equals(C("CommandId")))
+				{
+					return id(sender, args);
+				}
+				if (arg0.equals("reload"))
+				{
+					return reload(sender, args);
+				}
+				if (arg0.equals(C("CommandList")))
+				{
+					return plotlist(sender, args);
+				}
+				if (arg0.equals(C("CommandExpired")))
+				{
+					return expired(sender, args);
+				}
+				if (arg0.equals(C("CommandAddtime")))
+				{
+					return addtime(sender, args);
+				}
+				if (arg0.equals(C("CommandDone")))
+				{
+					return done(sender, args);
+				}
+				if (arg0.equals(C("CommandDoneList")))
+				{
+					return donelist(sender, args);
+				}
+				if (arg0.equals(C("CommandDispose")))
+				{
+					return dispose(sender, args);
+				}
+				if (arg0.equals(C("CommandAuction")))
+				{
+					return auction(sender, args);
+				}
+				if (arg0.equals(C("CommandResetExpired")))
+				{
+					return resetexpired(player, args);
 				}
 			}
 			else
@@ -357,7 +349,7 @@ public class PlotMeCommands implements CommandExecutor
 								}  
 								catch( Exception ex) {}
 								
-								PlotAuctionBid highestBid = plot.getAuctionBid(0);
+								PlotAuctionBid highestBid = plot.getHighestAuctionBid();
 								
 								if (bid <= highestBid.getMoneyAmount() && highestBid != null)
 								{
@@ -514,7 +506,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					Send(player, C("MsgAlreadyReachedMaxPlots") + " (" + 
 									String.valueOf(newowner.getOwnPlotsCount()) + "/" + String.valueOf(plotlimit) + "). " + 
-									C("WordUse") + " " + RED + "/plot " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
+									C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
 					return true;
 				}
 
@@ -585,7 +577,10 @@ public class PlotMeCommands implements CommandExecutor
 						
 				plot.disableSelling();
 				plot.disableAuctioning();
+				
+				// SET THE NEW OWNER
 				plot.setOwner(newowner);
+				
 				Send(player, C("MsgPlotBought") + " " + f(-cost));
 
 				if (isAdv)
@@ -606,238 +601,313 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 
-	private boolean auction(Player player, String[] args) 
+	private boolean auction(CommandSender sender, String[] args) 
 	{
-		if(PlotManager.isEconomyEnabled(player))
+		if (PlotMe.cPerms(sender, "plotme.use.auction") || PlotMe.cPerms(sender, "plotme.admin.auction") || canExecuteAdminCommands(sender))
 		{
-			PlotWorld pwi = PlotManager.getPlotWorld(player.getWorld());
-			
-			if (pwi.CanPutOnSale)
+			Plot plot = null;
+			Player player = null;
+			if (sender instanceof Player)
 			{
-				if (PlotMe.cPerms(player, "plotme.use.auction") || PlotMe.cPerms(player, "plotme.admin.auction") || canExecuteAdminCommands(player))
+				player = (Player)sender;
+				if (args.length < 2)
 				{
-					Plot plot = PlotManager.getPlotAtBlockPosition(player);
-					if (plot == null)
-					{
-						Send(player, RED + C("MsgNoPlotFound"));
-					}
-					else
-					{
-						if (plot.getOwnerName().equals(player.getName()) || PlotMe.cPerms(player, "plotme.admin.auction") || canExecuteAdminCommands(player))
-						{
-							World w = player.getWorld();
-							if (plot.isAuctioned())
-							{
-								PlotAuctionBid highestBid = plot.getAuctionBid(0);
-								if (highestBid != null)
-								{
-									if (!PlotMe.cPerms(player, "plotme.admin.auction") && !canExecuteAdminCommands(player))
-									{
-										Send(player, RED + C("MsgPlotHasBidsAskAdmin"));
-									}
-									else
-									{
-										
-										EconomyResponse er = PlotMe.economy.depositPlayer(highestBid.getBidderName(), highestBid.getMoneyAmount());
-										if (!er.transactionSuccess())
-										{
-											Send(player, RED + er.errorMessage);
-											warn(er.errorMessage);
-										}
-										else
-										{
-										    for (Player pl : Bukkit.getServer().getOnlinePlayers())
-										    {
-										        if (pl.getName().equalsIgnoreCase(highestBid.getBidderName()))
-										        {
-										        	if (PlotMe.useDisplayNamesInMessages)
-										        	{
-										        		Send(player, C("MsgAuctionCancelledOnPlot") + 
-										        				" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerDisplayName() + ". " + f(highestBid.getMoneyAmount()));
-										        	}
-										        	else
-										        	{
-										        		Send(player, C("MsgAuctionCancelledOnPlot") + 
-										        				" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerDisplayName() + ". " + f(highestBid.getMoneyAmount()));
-										        	}
-										        	break;
-										        }
-										    }
-										}
-										
-										plot.disableAuctioning();
-										Send(player, C("MsgAuctionCancelled"));
-										
-										if (isAdv)
-										{
-											PlotMe.logger.info(LOG + player.getName() + " " + C("MsgStoppedTheAuctionOnPlot") + " " + String.valueOf(plot.getId()));
-										}
-									}
-								}
-								else
-								{									
-									double bid = 1;
-									
-									if (args.length == 2)
-									{
-										try  
-										{  
-											bid = Double.parseDouble(args[1]);  
-										}  
-										catch( Exception e){}
-									}
-									
-									if (bid < 1)
-									{
-										Send(player, RED + C("MsgInvalidAmount"));
-									}
-									else
-									{
-										plot.enableAuctioning();
-										plot.addAuctionBid(PlotDatabase.getPlotPlayer(player.getName(), player.getDisplayName()), bid);
-										
-										Send(player, C("MsgAuctionStarted"));
-										
-										if (isAdv)
-										{
-											PlotMe.logger.info(LOG + player.getName() + " " + C("MsgStartedAuctionOnPlot") + " " + String.valueOf(plot.getId()) + " " + C("WordAt") + " " + String.valueOf(bid));
-										}
-									}
-								}
-							}
-							else
-							{
-								Send(player, RED + C("MsgDoNotOwnPlot"));
-							}
-						}
-						else
-						{
-							Send(player, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgHasNoOwner"));
-						}
-					}
-				}
-				else
-				{
-					Send(player, RED + C("MsgPermissionDenied"));
+					plot = PlotManager.getPlotAtBlockPosition(player);
 				}
 			}
 			else
 			{
-				Send(player, RED + C("MsgSellingPlotsIsDisabledWorld"));
+				if (args.length < 2)
+				{
+					Send(sender, RED + C("WordMissing"));
+					return true;
+				}
+			}
+			
+			if (args.length >= 2)
+			{
+				int plotid = 0;
+				try
+				{
+					plotid = Integer.parseInt(args[1]);
+					plot = PlotManager.getPlot(plotid);
+				}
+				catch (NumberFormatException ex)
+				{
+					Send(sender, C("MsgInvalidNumber"));
+					return true;
+				}
+			}
+	
+			if (plot == null)
+			{
+				Send(sender, RED + C("MsgNoPlotFound"));
+				return true;
+			}
+			
+			if (!PlotManager.isEconomyEnabled(plot))
+			{
+				Send(sender, RED + C("MsgSellingPlotsIsDisabledWorld"));
+				if (plot.isAuctioned())
+				{
+					plot.disableAuctioning();
+				}
+				return true;
+			}
+			
+			PlotWorld pwi = plot.getPlotWorld();
+			if (pwi != null)
+			{
+				if (!pwi.CanPutOnSale)
+				{
+					Send(sender, RED + C("MsgEconomyDisabledWorld"));
+					return true;
+				}
+				if (plot.getOwner() != null)
+				{
+					if ((player != null && plot.getOwnerName().equals(player.getName())) || PlotMe.cPerms(sender, "plotme.admin.auction") || canExecuteAdminCommands(sender))
+					{
+						if (plot.isAuctioned())
+						{
+							PlotAuctionBid highestbid = plot.getHighestAuctionBid();
+							if (highestbid != null)
+							{
+								if (PlotMe.cPerms(sender, "plotme.admin.auction") || canExecuteAdminCommands(sender))
+								{
+									EconomyResponse er = PlotMe.economy.depositPlayer(highestbid.getBidderName(), highestbid.getMoneyAmount());
+									if (!er.transactionSuccess())
+									{
+										Send(sender, RED + er.errorMessage);
+										warn(er.errorMessage);
+									}
+									else
+									{
+									    for (Player pl : Bukkit.getServer().getOnlinePlayers())
+									    {
+								        	if (PlotMe.useDisplayNamesInMessages)
+								        	{
+								        		Send(pl, C("MsgAuctionCancelledOnPlot") + 
+								        				" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerName() + ". " + f(highestbid.getMoneyAmount()));
+								        	}
+								        	else
+								        	{
+								        		Send(pl, C("MsgAuctionCancelledOnPlot") + 
+								        				" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerDisplayName() + ". " + f(highestbid.getMoneyAmount()));
+								        	}
+									    }
+									}			
+									
+									plot.disableAuctioning();
+									Send(sender, C("MsgAuctionCancelled"));
+									
+									if (isAdv)
+									{
+										PlotMe.logger.info(LOG + sender.getName() + " " + C("MsgStoppedTheAuctionOnPlot") + " " + String.valueOf(plot.getId()));
+									}
+								}
+								else
+								{
+									Send(sender, RED + C("MsgPlotHasBidsAskAdmin"));
+									return true;
+								}
+							}
+						}
+						else
+						{									
+							double bid = 0;
+					
+							if (args.length == 2)
+							{
+								try  
+								{  
+									bid = Double.parseDouble(args[1]);  
+								}  
+								catch (Exception ex) {}
+							}
+							
+							if (bid >= 1)
+							{
+								plot.enableAuctioning();
+								Send(sender, C("MsgAuctionStarted"));
+								
+								if (isAdv)
+								{
+									PlotMe.logger.info(LOG + sender.getName() + " " + C("MsgStartedAuctionOnPlot") + " " + String.valueOf(plot.getId()) + " " + C("WordAt") + " " + String.valueOf(bid));
+								}
+							}
+							else
+							{
+								Send(sender, RED + C("MsgInvalidAmount"));
+								return true;
+							}
+						}
+					}
+					else
+					{
+						Send(sender, RED + C("MsgDoNotOwnPlot"));
+						return true;
+					}
+				}
+				else
+				{
+					Send(sender, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgHasNoOwner"));
+					return true;
+				}
+			}
+			else
+			{
+				Send(sender, RED + C("MsgEconomyDisabledWorld"));
 			}
 		}
 		else
 		{
-			Send(player, RED + C("MsgEconomyDisabledWorld"));
+			Send(sender, RED + C("MsgPermissionDenied"));
+			return true;
 		}
 		return true;
 	}
 
-	private boolean dispose(Player player, String[] args) 
+	private boolean dispose(CommandSender sender, String[] args) 
 	{
-		if (PlotMe.cPerms(player, "plotme.admin.dispose") || PlotMe.cPerms(player, "plotme.use.dispose") || canExecuteAdminCommands(player))
+		if (PlotMe.cPerms(sender, "plotme.admin.dispose") || PlotMe.cPerms(sender, "plotme.use.dispose") || canExecuteAdminCommands(sender))
 		{
-			if (!PlotManager.isPlotWorld(player))
+			Plot plot = null;
+			if (sender instanceof Player)
 			{
-				Send(player, RED + C("MsgNotPlotWorld"));
-				return true;
+				if (args.length < 2)
+				{
+					plot = PlotManager.getPlotAtBlockPosition((Player)sender);
+				}
 			}
-
-			Plot plot = PlotManager.getPlotAtBlockPosition(player);
+			else
+			{
+				if (args.length < 2)
+				{
+					Send(sender, RED + C("WordMissing"));
+					return true;
+				}
+			}
+			
+			if (args.length >= 2)
+			{
+				int plotid = 0;
+				try
+				{
+					plotid = Integer.parseInt(args[1]);
+					plot = PlotManager.getPlot(plotid);
+				}
+				catch (NumberFormatException ex)
+				{
+					Send(sender, C("MsgInvalidNumber"));
+					return true;
+				}
+			}
+			
 			if (plot == null)
 			{
-				Send(player, RED + C("MsgNoPlotFound"));
+				Send(sender, RED + C("MsgNoPlotFound"));
 				return true;
 			}
 			
+			if (!plot.isAvailable())
+			{
+				Send(sender, C("MsgPlotDisposedAnyoneClaim"));
+			}
+
+			if (!PlotManager.isPlotWorld(plot.getPlotWorld()))
+			{
+				Send(sender, RED + C("MsgNotPlotWorld"));
+				return true;
+			}
+
 			if (plot.isProtected())
 			{
-				Send(player, RED + C("MsgPlotProtectedNotDisposed"));
+				Send(sender, RED + C("MsgPlotProtectedNotDisposed"));
 				return true;
 			}
 			
 			if (plot.getOwner() == null)
 			{
-				Send(player, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgHasNoOwner"));
+				Send(sender, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgHasNoOwner"));
 				return true;
 			}
 			
-			if (plot.getOwnerName().equals(player.getName()) || PlotMe.cPerms(player, "plotme.admin.dispose") || canExecuteAdminCommands(player))
+			double cost = plot.getPlotWorld().DisposePrice;
+			
+			if (sender instanceof Player)
 			{
-				PlotWorld pwi = PlotManager.getPlotWorld(player.getWorld());
-				double cost = pwi.DisposePrice;
-						
-				if (PlotManager.isEconomyEnabled(player))
+				Player player = (Player)sender;
+				if (plot.getOwnerName().equals(player.getName()) || PlotMe.cPerms(player, "plotme.admin.dispose") || canExecuteAdminCommands(player))
 				{
-					if (cost != 0 && PlotMe.economy.getBalance(player.getName()) < cost)
+					if (PlotManager.isEconomyEnabled(plot))
 					{
-						Send(player, RED + C("MsgNotEnoughDispose"));
-						return true;
+						if (cost != 0 && PlotMe.economy.getBalance(player.getName()) < cost)
+						{
+							Send(player, RED + C("MsgNotEnoughDispose"));
+							return true;
+						}
 					}
 				}
-				
+				else
+				{
+					Send(player, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgNotYoursCannotDispose"));
+					return true;
+				}
 				EconomyResponse er = PlotMe.economy.withdrawPlayer(player.getName(), cost);
-					
 				if (!er.transactionSuccess())
 				{	
 					Send(player, RED + er.errorMessage);
 					warn(er.errorMessage);
 					return true;
 				}
-				
-				if (plot.isAuctioned())
+			}
+			
+			if (plot.isAuctioned())
+			{
+				PlotAuctionBid highestbid = plot.getHighestAuctionBid();
+				if (highestbid != null)
 				{
-					PlotAuctionBid highestBid = plot.getAuctionBid(0);
-					if (highestBid != null)
+					if (PlotMe.cPerms(sender, "plotme.admin.dispose") || canExecuteAdminCommands(sender))
 					{
-						EconomyResponse er2 = PlotMe.economy.depositPlayer(highestBid.getBidderName(), highestBid.getMoneyAmount());
-					
+						EconomyResponse er2 = PlotMe.economy.depositPlayer(highestbid.getBidderName(), highestbid.getMoneyAmount());
 						if (!er2.transactionSuccess())
 						{
-							Send(player, RED + er2.errorMessage);
+							Send(sender, RED + er2.errorMessage);
 							warn(er2.errorMessage);
 						}
-						else
-						{
-						    for (Player pl : Bukkit.getServer().getOnlinePlayers())
-							{
-							    if (player.getName().equals(highestBid.getBidderName()))
-							    {
-							    	if (PlotMe.useDisplayNamesInMessages)
-							    	{
-							    		Send(player, C("WordPlot") + 
-							            		" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerDisplayName() + " " + C("MsgWasDisposed") + " " + f(cost));
-							            
-							        }
-							    	else
-							    	{
-							    		Send(player, C("WordPlot") + 
-							            		" " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerName() + " " + C("MsgWasDisposed") + " " + f(cost));
-							    	}
-							    	break;
-							    }
-							}
-						}
+					}
+					else
+					{
+						Send(sender, RED + C("MsgPlotHasBidsAskAdmin"));
+						return true;
 					}
 				}
-
-				PlotManager.removePlot(plot);
-	
-				Send(player, C("MsgPlotDisposedAnyoneClaim"));
-					
-				if (isAdv)
-				{
-					PlotMe.logger.info(LOG + player.getName() + " " + C("MsgDisposedPlot") + " " + String.valueOf(plot.getId()));
-				}
 			}
-			else
+			
+			PlotManager.removePlot(plot);
+			if (isAdv)
 			{
-				Send(player, RED + C("MsgThisPlot") + "(" + String.valueOf(plot.getId()) + ") " + C("MsgNotYoursCannotDispose"));
+				PlotMe.logger.info(LOG + sender.getName() + " " + C("MsgDisposedPlot") + " " + String.valueOf(plot.getId()));
+			}
+			
+			for (Player pl : Bukkit.getServer().getOnlinePlayers())
+			{
+		    	if (PlotMe.useDisplayNamesInMessages)
+				{
+		    		Send(pl, C("WordPlot") + 
+						     " " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerDisplayName() + " " + C("MsgWasDisposed") + " " + f(cost));
+				}
+				else
+				{
+					Send(pl, C("WordPlot") + 
+					   		 " " + String.valueOf(plot.getId()) + " " + C("MsgOwnedBy") + " " + plot.getOwnerName() + " " + C("MsgWasDisposed") + " " + f(cost));
+				}
+				break;
 			}
 		}
 		else
 		{
-			Send(player, RED + C("MsgPermissionDenied"));
+			Send(sender, RED + C("MsgPermissionDenied"));
 		}
 			
 		return true;
@@ -1124,76 +1194,82 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 
-	private boolean donelist(Player player, String[] args) 
+	private boolean donelist(CommandSender sender, String[] args) 
 	{
-		if(PlotMe.cPerms(player, "PlotMe.admin.done"))
+		if (PlotMe.cPerms(sender, "plotme.admin.done") || canExecuteAdminCommands(sender))
 		{
-			PlotWorld pwi = PlotManager.getPlotWorld(player);
+			List<Integer> finishedplots = PlotDatabase.getFinishedPlots();
 			
-			if (pwi == null)
+			if (finishedplots == null || finishedplots.size() == 0)
 			{
-				Send(player, RED + C("MsgNotPlotWorld"));
+				Send(sender, C("MsgNoPlotsFinished"));
 				return true;
 			}
-			else
+			
+			int nbfinished = 0;
+			int page = 1;
+			
+			if (args.length >= 2)
 			{
-				
-				HashMap<String, Plot> plots = pwi.plots;
-				List<Plot> finishedplots = new ArrayList<Plot>();
-				int nbfinished = 0;
-				int maxpage = 0;
-				int pagesize = 8;
-				int page = 1;
-				
-				if(args.length == 2)
+				try
 				{
-					try
-					{
-						page = Integer.parseInt(args[1]);
-					}catch(NumberFormatException ex){}
+					page = Integer.parseInt(args[1]);
 				}
-				
-				for (String id : plots.keySet())
+				catch(NumberFormatException ex)
 				{
-					Plot plot = plots.get(id);
-					
-					if (plot.isFinished())
+					Send(sender, RED + C("InvalidPageNumber"));
+					page = 1;
+				}
+			}
+			
+			if (page < 1)
+			{
+				page = 1;
+			}
+			
+			int minIndex = (page-1) * 8;
+			int maxIndex = Math.min(minIndex + 8, finishedplots.size());
+			
+			int maxPage = (int)Math.ceil((double)finishedplots.size() / (double)8);
+			if (page > maxPage)
+			{
+				page = maxPage;
+			}
+			
+			Send(sender, C("MsgFinishedPlotsPage") + " " + page + " / " + maxPage);
+			
+			int finId;
+
+			Iterator<Integer> fini = finishedplots.iterator();
+			int textLength;
+			int daysAgo;
+			long currentTime = Math.round(System.currentTimeMillis() / 1000);
+			while (fini.hasNext() && nbfinished < maxIndex)
+			{
+				finId = fini.next();
+				if (finId > 0 && nbfinished >= minIndex)
+				{
+					Plot plot = PlotManager.getPlot(finId);
+					if (plot != null)
 					{
-						finishedplots.add(plot);
-						nbfinished++;
+						daysAgo = (int)Math.floor((currentTime - plot.getFinish()) / 86400);
+						sender.sendMessage(" " + BLUE + String.valueOf(nbfinished) + String.valueOf(plot.getId()) + RESET + " -> " + plot.getOwnerName() + " (" + String.valueOf(daysAgo) + " days ago)");
 					}
-				}
-				
-				Collections.sort(finishedplots, new FinishedPlotsComparator());
-				
-				maxpage = (int) Math.ceil(((double)nbfinished/(double)pagesize));
-				
-				if(finishedplots.size() == 0)
-				{
-					Send(player, C("MsgNoPlotsFinished"));
+					else
+					{
+						sender.sendMessage(" " + RED + String.valueOf(nbfinished) + ". NULL");
+					}
 				}
 				else
 				{
-					Send(player, C("MsgFinishedPlotsPage") + " " + page + "/" + maxpage);
-					
-					for(int i = (page-1) * pagesize; i < finishedplots.size() && i < (page * pagesize); i++)
-					{	
-						Plot plot = finishedplots.get(i);
-						
-						String starttext = "  " + BLUE + plot.getId() + RESET + " -> " + plot.getOwnerName();
-						
-						int textLength = MinecraftFontWidthCalculator.getStringWidth(starttext);						
-						
-						String line = starttext + whitespace(550 - textLength) + "@" + plot.isFinished()date;
-
-						player.sendMessage(line);
-					}
+					sender.sendMessage(" " + RED + String.valueOf(nbfinished) + ". INVALID");
 				}
+				nbfinished++;
 			}
 		}
 		else
 		{
-			Send(player, RED + C("MsgPermissionDenied"));
+			Send(sender, RED + C("MsgPermissionDenied"));
 		}
 		return true;
 	}
@@ -1209,9 +1285,9 @@ public class PlotMeCommands implements CommandExecutor
 			}
 			else
 			{
-				Plot ppi = PlotManager.getPlotAtBlockPosition(player.getLocation());
+				Plot plot = PlotManager.getPlotAtBlockPosition(player);
 				
-				if (ppi == null)
+				if (plot == null)
 				{
 					Send(player, RED + C("MsgNoPlotFound"));
 				}
@@ -1219,7 +1295,7 @@ public class PlotMeCommands implements CommandExecutor
 				{
 					if(!PlotManager.isPlotAvailable(player))
 					{
-						Plot plot = PlotManager.getPlotById(p,id);
+						
 						String name = player.getName();
 						
 						if (plot.getOwner().getName().equalsIgnoreCase(name) || PlotMe.cPerms(player, "PlotMe.admin.done"))
@@ -1267,23 +1343,21 @@ public class PlotMeCommands implements CommandExecutor
 			}
 			else
 			{
-				Plot ppi = PlotManager.getPlotAtBlockPosition(player.getLocation());
+				Plot plot = PlotManager.getPlotAtBlockPosition(player);
 				
-				if (ppi == null)
+				if (plot == null)
 				{
 					Send(player, RED + C("MsgNoPlotFound"));
 				}
 				else
 				{
-					if(!PlotManager.isPlotAvailable(player))
+					if (!plot.isAvailable())
 					{
-						Plot plot = PlotManager.getPlotById(p,id);
-						
 						if(plot != null)
 						{
 							String name = player.getName();
 							
-							plot.resetExpire(PlotManager.getPlotWorld(player).DaysToExpiration);
+							plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
 							Send(player, C("MsgPlotExpirationReset"));
 							
 							if(isAdv)
@@ -1321,8 +1395,7 @@ public class PlotMeCommands implements CommandExecutor
 				int nbexpiredplots = 0; 
 				PlotWorld pwi = PlotManager.getPlotWorld(player);
 				List<Plot> expiredplots = new ArrayList<Plot>();
-				HashMap<String, Plot> plots = PlotManager.getPlots(w);
-				String date = PlotMe.getDate();
+				HashMap<String, Plot> plots = PlotManager.getPlot
 				
 				if(args.length == 2)
 				{
@@ -1401,7 +1474,7 @@ public class PlotMeCommands implements CommandExecutor
 					Send(player, C("MsgListOfPlotsWhereYou"));
 				}
 								
-				for(Plot plot : PlotManager.getPlots(p).values())
+				for (Plot plot : PlotManager.getPlots(p).values())
 				{
 					StringBuilder addition = new StringBuilder();
 						
@@ -1520,16 +1593,24 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean showhelp(Player player, int page)
+	private boolean showhelp(CommandSender sender, int page)
 	{
 		int max = 4;
 		int maxpage = 0;
-		boolean ecoon = PlotManager.isEconomyEnabled(p);
+		
+		
+		
 		
 		List<String> allowed_commands = new ArrayList<String>();
 		
-		allowed_commands.add("limit");
-		if(PlotMe.cPerms(player, "PlotMe.use.claim")) allowed_commands.add("claim");
+		if (sender instanceof Player)
+		{
+			Player player = (Player)sender;
+
+			boolean ecoon = PlotManager.isEconomyEnabled(player);
+
+			allowed_commands.add("limit");
+			if (PlotMe.cPerms(player, "plotme.use.claim")) allowed_commands.add("claim");
 		if(PlotMe.cPerms(player, "PlotMe.use.claim.other")) allowed_commands.add("claim.other");
 		if(PlotMe.cPerms(player, "PlotMe.use.auto")) allowed_commands.add("auto");
 		if(PlotMe.cPerms(player, "PlotMe.use.home")) allowed_commands.add("home");
@@ -2401,7 +2482,7 @@ public class PlotMeCommands implements CommandExecutor
 			{
 				if(args.length < 2)
 				{
-					Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandComment") + " <" + C("WordText") + ">");
+					Send(player, C("WordUsage") + ": " + RED + "/plot " + C("CommandComment") + " <" + C("WordText") + ">");
 				}
 				else
 				{
@@ -2476,48 +2557,129 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean comments(Player player, String[] args)
+	private boolean comments(CommandSender sender, String[] args)
 	{
-		if (PlotMe.cPerms(player, "PlotMe.use.comments"))
+		if (PlotMe.cPerms(sender, "plotme.use.comments") || PlotMe.cPerms(sender, "plotme.view.allcomments") || canExecuteAdminCommands(sender))
 		{
-			if(!PlotManager.isPlotWorld(player))
+			Plot plot = null;
+			int ipage = 0;
+			Player player = null;
+			if (args.length < 3)
 			{
-				Send(player, RED + C("MsgNotPlotWorld"));
+				if (sender instanceof Player)
+				{
+					player = (Player)sender;
+					if (!PlotManager.isPlotWorld(player))
+					{
+						Send(player, RED + C("MsgNotPlotWorld"));
+						return true;
+					}
+					plot = PlotManager.getPlotAtBlockPosition(player.getLocation());
+					if (plot != null)
+					{
+						if (!(plot.getOwner().getName().equals(player.getName()) || plot.isAllowed(player.getName()) || PlotMe.cPerms(sender, "plotme.view.allcomments") || canExecuteAdminCommands(player)))
+						{
+							player.sendMessage(BLUE + PREFIX + RED + C("MsgPermissionDenied"));
+							return true;
+						}
+					}
+					if (args.length >= 2)
+					{
+						try
+						{
+							ipage = Integer.parseInt(args[1]);
+						}
+						catch (NumberFormatException ex)
+						{
+							sender.sendMessage(C("MsgInvalidPageNumber"));
+							return false;
+						}
+					}
+				}
+				else
+				{
+					return false;
+				}
 			}
 			else
 			{
-				if(args.length < 2)
+				try
 				{
-					Plot ppi = PlotManager.getPlotAtBlockPosition(player.getLocation());
+					int plotid = Integer.parseInt(args[1]);
+					plot = PlotManager.getPlot(plotid);
+				}
+				catch (NumberFormatException ex)
+				{
+					sender.sendMessage(C("MsgInvalidNumber"));
+					return false;
+				}
+				try
+				{
+					ipage = Integer.parseInt(args[2]);
+				}
+				catch (NumberFormatException ex)
+				{
+					sender.sendMessage(C("MsgInvalidPageNumber"));
+					return false;
+				}
+			}
+			if (plot == null)
+			{
+				Send(sender, RED + C("MsgNoPlotFound"));
+				return true;
+			}
+			
+			if (ipage < 0)
+			{
+				ipage = 0;
+			}
+
+			LinkedList<Pair<String, String>> plotcomments = plot.getComments();
+			
+			if (plotcomments != null && plotcomments.size() > 0)
+			{
+				int maxpage = (int)Math.ceil(plotcomments.size() / 10);
+				
+				if (ipage > maxpage)
+				{
+					sender.sendMessage(C("MsgInvalidPageNumber"));
+				}
+				
+				if (player != null)
+				{
+					Send(player, C("MsgYouHave") + " " +
+								 BLUE + plotcomments.size() +
+								 RESET + " " + C("MsgComments")
+					);
+				}
+				else
+				{
+					Send(sender, BLUE + plotcomments.size() +
+							 	 RESET + " " + C("MsgComments")
+					);
+				}
 					
-					if (ppi == null)
+				int curIndex = 0;
+				int minIndex = ipage * 10;
+				int maxIndex = min(minIndex + 10, plotcomments.size());
+				Pair<String, String> curComment;
+
+				Iterator<Pair<String, String>> commentsIterator = plotcomments.iterator();
+				while (commentsIterator.hasNext() && curIndex < maxIndex)
+				{
+					curComment = commentsIterator.next();
+					if (curIndex >= minIndex)
 					{
-						Send(player, RED + C("MsgNoPlotFound"));
+						sender.sendMessage(ChatColor.BLUE + C("WordFrom") + " : " + RED + curComment.getLeft());
+						sender.sendMessage("" + RESET + ChatColor.ITALIC + curComment.getRight());
 					}
-					else
-					{
-						if(!PlotManager.isPlotAvailable(player))
-						{
-							Plot plot = PlotManager.getPlotById(p,id);
-							
-							if(plot.getOwner().getName().equalsIgnoreCase(player.getName()) || plot.isAllowed(player.getName()) || PlotMe.cPerms(player, "PlotMe.admin"))
-							{
-								if(plot.comments.size() == 0)
-								{
-									Send(player, C("MsgNoComments"));
-								}
-								else
-								{
-									Send(player, C("MsgYouHave") + " " + 
-											BLUE + plot.comments.size() + RESET + " " + C("MsgComments"));
-									
-									for(String[] comment : plot.comments)
-									{
-										player.sendMessage(ChatColor.BLUE + C("WordFrom") + " : " + RED + comment[0]);
-										player.sendMessage("" + RESET + ChatColor.ITALIC + comment[1]);
-									}
-									
-								}
+					curIndex ++;
+				}
+			}
+			else
+			{
+				Send(player, C("MsgNoComments"));
+			}
 							}
 							else
 							{
@@ -3466,12 +3628,17 @@ public class PlotMeCommands implements CommandExecutor
 		return true;
 	}
 	
-	private boolean move(Player player, String[] args)
+	private boolean move(CommandSender sender, String[] args)
 	{
-		if (PlotMe.cPerms(player, "plotme.admin.move") || canExecuteAdminCommands(player))
+		if (PlotMe.cPerms(sender, "plotme.admin.move") || canExecuteAdminCommands(sender))
 		{
-			if (args.length == 2)
+			if (sender instanceof Player)
 			{
+				if (args.length < 2)
+				{
+				
+				
+				
 				if (PlotManager.isPlotWorld(player))
 				{
 					String sub = args[1].toLowerCase();

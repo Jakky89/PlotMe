@@ -231,7 +231,10 @@ public class PlotDatabase {
 	        	st.addBatch(LAYOUT_COMMENT_TABLE);
 	        	st.addBatch(LAYOUT_INFO_TABLE);
 	        	
-	        	st.addBatch("INSERT INTO `plotme_info` VALUES()");
+	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_WORLDS', '" + LAYOUT_WORLD_TABLE + "')");
+	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_PLAYERS', '" + LAYOUT_PLAYER_TABLE + "')");
+	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_PLOTS', '" + LAYOUT_PLOT_TABLE + "')");
+	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_COMMENTS', '" + LAYOUT_COMMENT_TABLE + "')");
 	        	
 	   			if (PlotDatabase.batchExecuteCommitOrRollback(st))
 	   			{
@@ -827,8 +830,8 @@ public class PlotDatabase {
     {
     	return getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName());
     }
-    
-    public static List<Plot> loadPlayerOwnedPlots(int ownerId)
+
+    public static List<Integer> loadPlayerOwnedPlotIds(int ownerId)
     {
     	if (ownerId < 0)
     	{
@@ -841,26 +844,24 @@ public class PlotDatabase {
     		return null;
     	}
     	
-    	List<Plot> tmpList = new ArrayList<Plot>();
+    	List<Integer> tmpList = new ArrayList<Integer>();
     	
     	Statement st = null;
     	ResultSet rs = null;
+    	
 		try {
 			st = con.createStatement();
-			rs = st.executeQuery("SELECT id,owner " +
+			rs = st.executeQuery("SELECT id " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
 								 		"owner=" + String.valueOf(ownerId)
 								);
 			while (rs.next()) 
 			{
-				if (rs.getInt(2) == ownerId)
-				{
-					tmpList.add(PlotManager.getPlot(rs.getInt(1)));
-				}
+				tmpList.add(rs.getInt(1));
 			}
 			
-            return null;
+            return tmpList;
         }
         catch (SQLException ex)
         {
@@ -878,6 +879,31 @@ public class PlotDatabase {
             }
         }
         return null;
+    }
+    
+    public static void loadPlotProperties(Plot plot, byte[] byteArray)
+    {
+    	if (byteArray.length > 0)
+        {
+			try {
+				ObjectInputStream oin = new ObjectInputStream(new ByteArrayInputStream(byteArray));
+				plot.setProperties((Jakky89Properties)oin.readObject());
+			}
+			catch (ClassNotFoundException ex)
+			{
+				PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
+				PlotMe.logger.severe("  " + ex.getMessage());
+			}
+			catch (IOException ex)
+			{
+	        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
+				PlotMe.logger.severe("  " + ex.getMessage());
+			}
+        }
+    	else
+    	{
+    		plot.setProperties(new Jakky89Properties());
+    	}
     }
     
     
@@ -940,27 +966,6 @@ public class PlotDatabase {
 					isprotected = false;
 				}
 				
-				// load other properties
-				buf = rs.getBytes(13);
-				oin = null;
-		    	properties = null;
-		    	if (buf != null)
-		        {
-					try {
-						oin = new ObjectInputStream(new ByteArrayInputStream(buf));
-						properties = (Jakky89Properties)oin.readObject();
-					}
-					catch (ClassNotFoundException ex)
-					{
-						PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-						PlotMe.logger.severe("  " + ex.getMessage());
-					}
-					catch (IOException ex)
-					{
-			        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-						PlotMe.logger.severe("  " + ex.getMessage());
-					}
-		        }
 				plot = new Plot(
 									id,
 									plotpos,
@@ -970,8 +975,7 @@ public class PlotDatabase {
 									rs.getLong(8),
 									rs.getDouble(9),
 									isforsale,
-									isprotected,
-									properties
+									isprotected
 								);
 		
 				PlotManager.registerPlot(plot);
@@ -1041,7 +1045,7 @@ public class PlotDatabase {
     	
 		try {
 			st = con.createStatement();
-			rs = st.executeQuery("SELECT id,world,xpos,zpos,biome," +
+			rs = st.executeQuery("SELECT id,world,xpos,zpos,owner,biome," +
 										"expireddate,finisheddate,price," +
 										"isforsale,isprotected,auction,properties " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
@@ -1054,63 +1058,42 @@ public class PlotDatabase {
 
 			while (rs.next()) 
 			{
-				if (rs.getInt(2) == plotWorld.getId())
+				id = rs.getInt(1);
+				int xpos = rs.getInt(3);
+				int zpos = rs.getInt(4);
+				plotpos = new PlotPosition(plotWorld, xpos, zpos);
+				if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
 				{
-					id = rs.getInt(1);
-					int xpos = rs.getInt(3);
-					int zpos = rs.getInt(4);
-					plotpos = new PlotPosition(plotWorld, xpos, zpos);
-					if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
+					boolean isforsale = false;
+					if (rs.getInt(10) == 1)
 					{
-						boolean isforsale = false;
-						if (rs.getInt(10) == 1)
-						{
-							isforsale = true;
-						}
-						boolean isprotected = true;
-						if (rs.getInt(11) == 0)
-						{
-							isprotected = false;
-						}
-						// load other properties
-						buf = rs.getBytes(13);
-						oin = null;
-		    		    properties = null;
-		    		    if (buf != null)
-		    		    {
-							try {
-								oin = new ObjectInputStream(new ByteArrayInputStream(buf));
-								properties = (Jakky89Properties)oin.readObject();
-							} catch (ClassNotFoundException ex) {
-								PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-								PlotMe.logger.severe("  " + ex.getMessage());
-							} catch (IOException ex) {
-					        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-								PlotMe.logger.severe("  " + ex.getMessage());
-							}
-		    		    }
-						plot = new Plot(
-							id,
-							plotpos,
-		    				getPlotPlayer(rs.getString(5), ""),
-		    				Biome.valueOf(rs.getString(6)),
-		    				rs.getLong(7),
-		    				rs.getLong(8),
-		    				rs.getDouble(9),
-		    				isforsale,
-		    				isprotected,
-		    				properties
-						);
-		
-						PlotManager.registerPlot(plot);
-						
-						if (rs.getInt(12) > 0)
-						{
-							plot.setAuctionNumber(rs.getInt(12));
-						}
-					
-						//PlotMeSqlManager.loadPlotProperties(plot);
+						isforsale = true;
 					}
+					boolean isprotected = true;
+					if (rs.getInt(11) == 0)
+					{
+						isprotected = false;
+					}
+					plot = new Plot(
+						id,
+						plotpos,
+		    			getPlotPlayer(rs.getInt(5)),
+		    			Biome.valueOf(rs.getString(6)),
+		    			rs.getLong(7),
+		    			rs.getLong(8),
+		    			rs.getDouble(9),
+		    			isforsale,
+		    			isprotected
+					);
+
+					if (rs.getInt(11) > 0)
+					{
+						plot.setAuctionNumber(rs.getInt(12));
+					}
+						
+					loadPlotProperties(plot, rs.getBytes(13));
+		
+					PlotManager.registerPlot(plot);
 				}
 			}
 
@@ -1171,7 +1154,10 @@ public class PlotDatabase {
     	loadPlots(plotWorld, centerBlockLocation.getBlockX(), centerBlockLocation.getBlockZ(), range);
     }
     
-    public static List<Plot> getFinishedPlots()
+    /**
+     * @return: arraylist of finished plot ids
+     */
+    public static List<Integer> getFinishedPlots()
     {
     	con = getConnection();
     	if (con == null)
@@ -1183,89 +1169,30 @@ public class PlotDatabase {
    	    ResultSet rs = null;
    	    
    	    long currentTime = Math.round(System.currentTimeMillis() / 1000);
-   	    
-    	int id;
-    	PlotPosition plotpos;
-    	Plot plot;
-    	byte[] buf;
-    	List<Plot> tmpList = new ArrayList<Plot>();
-    	
-    	ObjectInputStream oin = null;
-    	Jakky89Properties properties = null;
-   	    
+
         try {
         	st = con.createStatement();
         	
-			rs = 							st.executeQuery("SELECT id,world,xpos,zpos,playername,biome," +
-																   "expireddate,finisheddate,price," +
-																   "isforsale,isprotected,auction,properties " +
-															"FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
-															"WHERE " +
-																"finisheddate IS NOT NULL AND finisheddate>0 AND finisheddate<=" + String.valueOf(currentTime));
+			rs = st.executeQuery("SELECT id " +
+								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
+								 "WHERE " +
+									"finisheddate IS NOT NULL AND finisheddate>0 AND finisheddate<=" + String.valueOf(currentTime));
 
-			while (rs.next()) 
-			{
-				id = rs.getInt(1);
-	
-				plotpos = new PlotPosition(PlotManager.getPlotWorld(rs.getInt(2)), rs.getInt(3), rs.getInt(4));
-
-				boolean isforsale = false;
-				if (rs.getInt(10) == 1)
-				{
-					isforsale = true;
-				}
-				
-				boolean isprotected = true;
-				if (rs.getInt(11) == 0)
-				{
-					isprotected = false;
-				}
-				
-				// load other properties
-				buf = rs.getBytes(13);
-				oin = null;
-    		    properties = null;
-    		    if (buf != null)
-    		    {
-					try {
-						oin = new ObjectInputStream(new ByteArrayInputStream(buf));
-						properties = (Jakky89Properties)oin.readObject();
-					} catch (ClassNotFoundException ex) {
-						PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-						PlotMe.logger.severe("  " + ex.getMessage());
-					} catch (IOException ex) {
-			        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while loading plot properties object:");
-						PlotMe.logger.severe("  " + ex.getMessage());
-					}
-    		    }
-				plot = new Plot(
-					id,
-					plotpos,
-    				getPlotPlayer(rs.getString(5), null),
-    				Biome.valueOf(rs.getString(6)),
-    				rs.getLong(7),
-    				rs.getLong(8),
-    				rs.getDouble(9),
-    				isforsale,
-    				isprotected,
-    				properties
-				);
-
-				PlotManager.registerPlot(plot);
-				
-				if (rs.getInt(12) > 0)
-				{
-					plot.setAuctionNumber(rs.getInt(12));
-				}
+			List<Integer> tmpList = new ArrayList<Integer>();
 			
-				tmpList.add(plot);
+			while (rs.next())
+			{
+				if (rs.getInt(1) > 0)
+				{
+					tmpList.add(rs.getInt(1));
+				}
 			}
 			
 			return tmpList;
     	}
         catch (SQLException ex) 
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while inserting plot data:");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while fetching list of finished plots:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         	return null;
         } 
@@ -1281,7 +1208,7 @@ public class PlotDatabase {
         }
     }
 
-    public static void insertPlot(Plot plot)
+    public static void savePlot(Plot plot)
     {
     	if (plot == null || plot.getPlotWorld() == null)
     	{
@@ -1294,12 +1221,14 @@ public class PlotDatabase {
         try 
         {
             conn = getConnection();
-            ps = conn.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, price, isforsale, isprotected, auction, properties) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT OR REPLACE INTO `" + PlotMe.databasePrefix + "plotme_plots` (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, price, isforsale, isprotected, auction, properties) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             
             ps.setInt(1, plot.getId());
             ps.setInt(2, plot.getPlotWorld().getId());
             ps.setInt(3, plot.getPlotX());
             ps.setInt(4, plot.getPlotZ());
+            
+            // OWNER
             if (plot.getOwner() != null)
             {
             	ps.setInt(5, plot.getOwner().getId());
@@ -1308,28 +1237,20 @@ public class PlotDatabase {
             {
             	ps.setInt(5, 0);
             }
+            
+            // BIOME
             ps.setString(6, plot.getBiome().toString());
             
-            if (plot.getExpiration() > 0)
-            {
-            	ps.setLong(7, plot.getExpiration());
-            }
-            else
-            {
-            	ps.setLong(7, (Long)null);
-            }
+            // EXPIRATION
+            ps.setLong(7, plot.getExpiration());
             
-            if (plot.getFinish() > 0)
-            {
-            	ps.setLong(8, plot.getFinish());
-            }
-            else
-            {
-            	ps.setLong(8, (Long)null);
-            }
+            // FINISH
+            ps.setLong(8, plot.getFinish());
             
+            // PRICE
             ps.setDouble(9, plot.getPrice());
             
+            // FORSALE
             if (plot.isForSale())
             {
             	ps.setByte(10, (byte)1);
@@ -1339,6 +1260,7 @@ public class PlotDatabase {
             	ps.setByte(10, (byte)0);
             }
             
+            // PROTECTED
             if (plot.isProtected())
             {
             	ps.setByte(11, (byte)1);
@@ -1348,7 +1270,11 @@ public class PlotDatabase {
             	ps.setByte(11, (byte)0);
             }
             
+            // AUCTION
             ps.setInt(12, plot.getAuctionNumber());
+            
+            // PROPERTIES
+            ps.setObject(13, plot.getProperties());
             
             ps.executeUpdate();
             conn.commit();
@@ -1413,7 +1339,7 @@ public class PlotDatabase {
         }
     }
     
-    public static void updateJakky89Properties(int rowId, String databaseSuffix, String colName, Jakky89Properties cellValue)
+    public static void updateProperties(int rowId, String databaseSuffix, String colName, Jakky89Properties cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;

@@ -82,8 +82,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean DisableNetherrackIgnition;
 	public boolean DisableObsidianIgnition;
 	
-	private HashSet<Pair<Short, Byte>> ProtectedBlocks;
-	private HashSet<Pair<Short, Byte>> PreventedItems;
+	private HashSet<Pair<Integer, Byte>> ProtectedBlocks;
+	private HashSet<Pair<Integer, Byte>> PreventedItems;
 	
 	public Map<PlotPosition, Plot> plotPositions;
 		
@@ -137,28 +137,32 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public List<String> getProtectedBlocksAsStringList()
 	{
 		ArrayList<String> tmpList = new ArrayList<String>();
-		Pair<Short, Byte> tmpEntry;
-		Iterator<Pair<Short, Byte>> ppIterator = ProtectedBlocks.iterator();
+		Pair<Integer, Byte> tmpEntry;
+		Iterator<Pair<Integer, Byte>> ppIterator = ProtectedBlocks.iterator();
 		while (ppIterator.hasNext())
 		{
 			tmpEntry = ppIterator.next();
-			tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
+			if (tmpEntry.getRight() != null)
+			{
+				tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
+			}
+			else
+			{
+				tmpList.add(tmpEntry.getLeft().toString());
+			}
 		}
 		return tmpList;
 	}
 
-	public boolean isProtectedBlock(int typeId, byte dataValue)
+	public boolean isProtectedBlock(Integer typeId, Byte dataValue)
 	{
-		if (typeId >= 0)
+		if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
 		{
-			if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
-			{
-				return false;
-			}
-			if (!ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, dataValue)) && !ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, null)))
-			{
-				return false;
-			}
+			return false;
+		}
+		if (typeId != null && !ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, dataValue)) && !ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, null)))
+		{
+			return false;
 		}
 		return true;
 	}
@@ -172,11 +176,23 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return true;
 	}
 	
-	public void setProtectedBlocks(Set<Pair<Short, Byte>> blockSet)
+	public void setProtectedBlocks(Set<Pair<Integer, Byte>> blockSet)
 	{
 		if (blockSet != null)
 		{
-			ProtectedBlocks = new HashSet<Pair<Short, Byte>>(blockSet);
+			ProtectedBlocks = new HashSet<Pair<Integer, Byte>>(blockSet);
+		}
+	}
+	
+	public void addToProtectedBlocks(Pair<Integer, Byte> itemIdValue)
+	{
+		if (itemIdValue != null)
+		{
+			if (ProtectedBlocks == null)
+			{
+				ProtectedBlocks = new HashSet<Pair<Integer, Byte>>();
+			}
+			ProtectedBlocks.add(itemIdValue);
 		}
 	}
 	
@@ -184,38 +200,39 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		if (typeIdValues != null && typeIdValues.size() > 0)
 		{
+			if (ProtectedBlocks == null)
+			{
+				ProtectedBlocks = new HashSet<Pair<Integer, Byte>>();
+			}
+			
 			for (String s : typeIdValues)
 			{
 				ProtectedBlocks.add(PlotMe.getItemIdValue(s));
 			}
 		}
 	}
-	
-	public void addToProtectedBlocks(Pair<Short, Byte> itemTypeValue)
+
+	public void addToProtectedBlocks(Integer typeId)
 	{
-		if (itemTypeValue != null)
+		if (typeId != null)
 		{
-			if (ProtectedBlocks == null)
-			{
-				ProtectedBlocks = new HashSet<Pair<Short, Byte>>();
-			}
-			ProtectedBlocks.add(itemTypeValue);
+			addToProtectedBlocks(new Pair<Integer, Byte>(typeId, null));
 		}
 	}
 	
-	public void addToProtectedBlocks(int typeId)
+	public void addToProtectedBlocks(Integer typeId, Byte dataValue)
 	{
-		if (typeId >= 0)
+		if (typeId != null)
 		{
-			addToProtectedBlocks(new Pair<Short, Byte>((short)typeId, null));
+			addToProtectedBlocks(new Pair<Integer, Byte>(typeId, dataValue));
 		}
 	}
 	
-	public void addToProtectedBlocks(int typeId, byte dataValue)
+	public void addToProtectedBlocks(BlockState block)
 	{
-		if (typeId >= 0)
+		if (block != null)
 		{
-			addToProtectedBlocks(new Pair<Short, Byte>((short)typeId, dataValue));
+			addToProtectedBlocks(block.getTypeId(), block.getRawData());
 		}
 	}
 	
@@ -223,7 +240,15 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		if (block != null)
 		{
-			addToProtectedBlocks((short)block.getTypeId(), block.getData());
+			addToProtectedBlocks(block.getTypeId(), block.getData());
+		}
+	}
+	
+	public void addToProtectedBlocks(Material material, Byte dataValue)
+	{
+		if (material != null)
+		{
+			addToProtectedBlocks(material.getId(), dataValue);
 		}
 	}
 	
@@ -231,44 +256,61 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		if (material != null)
 		{
-			addToProtectedBlocks(material.getId(), (byte)0);
+			addToProtectedBlocks(material.getId(), null);
 		}
 	}
 	
-	public void removeFromProtectedBlocks(int typeId, byte dataValue)
+	public void removeFromProtectedBlocks(Integer typeId, Byte dataValue)
 	{
-		if (typeId < 0 || ProtectedBlocks == null || ProtectedBlocks.isEmpty())
+		if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
 		{
 			return;
 		}
-		ProtectedBlocks.remove(new Pair<Short, Byte>((short)typeId, dataValue));
+		ProtectedBlocks.remove(new Pair<Integer, Byte>(typeId, dataValue));
 	}
 	
 	public List<String> getPreventedItemsAsStringList()
 	{
 		ArrayList<String> tmpList = new ArrayList<String>();
-		Pair<Short, Byte> tmpEntry;
-		Iterator<Pair<Short, Byte>> piIterator = PreventedItems.iterator();
+		Pair<Integer, Byte> tmpEntry;
+		Iterator<Pair<Integer, Byte>> piIterator = PreventedItems.iterator();
 		while (piIterator.hasNext())
 		{
 			tmpEntry = piIterator.next();
-			tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
+			if (tmpEntry.getRight() != null)
+			{
+				tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
+			}
+			else
+			{
+				tmpList.add(tmpEntry.getLeft().toString());
+			}
 		}
 		return tmpList;
 	}
 	
-	public boolean isPreventedItem(int typeId, byte dataValue)
+	public boolean isPreventedItem(Integer typeId, Byte dataValue)
 	{
-		if (typeId >= 0)
+		if (typeId != null)
 		{
 			if (PreventedItems == null || PreventedItems.isEmpty())
 			{
 				return false;
 			}
-			if (!PreventedItems.contains(new Pair<Short, Byte>((short)typeId, dataValue)) && !PreventedItems.contains(new Pair<Short, Byte>((short)typeId, null)))
+			
+			if (!PreventedItems.contains(new Pair<Integer, Byte>(typeId, dataValue)) && !PreventedItems.contains(new Pair<Integer, Byte>(typeId, null)))
 			{
 				return false;
 			}
+		}
+		return true;
+	}
+	
+	public boolean isPreventedItem(Material material, Byte dataValue)
+	{
+		if (material != null)
+		{
+			return isPreventedItem(material.getId(), dataValue);
 		}
 		return true;
 	}
@@ -277,34 +319,16 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		if (material != null)
 		{
-			return isPreventedItem(material.getId(), (byte)0);
+			return isPreventedItem(material.getId(), null);
 		}
 		return true;
 	}
-	
-	public boolean isPreventedItem(BlockState blockState)
+
+	public void setPreventedItems(Set<Pair<Integer, Byte>> itemSet)
 	{
-		if (blockState != null)
+		if (itemSet != null && itemSet.size() > 0)
 		{
-			return isPreventedItem(blockState.getTypeId(), blockState.getRawData());
-		}
-		return true;
-	}
-	
-	public boolean isPreventedItem(Block block)
-	{
-		if (block != null)
-		{
-			return isPreventedItem(block.getTypeId(), block.getData());
-		}
-		return true;
-	}
-	
-	public void setPreventedItems(Set<Pair<Short, Byte>> itemSet)
-	{
-		if (itemSet != null)
-		{
-			PreventedItems = new HashSet<Pair<Short, Byte>>(itemSet);
+			PreventedItems = new HashSet<Pair<Integer, Byte>>(itemSet);
 		}
 	}
 	
@@ -312,6 +336,11 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		if (typeIdValues != null && typeIdValues.size() > 0)
 		{
+			if (PreventedItems == null)
+			{
+				PreventedItems = new HashSet<Pair<Integer, Byte>>();
+			}
+			
 			for (String s : typeIdValues)
 			{
 				PreventedItems.add(PlotMe.getItemIdValue(s));
@@ -319,23 +348,31 @@ public class PlotWorld implements Comparable<PlotWorld>
 		}
 	}
 	
-	public void addToPreventedItems(int typeId)
+	public void addToPreventedItems(Integer typeId)
 	{
-		if (typeId >= 0)
+		if (typeId != null)
 		{
-			PreventedItems.add(new Pair<Short, Byte>((short)typeId, null));
+			PreventedItems.add(new Pair<Integer, Byte>(typeId, null));
 		}
 	}
 	
-	public void addToPreventedItems(int typeId, byte dataValue)
+	public void addToPreventedItems(Integer typeId, Byte dataValue)
 	{
-		if (typeId >= 0)
+		if (typeId != null)
 		{
 			if (PreventedItems == null)
 			{
-				PreventedItems = new HashSet<Pair<Short, Byte>>();
+				PreventedItems = new HashSet<Pair<Integer, Byte>>();
 			}
-			PreventedItems.add(new Pair<Short, Byte>((short)typeId, dataValue));
+			PreventedItems.add(new Pair<Integer, Byte>(typeId, dataValue));
+		}
+	}
+	
+	public void addToPreventedItems(Material material, Byte dataValue)
+	{
+		if (material != null)
+		{
+			addToPreventedItems(material.getId(), dataValue);
 		}
 	}
 	
@@ -344,18 +381,6 @@ public class PlotWorld implements Comparable<PlotWorld>
 		if (material != null)
 		{
 			addToPreventedItems(material.getId());
-		}
-	}
-	
-	public void addToPreventedItems(Material material, byte dataValue)
-	{
-		if (material != null && dataValue >= 0)
-		{
-			if (PreventedItems == null)
-			{
-				PreventedItems = new HashSet<Pair<Short, Byte>>();
-			}
-			PreventedItems.add(new Pair<Short, Byte>((short)material.getId(), dataValue));
 		}
 	}
 	
@@ -404,16 +429,26 @@ public class PlotWorld implements Comparable<PlotWorld>
 	}
 	
 	public boolean registerPlot(Plot plot) {
+		
 		if (plot == null || plot.getPlotWorld() == null || !plot.getPlotWorld().equals(this) || plot.getPlotPosition() == null)
 		{
 			return false;
 		}
+
 		Plot oldPlot = plotPositions.put(plot.getPlotPosition(), plot);
-		if (oldPlot == null || !oldPlot.equals(plot))
+		if (oldPlot != null)
 		{
-			refreshNeighbours(plot);
+			if (!oldPlot.equals(plot))
+			{
+				oldPlot.resetNeighbourPlots();
+				return true;
+			}
+		}
+		else
+		{
 			return true;
 		}
+		
 		return false;
 	}
 
@@ -423,12 +458,14 @@ public class PlotWorld implements Comparable<PlotWorld>
 		{
 			return false;
 		}
+		
 		Plot removedPlot = plotPositions.remove(plot.getPlotPosition());
-		if (removedPlot != null && removedPlot.equals(plot))
+		if (removedPlot != null)
 		{
-			plot.resetNeighbourPlots();
+			removedPlot.resetNeighbourPlots();
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -590,8 +627,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 		
 		double pph = (double)(PathWidth / 2);
 		
-		int locx = (int)Math.floor((double)(plot.getPlotX() * multi) + pph);
-		int locz = (int)Math.floor((double)(plot.getPlotZ() * multi) + pph);
+		int locx = (int)Math.ceil((double)(plot.getPlotX() * multi) + pph);
+		int locz = (int)Math.ceil((double)(plot.getPlotZ() * multi) + pph);
 		
 		return new Location(bukkitWorld, locx, 1, locz);
 	}
@@ -614,13 +651,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public Block getCenterBlock(int plotX, int plotZ)
 	{
 		double multi = getPlotBlockPositionMultiplier();
-		
-		int blockx = (int)Math.round((double)(plotX * multi) + (double)(PlotSize / 2));
-		int blockz = (int)Math.round((double)(plotZ * multi) + (double)(PlotSize / 2));
-		
-		PlotMe.logger.info(PlotMe.PREFIX + "DEBUG: centerBlockX " + String.valueOf(blockx) + "  centerBlockZ " + String.valueOf(blockz));
-		
-		return bukkitWorld.getBlockAt(blockx, RoadHeight, blockz);
+		return bukkitWorld.getBlockAt((int)Math.round((double)(plotX * multi) + (double)(PlotSize / 2)), RoadHeight, (int)Math.round((double)(plotZ * multi) + (double)(PlotSize / 2)));
 	}
 	
 	public Block getCenterBlock(Plot plot)
@@ -641,10 +672,10 @@ public class PlotWorld implements Comparable<PlotWorld>
 		
 		double divi = getPlotBlockPositionMultiplier();
 		
-		int minX = (int)Math.floor(Math.min(loc1.getBlockX(), loc2.getBlockX()) / divi);
-		int minZ = (int)Math.floor(Math.min(loc1.getBlockZ(), loc2.getBlockZ()) / divi);
-		int maxX = (int)Math.ceil(Math.max(loc1.getBlockX(), loc2.getBlockX()) / divi);
-		int maxZ = (int)Math.ceil(Math.max(loc1.getBlockZ(), loc2.getBlockZ()) / divi);
+		int minX = (int)Math.ceil(Math.min(loc1.getBlockX(), loc2.getBlockX()) / divi);
+		int minZ = (int)Math.ceil(Math.min(loc1.getBlockZ(), loc2.getBlockZ()) / divi);
+		int maxX = (int)Math.floor(Math.max(loc1.getBlockX(), loc2.getBlockX()) / divi);
+		int maxZ = (int)Math.floor(Math.max(loc1.getBlockZ(), loc2.getBlockZ()) / divi);
 		
 		List<Plot> tmpList = new ArrayList<Plot>();
 
@@ -672,10 +703,10 @@ public class PlotWorld implements Comparable<PlotWorld>
 		double maxX = Math.max(x1, x2);
 		double maxZ = Math.max(z1, z2);
 		
-		int minChunkX = (int)Math.floor((double)(minX / 16));
-		int minChunkZ = (int)Math.floor((double)(minZ / 16));
-		int maxChunkX = (int)Math.ceil((double)(maxX / 16));
-		int maxChunkZ = (int)Math.ceil((double)(maxZ / 16));
+		int minChunkX = (int)Math.ceil((double)(minX / 16));
+		int minChunkZ = (int)Math.ceil((double)(minZ / 16));
+		int maxChunkX = (int)Math.floor((double)(maxX / 16));
+		int maxChunkZ = (int)Math.floor((double)(maxZ / 16));
 
 		for (int cx = minChunkX; cx <= maxChunkX; cx++)
 		{			
@@ -714,14 +745,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 			return null;
 		}
 		
-		double multi = getPlotBlockPositionMultiplier();
-		
-		double x1 = (double)(plot.getPlotX() * multi);
-		double z1 = (double)(plot.getPlotZ() * multi);
-		double x2 = (double)(x1 + PlotSize);
-		double z2 = (double)(z1 + PlotSize);
-		
-		return getAreaEntities(x1, z1, x2, z2, includePlayers);
+		Location baseLocation = getMinBlockLocation(plot);
+		return getAreaEntities(baseLocation.getBlockX()+3, baseLocation.getBlockZ()+3, baseLocation.getBlockX()+PlotSize-3, baseLocation.getBlockZ()+PlotSize-3, includePlayers);
 	}
 	
 	public int getPlotSize()
@@ -736,6 +761,12 @@ public class PlotWorld implements Comparable<PlotWorld>
 			return bukkitWorld.getName();
 		}
 		return null;
+	}
+	
+	@Override
+	public String toString()
+	{
+		return getName();
 	}
 	
 	@Override
@@ -755,7 +786,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	    	return false;
 	    }
 	    
-	    if (this.id == ((PlotWorld)o).id)
+	    if (this.id == ((PlotWorld)o).getId())
 	    {
 	    	return true;
 	    }
@@ -764,8 +795,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 	}
 
 	@Override
-	public int compareTo(PlotWorld pw) {
-		return this.id - pw.id;
+	public int compareTo(PlotWorld pw2) {
+		return this.id - pw2.getId();
 	}
 	
 }
