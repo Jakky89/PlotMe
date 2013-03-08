@@ -19,6 +19,7 @@ import org.bukkit.block.Biome;
 import org.bukkit.entity.Player;
 
 import com.worldcretornica.plotme.utils.Jakky89Properties;
+import com.worldcretornica.plotme.utils.Pair;
 
 
 public class PlotDatabase {
@@ -29,48 +30,54 @@ public class PlotDatabase {
 	public final static String sqlitedb = "/plots.db";
 	
     final static String LAYOUT_WORLD_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_worlds` " +
-			"("
-				+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-				+ "`worldname` VARCHAR(64) NOT NULL UNIQUE" +
-			");";
+					"("
+						+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+						+ "`worldname` VARCHAR(64) NOT NULL UNIQUE" +
+					")";
 
 	final static String LAYOUT_PLAYER_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_players` " + 
-	 			"("
-	 	  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-	 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE"
-	 	  			+ "`displayname` VARCHAR(32) DEFAULT NULL,"
-	 	  			+ "`lastonline` UNSIGNED INTEGER DEFAULT NULL" +
-	 	  		");";
+		 			"("
+		 	  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE,"
+		 	  			+ "`displayname` VARCHAR(32) DEFAULT NULL,"
+		 	  			+ "`lastonline` UNSIGNED INTEGER DEFAULT NULL" +
+		 	  		")";
 	
 	final static String LAYOUT_PLOT_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plots` " +
-			 		"("
-			  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-	  		  		+ "`world` UNSIGNED INTEGER,"
-	  		  		+ "`xpos` INTEGER,"
-	  		  		+ "`zpos` INTEGER,"
-	  		  		+ "`owner` UNSIGNED INTEGER DEFAULT NULL,"
-	  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
-	  		  		+ "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
-			  		+ "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
-			  		+ "`price` DOUBLE DEFAULT 0,"
-			  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
-			  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-			  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL,"
-			  		+ "`properties` BLOB DEFAULT NULL, "
-			  		+ "UNIQUE (world, xpos, zpos)" +
-			  	");";
+				 	"("
+				  		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		  		  		+ "`world` UNSIGNED INTEGER,"
+		  		  		+ "`xpos` INTEGER,"
+		  		  		+ "`zpos` INTEGER,"
+		  		  		+ "`owner` UNSIGNED INTEGER DEFAULT NULL INDEX,"
+		  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
+		  		  		+ "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
+				  		+ "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
+				  		+ "`price` DOUBLE DEFAULT 0,"
+				  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
+				  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL,"
+				  		+ "`properties` BLOB DEFAULT NULL,"
+				  		+ "UNIQUE (world, xpos, zpos)" +
+				  	")";
+	
+	final static String LAYOUT_RIGHTS_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_rights` " +
+					"("
+						+ "`plot` UNSIGNED INTEGER NOT NULL,"
+						+ "`player` UNSIGNED INTEGER NOT NULL,"
+						+ "`rights` INTEGER NOT NULL DEFAULT 0,"
+						+ "PRIMARY KEY(plot, player)" +
+					")";
 	
 	final static String LAYOUT_AUCTIONS_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_auctions` " +
 					"("
-						+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
 						+ "`date` UNSIGNED INTEGER NOT NULL,"
 						+ "`auction` UNSIGNED INTEGER NOT NULL,"
 						+ "`plot` UNSIGNED INTEGER NOT NULL,"
 						+ "`player` UNSIGNED INTEGER NOT NULL,"
-						+ "`amount` UNSIGNED INTEGER NOT NULL,"
-						+ "`typeid` UNSIGNED SMALLINT DEFAULT NULL,"
-						+ "`datavalue` UNSIGNED TINYINT DEFAULT NULL," +
-					");";
+						+ "`amount` UNSIGNED INTEGER NOT NULL"
+						+ "INDEX(plot, auction)" +
+					")";
 	
 	/*final static String LAYOUT_CHANGES_TABLE  = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_changes` " +
 					"("
@@ -85,16 +92,16 @@ public class PlotDatabase {
 						+ "`toblockid` UNSIGNED SMALLINT NOT NULL,"
 						+ "`toblockvalue` UNSIGNED TINYINT NOT NULL DEFAULT 0,"
 						+ "`binarydata` BLOB DEFAULT NULL" +
-					");";*/
+					")";*/
 	
 	final static String LAYOUT_COMMENT_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_comments` " +
-			 	"("
-			 		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-			 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
-			 		+ "`player` UNSIGNED INTEGER NOT NULL,"
-			 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-			 		+ "`message` TEXT" +
-			 	");";
+				 	"("
+				 		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+				 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
+				 		+ "`player` UNSIGNED INTEGER NOT NULL,"
+				 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+				 		+ "`message` TEXT" +
+				 	")";
 	
 	/*final static String LAYOUT_ROOMS_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_rooms` " +
 					"("
@@ -110,7 +117,7 @@ public class PlotDatabase {
 						+ "`rentee` UNSIGNED INTEGER DEFAULT NULL,"
 						+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
 						+ "`comment` TEXT" +
-					");";*/
+					")";*/
 	
 	final static String LAYOUT_INFO_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_info` " + 
 				"("
@@ -1155,7 +1162,7 @@ public class PlotDatabase {
     }
     
     /**
-     * @return: arraylist of finished plot ids
+     * @return: ArrayList of FINISHED Plot IDs
      */
     public static List<Integer> getFinishedPlots()
     {
@@ -1193,6 +1200,139 @@ public class PlotDatabase {
         catch (SQLException ex) 
         {
         	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while fetching list of finished plots:");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+        	return null;
+        } 
+        finally 
+        {
+            try 
+            {
+                if (st != null) 
+                {
+                    st.close();
+                }
+            } catch (SQLException ex) {}
+        }
+    }
+    
+    /**
+     * @return: ArrayList of EXPIRED Plot IDs
+     */
+    public static List<Integer> getExpiredPlots()
+    {
+    	con = getConnection();
+    	if (con == null)
+    	{
+    		return null;
+    	}
+
+    	Statement st = null;
+   	    ResultSet rs = null;
+   	    
+   	    long currentTime = Math.round(System.currentTimeMillis() / 1000);
+
+        try {
+        	st = con.createStatement();
+        	
+			rs = st.executeQuery("SELECT id " +
+								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
+								 "WHERE " +
+										"expireddate IS NOT NULL" +
+									" AND " +
+										"expireddate>0" + 
+									" AND " +
+										"expireddate<=" + String.valueOf(currentTime) +
+									" AND " +
+											"(finisheddate IS NULL" +
+										" OR " +
+											"finisheddate<=0)" +
+									" AND " +
+										"isprotected=0" +
+									" AND " +
+										"isforsale=0" +
+									" AND " +
+											"(auction IS NULL" +
+										" OR " +
+											"auction<=0)" +
+								" ORDER BY expireddate ASC"
+								);
+
+			List<Integer> tmpList = new ArrayList<Integer>();
+			
+			while (rs.next())
+			{
+				if (rs.getInt(1) > 0)
+				{
+					tmpList.add(rs.getInt(1));
+				}
+			}
+			
+			return tmpList;
+    	}
+        catch (SQLException ex) 
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while fetching list of expired plots!");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+        	return null;
+        } 
+        finally 
+        {
+            try 
+            {
+                if (st != null) 
+                {
+                    st.close();
+                }
+            } catch (SQLException ex) {}
+        }
+    }
+    
+    /**
+     * @param: playerId
+     * @return: ArrayList of PAIRS of PLOT ID and RIGHTS
+     */
+    public static List<Pair<Integer, Integer>> getPlotRights(int playerId)
+    {
+    	if (playerId < 1)
+    	{
+    		return null;
+    	}
+    	
+    	con = getConnection();
+    	if (con == null)
+    	{
+    		return null;
+    	}
+
+    	Statement st = null;
+   	    ResultSet rs = null;
+   	    
+   	    long currentTime = Math.round(System.currentTimeMillis() / 1000);
+
+        try {
+        	st = con.createStatement();
+        	
+			rs = st.executeQuery("SELECT plot, rights " +
+								 "FROM `" + PlotMe.databasePrefix + "plotme_rights` " +
+								 "WHERE " +
+										"player=" + String.valueOf(playerId)
+								);
+
+			List<Pair<Integer, Integer>> tmpList = new ArrayList<Pair<Integer, Integer>>();
+			
+			while (rs.next())
+			{
+				if (rs.getInt(1) > 0)
+				{
+					tmpList.add(new Pair<Integer, Integer>(rs.getInt(1), rs.getInt(2)));
+				}
+			}
+			
+			return tmpList;
+    	}
+        catch (SQLException ex) 
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while fetching list of expired plots!");
         	PlotMe.logger.severe("  " + ex.getMessage());
         	return null;
         } 

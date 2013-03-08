@@ -8,23 +8,29 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import net.milkbowl.vault.economy.Economy;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.RemoteConsoleCommandSender;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -39,9 +45,9 @@ import org.yaml.snakeyaml.Yaml;
 
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.worldcretornica.plotme.Metrics.Graph;
+import com.worldcretornica.plotme.commands.PlotMeCommands;
 import com.worldcretornica.plotme.listener.PlotListener;
 import com.worldcretornica.plotme.listener.PlotWorldEditListener;
-import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotMe extends JavaPlugin
 {
@@ -90,8 +96,8 @@ public class PlotMe extends JavaPlugin
     
     public static PlotPlayer bankOwner;
     
-    private static HashSet<String> playersignoringwelimit = null;
-    private static HashMap<String, String> captions;
+    private static Set<String> playersignoringwelimit = null;
+    private static Map<String, String> captions;
     
     private static Boolean update = false;
     
@@ -103,12 +109,6 @@ public class PlotMe extends JavaPlugin
 	public void onDisable()
 	{	
 		PlotDatabase.closeConnection();
-		NAME = null;
-		PREFIX = null;
-		VERSION = null;
-		WEBSITE = null;
-		
-		logger = null;
 		
 		usemySQL = null;
 		mySQLuname = null;
@@ -136,6 +136,22 @@ public class PlotMe extends JavaPlugin
 	
 	public void onEnable()
 	{
+		self = this;
+		
+		PluginDescriptionFile pdfFile 	= getDescription();
+		
+		if (!this.getDataFolder().exists()) 
+		{
+        	this.getDataFolder().mkdirs();
+        }
+		
+		NAME 					= pdfFile.getName();
+		PREFIX					= ChatColor.BLUE + "[" + NAME + "] " + ChatColor.RESET;
+		VERSION					= pdfFile.getVersion();
+		WEBSITE					= pdfFile.getWebsite();
+		configpath				= getDataFolder().getAbsolutePath();
+		playersignoringwelimit	= new HashSet<String>();
+		
 		initialize();
 		
 		doMetric();
@@ -164,11 +180,19 @@ public class PlotMe extends JavaPlugin
 			usingvoxelsniper = true;
 		}
 
-		getCommand("plotme").setExecutor(new PlotMeCommands(this));
+		PlotMeCommands pmcExec = new PlotMeCommands(this);
+		getCommand("plot").setExecutor(pmcExec);
+		getCommand("plotme").setExecutor(pmcExec);
+		getCommand("pme").setExecutor(pmcExec);
+		
+		// Most servers have mcmmo installed (the /p is there the party command)
+		//getCommand("p").setExecutor(pmcExec);
 				
 		setupUpdater();
-				
-		self = this;
+	}
+	
+	public Server getBukkitServer() {
+		return getServer();
 	}
 	
 	private void setupUpdater()
@@ -264,39 +288,53 @@ public class PlotMe extends JavaPlugin
 		}
 	}
 	
-	public static Pair<Integer, Byte> getItemIdValue(String itemstr)
-	{
-		 int dpp = itemstr.indexOf(':');
-		 if (dpp > 0)
-		 {
-			 return new Pair<Integer, Byte>(Integer.valueOf(itemstr.substring(0, dpp)), Byte.valueOf(itemstr.substring(dpp)));
-		 }
-		 else
-		 {
-			 return new Pair<Integer, Byte>(Integer.valueOf(itemstr.substring(0, dpp)), null);
-		 }
-	}
-	
 	public static boolean cPerms(CommandSender sender, String node)
 	{
-		return sender.hasPermission(node);
+		if (((sender instanceof Player) && (((Player)sender).hasPermission(node) || ((Player)sender).hasPermission("plotme.admin.*"))) || (sender instanceof ConsoleCommandSender) || (sender instanceof RemoteConsoleCommandSender) || (PlotMe.opPermissions && sender.isOp()))
+		{
+			return true;
+		}
+		return false;
 	}
 	
-	public void initialize()
+	private List<String> getDefaultProtectedBlocks()
 	{
-		PluginDescriptionFile pdfFile = this.getDescription();
-		NAME = pdfFile.getName();
-		PREFIX = ChatColor.BLUE + "[" + NAME + "] " + ChatColor.RESET;
-		VERSION = pdfFile.getVersion();
-		WEBSITE = pdfFile.getWebsite();
-		configpath = getDataFolder().getAbsolutePath();
-		playersignoringwelimit = new HashSet<String>();
+		List<String> protections = new ArrayList<String>();
+		
+		protections.add(Material.CHEST.toString());
+		protections.add(Material.FURNACE.toString());
+		protections.add(Material.BURNING_FURNACE.toString());
+		protections.add(Material.ENDER_PORTAL_FRAME.toString());
+		protections.add(Material.DIODE_BLOCK_ON.toString());
+		protections.add(Material.DIODE_BLOCK_OFF.toString());
+		protections.add(Material.JUKEBOX.toString());
+		protections.add(Material.NOTE_BLOCK.toString());
+		protections.add(Material.BED.toString());
+		protections.add(Material.CAULDRON.toString());
+		protections.add(Material.BREWING_STAND.toString());
+		protections.add(Material.BEACON.toString());
+		protections.add(Material.FLOWER_POT.toString());
+		protections.add(Material.ANVIL.toString());
+		
+		return protections;
+	}
+	
+	private List<String> getDefaultPreventedItems()
+	{
+		List<String> preventeditems = new ArrayList<String>();
 
-		if (!this.getDataFolder().exists()) 
-		{
-        	this.getDataFolder().mkdirs();
-        }
-				
+		preventeditems.add(Material.INK_SACK.toString() + ":15");
+		preventeditems.add(Material.FLINT_AND_STEEL.toString());
+		preventeditems.add(Material.MINECART.toString());
+		preventeditems.add(Material.POWERED_MINECART.toString());
+		preventeditems.add(Material.STORAGE_MINECART.toString());
+		preventeditems.add(Material.BOAT.toString());
+		
+		return preventeditems;
+	}
+	
+	public void loadConfiguration()
+	{
 		File configfile = new File(configpath, "config.yml");
 		FileConfiguration config = new YamlConfiguration();
 		
@@ -317,7 +355,7 @@ public class PlotMe extends JavaPlugin
 			logger.severe(PREFIX + "invalid configuration format");
 			e.printStackTrace();
 		}
-        
+
         usemySQL = config.getBoolean("usemySQL", false);
 		mySQLconn = config.getString("mySQLconn", "jdbc:mysql://localhost:3306/minecraft");
 		mySQLuname = config.getString("mySQLuname", "root");
@@ -336,6 +374,9 @@ public class PlotMe extends JavaPlugin
 		ConfigurationSection cfgWorlds;
 		ConfigurationSection cfgWorld;
 		String cfgWorldName;
+		
+		List<String> defProtectedBlocks = getDefaultProtectedBlocks();
+		List<String> defPreventedItems = getDefaultPreventedItems();
 		
 		if (config.contains("worlds"))
 		{
@@ -361,8 +402,9 @@ public class PlotMe extends JavaPlugin
 			
 			cfgWorld.set("RoadHeight", DEFAULT_ROAD_HEIGHT);
 			cfgWorld.set("DaysToExpiration", DEFAULT_DAYS_EXPIRATION);
-			cfgWorld.set("ProtectedBlocks", getDefaultProtectedBlocks());
-			cfgWorld.set("PreventedItems", getDefaultPreventedItems());
+
+			cfgWorld.set("ProtectedBlocks", defProtectedBlocks);
+			cfgWorld.set("PreventedItems", defPreventedItems);
 			cfgWorld.set("ProtectedWallBlockId", "44:4");
 			cfgWorld.set("ForSaleWallBlockId", "44:1");
 			cfgWorld.set("AuctionWallBlockId", "44:1");
@@ -400,6 +442,7 @@ public class PlotMe extends JavaPlugin
 			
 			cfgWorld = cfgWorlds.createSection("ExampleWorld");
 			cfgWorld.set("InheritWorld", "Global");
+			cfgWorld.set("PlotsEnabled", "true");
 		}
 		
 		Iterator<String> cfgWorldsIterator = cfgWorlds.getKeys(false).iterator();
@@ -439,7 +482,7 @@ public class PlotMe extends JavaPlugin
 			PlotWorld tmpPlotWorld = PlotDatabase.getPlotWorld(bukkitWorld);
 			if (tmpPlotWorld == null)
 			{
-				logger.warning(PREFIX + "Id of world \"" + cfgWorldName + "\" could not be loaded from or created in database!");
+				logger.warning(PREFIX + "Id of world \"" + cfgWorldName + "\" could not be loaded from nor created in database!");
 				continue;
 			}
 			
@@ -473,16 +516,16 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.DisableObsidianIgnition				= cfgCurrWorld.getBoolean("DisableObsidianIgnition",				false);
 	
 			
-			tmpPlotWorld.RoadHeight				= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
+			tmpPlotWorld.RoadHeight								= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
 			if (tmpPlotWorld.RoadHeight > 250)
 			{
 				logger.severe(PREFIX + "RoadHeight above 250 is unsafe. This is the height at which your road is located. Normalized to 64.");
-				tmpPlotWorld.RoadHeight = 64;
+				tmpPlotWorld.RoadHeight 						= 64;
 			}
 			else if (tmpPlotWorld.RoadHeight < 1)
 			{
 				logger.severe(PREFIX + "RoadHeight below 1 is invalid. This is the height at which your road is located. Normalized to 64.");
-				tmpPlotWorld.RoadHeight = 64;
+				tmpPlotWorld.RoadHeight 						= 64;
 			}
 			tmpPlotWorld.DaysToExpiration			= cfgCurrWorld.getInt("DaysToExpiration",	DEFAULT_DAYS_EXPIRATION);
 			
@@ -492,22 +535,7 @@ public class PlotMe extends JavaPlugin
 			}
 			else
 			{
-				tmpPlotWorld.addToProtectedBlocks(Material.CHEST);
-				tmpPlotWorld.addToProtectedBlocks(Material.FURNACE);
-				tmpPlotWorld.addToProtectedBlocks(Material.BURNING_FURNACE);
-				tmpPlotWorld.addToProtectedBlocks(Material.ENDER_PORTAL_FRAME);
-				tmpPlotWorld.addToProtectedBlocks(Material.DIODE_BLOCK_ON);
-				tmpPlotWorld.addToProtectedBlocks(Material.DIODE_BLOCK_OFF);
-				tmpPlotWorld.addToProtectedBlocks(Material.JUKEBOX);
-				tmpPlotWorld.addToProtectedBlocks(Material.NOTE_BLOCK);
-				tmpPlotWorld.addToProtectedBlocks(Material.BED);
-				tmpPlotWorld.addToProtectedBlocks(Material.CAULDRON);
-				tmpPlotWorld.addToProtectedBlocks(Material.BREWING_STAND);
-				tmpPlotWorld.addToProtectedBlocks(Material.BEACON);
-				tmpPlotWorld.addToProtectedBlocks(Material.FLOWER_POT);
-				tmpPlotWorld.addToProtectedBlocks(Material.ANVIL);
-				tmpPlotWorld.addToProtectedBlocks(Material.SIGN_POST);
-				tmpPlotWorld.addToProtectedBlocks(Material.WALL_SIGN);
+				tmpPlotWorld.addToProtectedBlocks(defProtectedBlocks);
 			}
 			
 			if (cfgCurrWorld.contains("PreventedItems"))
@@ -516,16 +544,9 @@ public class PlotMe extends JavaPlugin
 			}
 			else
 			{
-				tmpPlotWorld.addToPreventedItems(Material.INK_SACK.getId(), (byte)15);
-				tmpPlotWorld.addToPreventedItems(Material.INK_SACK.getId(), (byte)15);
-				tmpPlotWorld.addToPreventedItems(Material.FLINT_AND_STEEL.getId());
-				tmpPlotWorld.addToPreventedItems(Material.MINECART.getId());
-				tmpPlotWorld.addToPreventedItems(Material.POWERED_MINECART.getId());
-				tmpPlotWorld.addToPreventedItems(Material.STORAGE_MINECART.getId());
-				tmpPlotWorld.addToPreventedItems(Material.BOAT.getId());
+				tmpPlotWorld.addToPreventedItems(defPreventedItems);
 			}
-
-			
+		
 			ConfigurationSection economysection;
 			
 			if (cfgCurrWorld.getConfigurationSection("economy") == null)
@@ -638,9 +659,19 @@ public class PlotMe extends JavaPlugin
 			logger.severe(PREFIX + "error writting configurations");
 			e.printStackTrace();
 		}
-		
+	}
+	
+	public void initialize()
+	{
+		loadConfiguration();
 		loadCaptions();
     }
+	
+	public void doReload()
+	{
+		PlotDatabase.closeConnection();
+		initialize();
+	}
 	
 	private void setupEconomy()
     {
@@ -728,47 +759,12 @@ public class PlotMe extends JavaPlugin
 		return loc;
 	}
 	
-	private HashSet<Integer> getDefaultProtectedBlocks()
-	{
-		HashSet<Integer> protections = new HashSet<Integer>();
-		
-		protections.add(Material.CHEST.getId());
-		protections.add(Material.FURNACE.getId());
-		protections.add(Material.BURNING_FURNACE.getId());
-		protections.add(Material.ENDER_PORTAL_FRAME.getId());
-		protections.add(Material.DIODE_BLOCK_ON.getId());
-		protections.add(Material.DIODE_BLOCK_OFF.getId());
-		protections.add(Material.JUKEBOX.getId());
-		protections.add(Material.NOTE_BLOCK.getId());
-		protections.add(Material.BED.getId());
-		protections.add(Material.CAULDRON.getId());
-		protections.add(Material.BREWING_STAND.getId());
-		protections.add(Material.BEACON.getId());
-		protections.add(Material.FLOWER_POT.getId());
-		protections.add(Material.ANVIL.getId());
-		
-		return protections;
-	}
-	
-	private HashSet<String> getDefaultPreventedItems()
-	{
-		HashSet<String> preventeditems = new HashSet<String>();
-
-		preventeditems.add(String.valueOf(Material.INK_SACK.getId()) + ":15");
-		preventeditems.add(String.valueOf(Material.FLINT_AND_STEEL.getId()));
-		preventeditems.add(String.valueOf(Material.MINECART.getId()));
-		preventeditems.add(String.valueOf(Material.POWERED_MINECART.getId()));
-		preventeditems.add(String.valueOf(Material.STORAGE_MINECART.getId()));
-		preventeditems.add(String.valueOf(Material.BOAT.getId()));
-		
-		return preventeditems;
-	}
-
 	private void loadCaptions()
 	{
 		File filelang = new File(this.getDataFolder(), "caption-english.yml");
 	
 		TreeMap<String, String> properties = new TreeMap<String, String>();
+		
 		properties.put("MsgDeletedExpiredPlots", "Deleted expired plot");
 		properties.put("MsgDoesNotExistOrNotLoaded","does not exist or is not loaded.");
 		properties.put("MsgNotPlotWorld", "This is not a plot world.");
@@ -849,7 +845,8 @@ public class PlotMe extends JavaPlugin
 		properties.put("MsgNoPlotExpired","No plots are expired");
 		properties.put("MsgExpiredPlotsPage","Expired plots page");
 		properties.put("MsgListOfPlotsWhere","List of plots where");
-		properties.put("MsgNowAllowed", "Not allowed");
+		properties.put("MsgNotAllowed", "Not allowed");
+		properties.put("MsgNowAllowed", "is now allowed");
 		properties.put("MsgCanBuild","can build:");
 		properties.put("MsgListOfPlotsWhereYou","List of plots where you can build:");
 		properties.put("MsgWorldEditInYourPlots","You can now only WorldEdit in your plots");
@@ -1175,8 +1172,8 @@ public class PlotMe extends JavaPlugin
 		}
 		else
 		{
-			logger.warning("[" + NAME + "] Missing caption: " + s);
-			return "ERROR:Missing caption '" + s + "'";
+			logger.warning("[" + NAME + "] Missing caption for " + s);
+			return "HINT: Missing caption for '" + s + "'";
 		}
 	}
 	

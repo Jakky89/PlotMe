@@ -7,7 +7,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -17,6 +19,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
+import com.worldcretornica.plotme.utils.ItemUtils;
 import com.worldcretornica.plotme.utils.Pair;
 
 
@@ -28,6 +31,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	private World bukkitWorld;
 
+	public boolean PlotsEnabled;
 	public int PlotSize;
 	public int PlotAutoLimit;
 	public int PathWidth;
@@ -136,22 +140,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public List<String> getProtectedBlocksAsStringList()
 	{
-		ArrayList<String> tmpList = new ArrayList<String>();
-		Pair<Integer, Byte> tmpEntry;
-		Iterator<Pair<Integer, Byte>> ppIterator = ProtectedBlocks.iterator();
-		while (ppIterator.hasNext())
-		{
-			tmpEntry = ppIterator.next();
-			if (tmpEntry.getRight() != null)
-			{
-				tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
-			}
-			else
-			{
-				tmpList.add(tmpEntry.getLeft().toString());
-			}
-		}
-		return tmpList;
+		return ItemUtils.itemIdValuesToStringList(ProtectedBlocks);
 	}
 
 	public boolean isProtectedBlock(Integer typeId, Byte dataValue)
@@ -205,9 +194,15 @@ public class PlotWorld implements Comparable<PlotWorld>
 				ProtectedBlocks = new HashSet<Pair<Integer, Byte>>();
 			}
 			
-			for (String s : typeIdValues)
+			List<Pair<Integer, Byte>> tmpList = new ArrayList<Pair<Integer, Byte>>();
+			tmpList = ItemUtils.stringListToItemIdValues(typeIdValues);
+			if (tmpList != null && !tmpList.isEmpty())
 			{
-				ProtectedBlocks.add(PlotMe.getItemIdValue(s));
+				ProtectedBlocks.addAll(tmpList);
+			}
+			else
+			{
+				PlotMe.logger.log(Level.WARNING, PlotMe.PREFIX + ChatColor.RED + "Could not add some protected blocks to the blacklist!");
 			}
 		}
 	}
@@ -271,22 +266,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public List<String> getPreventedItemsAsStringList()
 	{
-		ArrayList<String> tmpList = new ArrayList<String>();
-		Pair<Integer, Byte> tmpEntry;
-		Iterator<Pair<Integer, Byte>> piIterator = PreventedItems.iterator();
-		while (piIterator.hasNext())
-		{
-			tmpEntry = piIterator.next();
-			if (tmpEntry.getRight() != null)
-			{
-				tmpList.add(tmpEntry.getLeft().toString() + ":" + tmpEntry.getRight().toString());
-			}
-			else
-			{
-				tmpList.add(tmpEntry.getLeft().toString());
-			}
-		}
-		return tmpList;
+		return ItemUtils.itemIdValuesToStringList(PreventedItems);
 	}
 	
 	public boolean isPreventedItem(Integer typeId, Byte dataValue)
@@ -341,9 +321,15 @@ public class PlotWorld implements Comparable<PlotWorld>
 				PreventedItems = new HashSet<Pair<Integer, Byte>>();
 			}
 			
-			for (String s : typeIdValues)
+			List<Pair<Integer, Byte>> tmpList = new ArrayList<Pair<Integer, Byte>>();
+			tmpList = ItemUtils.stringListToItemIdValues(typeIdValues);
+			if (tmpList != null && !tmpList.isEmpty())
 			{
-				PreventedItems.add(PlotMe.getItemIdValue(s));
+				PreventedItems.addAll(tmpList);
+			}
+			else
+			{
+				PlotMe.logger.log(Level.WARNING, PlotMe.PREFIX + ChatColor.RED + "Could not add some prevented items to the blacklist!");
 			}
 		}
 	}
@@ -435,21 +421,9 @@ public class PlotWorld implements Comparable<PlotWorld>
 			return false;
 		}
 
-		Plot oldPlot = plotPositions.put(plot.getPlotPosition(), plot);
-		if (oldPlot != null)
-		{
-			if (!oldPlot.equals(plot))
-			{
-				oldPlot.resetNeighbourPlots();
-				return true;
-			}
-		}
-		else
-		{
-			return true;
-		}
-		
-		return false;
+		plotPositions.put(plot.getPlotPosition(), plot);
+		plot.refreshNeighbourPlots();
+		return true;
 	}
 
 	public boolean unregisterPlot(Plot plot)
@@ -485,7 +459,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public double getPlotBlockPositionMultiplier()
 	{
-		return (double)(PlotSize + (PathWidth / 2));
+		return (double)(PlotSize + ((PathWidth + 1) / 2));
 	}
 	
 	public PlotPosition blockToPlotPosition(double blockX, double blockZ)
@@ -530,7 +504,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		double pph = (double)(PathWidth / 2);
 		double ppp = (double)(PlotSize + pph);
 		
-		if (bsx > pph && bsx < ppp && bsz > pph && bsz < ppp)
+		if (bsx < pph && bsx > (ppp + 1) && bsz < pph && bsz > (ppp + 1))
 		{
 			return false;
 		}
@@ -625,10 +599,10 @@ public class PlotWorld implements Comparable<PlotWorld>
 	{
 		double multi = getPlotBlockPositionMultiplier();
 		
-		double pph = (double)(PathWidth / 2);
+		double pph = (double)(PathWidth + 1 / 2);
 		
-		int locx = (int)Math.ceil((double)(plot.getPlotX() * multi) + pph);
-		int locz = (int)Math.ceil((double)(plot.getPlotZ() * multi) + pph);
+		int locx = (int)Math.ceil((double)(plot.getPlotX() * multi) + pph + 1);
+		int locz = (int)Math.ceil((double)(plot.getPlotZ() * multi) + pph + 1);
 		
 		return new Location(bukkitWorld, locx, 1, locz);
 	}
