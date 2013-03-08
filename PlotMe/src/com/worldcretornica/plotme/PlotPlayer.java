@@ -122,7 +122,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 			ownplots = new HashSet<Plot>();
 		}
 		ownplots.add(plot);
-		plot.setOwner(this);
 	}
 	
 	public void removeOwnPlot(Plot plot)
@@ -132,7 +131,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 			return;
 		}
 		ownplots.remove(plot);
-		plot.unsetOwner();
 	}
 	
 	public void addToPlotGroup(PlotGroup plotGroup)

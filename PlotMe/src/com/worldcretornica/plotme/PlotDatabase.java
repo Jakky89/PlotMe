@@ -65,7 +65,7 @@ public class PlotDatabase {
 					"("
 						+ "`plot` UNSIGNED INTEGER NOT NULL,"
 						+ "`player` UNSIGNED INTEGER NOT NULL,"
-						+ "`rights` INTEGER NOT NULL DEFAULT 0,"
+						+ "`rights` INTEGER NOT NULL DEFAULT 0," // rights are simply integer values where single bits will be toggled
 						+ "PRIMARY KEY(plot, player)" +
 					")";
 	
@@ -629,8 +629,10 @@ public class PlotDatabase {
             rs = st.getResultSet();
             if (rs.next())
             {
+            	PlotMe.logger.info(PlotMe.PREFIX + "Loading player " + rs.getString(2) + " (ID " + String.valueOf(plotPlayerId) + ") from database.");
                	return new PlotPlayer(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4));
             }
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Got no result from database while loading plot player with id " + String.valueOf(plotPlayerId) + "!");
             return null;
         }
         catch (SQLException ex)
@@ -765,7 +767,11 @@ public class PlotDatabase {
             if (rs.next())
             {
             	playerId = rs.getInt(1);
-            	if (displayName == null || displayName.isEmpty())
+            	if (displayName != null)
+            	{
+            		updateData(playerId, "players", "displayname", displayName);
+            	}
+            	else
             	{
             		displayName = rs.getString(2);
             	}
@@ -781,7 +787,7 @@ public class PlotDatabase {
 	            rs = st.getGeneratedKeys();
 	            if (rs.next()) {
 	            	playerId = rs.getInt(1);
-	            	PlotMe.logger.info(PlotMe.PREFIX + "Created new entry with id " + String.valueOf(playerId) + " for plot owner \"" + playerName + "\" in database.");
+	            	PlotMe.logger.info(PlotMe.PREFIX + "Created new entry with id " + String.valueOf(playerId) + " for player \"" + playerName + "\" in PlotMe database " + PlotMe.databasePrefix + "plotme_players");
 	            }
 	            else
 	            {
@@ -872,7 +878,7 @@ public class PlotDatabase {
         }
         catch (SQLException ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting plots of owner with id " + String.valueOf(ownerId) + " from database:");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while getting plots of owner with id " + String.valueOf(ownerId) + " from database:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         finally
