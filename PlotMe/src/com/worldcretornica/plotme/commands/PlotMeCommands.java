@@ -47,6 +47,7 @@ public class PlotMeCommands implements CommandExecutor {
 		// USER COMMANDS
 		helpCommandRunner = new CommandHelp(this);
 		commands.put(C("CommandHelp"), helpCommandRunner);
+		commands.put(C("CommandClaim"), new CommandClaim(this));
 		
 		// ADMIN COMMANDS
 		commands.put(C("CommandMove"), new CommandMovePlot(this));
@@ -88,6 +89,9 @@ public class PlotMeCommands implements CommandExecutor {
 		
 							if (arg0.equals(C("CommandClaim")))
 							{
+								/**
+								 * TODO: FIRST CONFIGURABLE X PLOTS ARE FOR FREE (after that it costs something)
+								 */
 								return claim(player, args);
 							}
 							if (arg0.equals(C("CommandAuto")))

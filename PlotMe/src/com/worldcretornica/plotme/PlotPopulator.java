@@ -7,29 +7,32 @@ import org.bukkit.World;
 import org.bukkit.block.Biome;
 import org.bukkit.generator.BlockPopulator;
 
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
+
 public class PlotPopulator extends BlockPopulator {
 
 	private double plotsize;
 	private double pathsize;
-	private byte bottom;
-	private byte wall;
-	private byte plotfloor;
-	private byte filling;
-	private byte floor1;
-	private byte floor2;
+	private Jakky89ItemIdData bottom;
+	private Jakky89ItemIdData wall;
+	private Jakky89ItemIdData plotfloor;
+	private Jakky89ItemIdData filling;
+	private Jakky89ItemIdData floor1;
+	private Jakky89ItemIdData floor2;
 	private int roadheight;
 
 	public void setDefaults()
 	{
-		plotsize = PlotMe.DEFAULT_PLOT_SIZE;
-		pathsize = PlotMe.DEFAULT_PATH_WIDTH;
-		bottom = PlotMe.DEFAULT_BOTTOM_BLOCK;
-		wall = PlotMe.DEFAULT_WALL_BLOCK;
-		plotfloor = PlotMe.DEFAULT_FLOOR_BLOCK;
-		filling = PlotMe.DEFAULT_FILL_BLOCK;
-		roadheight = PlotMe.DEFAULT_ROAD_HEIGHT;
-		floor1 = PlotMe.DEFAULT_FLOOR_1;
-		floor2 = PlotMe.DEFAULT_FLOOR_2;
+		plotsize	= PlotMe.DEFAULT_PLOT_SIZE;
+		pathsize	= PlotMe.DEFAULT_PATH_WIDTH;
+		roadheight	= PlotMe.DEFAULT_ROAD_HEIGHT;
+		
+		bottom		= PlotMe.DEFAULT_BOTTOM_BLOCK;
+		wall		= PlotMe.DEFAULT_WALL_BLOCK;
+		plotfloor	= PlotMe.DEFAULT_FLOOR_BLOCK;
+		filling		= PlotMe.DEFAULT_FILL_BLOCK;
+		floor1		= PlotMe.DEFAULT_FLOOR_1_BLOCK;
+		floor2		= PlotMe.DEFAULT_FLOOR_2_BLOCK;
 	}
 	
 	public PlotPopulator()
@@ -38,7 +41,7 @@ public class PlotPopulator extends BlockPopulator {
 		PlotMe.logger.warning(PlotMe.PREFIX + "Unable to find configuration for PlotPopulator! Using defaults.");
 	}
 	
-	private void fetchPlotWorldProperties(PlotWorld pwi)
+	public PlotPopulator(PlotWorld pwi)
 	{
 		if (pwi == null)
 		{
@@ -46,20 +49,17 @@ public class PlotPopulator extends BlockPopulator {
 			PlotMe.logger.warning(PlotMe.PREFIX + "Unregistered PlotWorld in PlotPopulator! Using defaults.");
 			return;
 		}
-		plotsize = pwi.PlotSize;
-		pathsize = pwi.PathWidth;
-		bottom = pwi.BottomBlockValue;
-		wall = pwi.WallBlockValue;
-		plotfloor = pwi.PlotFloorBlockValue;
-		filling = pwi.PlotFillingBlockValue;
-		floor2 = pwi.RoadMainBlockValue;
-		floor1 = pwi.RoadStripeBlockValue;
-		roadheight = pwi.RoadHeight;
-	}
-	
-	public PlotPopulator(World world)
-	{
-		fetchPlotWorldProperties(PlotManager.plotWorlds.get(world.getName()));
+		
+		plotsize	= pwi.PlotSize;
+		pathsize	= pwi.PathWidth;
+		roadheight	= pwi.RoadHeight;
+		
+		bottom		= pwi.BottomBlock;
+		wall		= pwi.WallBlock;
+		plotfloor	= pwi.PlotFloorBlock;
+		filling		= pwi.PlotFillingBlock;
+		floor2		= pwi.RoadMainBlock;
+		floor1		= pwi.RoadStripeBlock;
 	}
 	
 	public void populate(World w, Random rand, Chunk chunk) 
@@ -71,6 +71,8 @@ public class PlotPopulator extends BlockPopulator {
 		int zz = cz << 4;
 
 		double size = plotsize + pathsize;
+		double psh  = (double)(pathsize/2);
+		
 		int valx;
 		int valz;
 
@@ -83,15 +85,15 @@ public class PlotPopulator extends BlockPopulator {
 		
 		if (pathsize % 2 == 1)
 		{
-			n1 = Math.ceil(((double)pathsize)/2) - 2;
-			n2 = Math.ceil(((double)pathsize)/2) - 1;
-			n3 = Math.ceil(((double)pathsize)/2);
+			n3 = Math.ceil(psh);
+			n1 = n3 - 2;
+			n2 = n3 - 1;
 		}
 		else
 		{
-			n1 = Math.floor(((double)pathsize)/2) - 2;
-			n2 = Math.floor(((double)pathsize)/2) - 1;
-			n3 = Math.floor(((double)pathsize)/2);
+			n3 = Math.floor(psh);
+			n1 = n3 - 2;
+			n2 = n3 - 1;
 		}
 		
 		if (pathsize % 2 == 1)
@@ -116,7 +118,7 @@ public class PlotPopulator extends BlockPopulator {
                 	if (y == 0)
                 	{
                 		//result[(x * 16 + z) * 128 + y] = bottom;
-            			setBlock(w, x + xx, y, z + zz, bottom);
+            			setBlock(w, x + xx, y, z + zz, bottom.getTypeId(), bottom.getDataValue());
                 		
                 	}
             		else if (y == roadheight)
@@ -136,12 +138,12 @@ public class PlotPopulator extends BlockPopulator {
                 			if (found)
                 			{
                 				//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-                				setBlock(w, x + xx, y, z + zz, floor1);
+                				setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
                 			}
                 			else
                 			{
                 				//result[(x * 16 + z) * 128 + y] = filling; //filling
-                				setBlock(w, x + xx, y, z + zz, filling);
+                				setBlock(w, x + xx, y, z + zz, filling.getTypeId(), filling.getDataValue());
                 			}
                 		}
                 		else if ((valx - n2 + mod1) % size == 0 || (valx + n2 + mod2) % size == 0) //middle+2
@@ -150,12 +152,12 @@ public class PlotPopulator extends BlockPopulator {
                 					|| (valz - n2 + mod1) % size == 0 || (valz + n2 + mod2) % size == 0)
                 			{
                 				//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-                				setBlock(w, x + xx, y, z + zz, floor1);
+                				setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
                 			}
                 			else
                 			{
                 				//result[(x * 16 + z) * 128 + y] = floor2; //floor2
-                				setBlock(w, x + xx, y, z + zz, floor2);
+                				setBlock(w, x + xx, y, z + zz, floor2.getTypeId(), floor2.getDataValue());
                 			}
                 		}
                 		else if ((valx - n1 + mod1) % size == 0 || (valx + n1 + mod2) % size == 0) //middle+2
@@ -164,12 +166,12 @@ public class PlotPopulator extends BlockPopulator {
                 				|| (valz - n1 + mod1) % size == 0 || (valz + n1 + mod2) % size == 0)
                 			{
                 				//result[(x * 16 + z) * 128 + y] = floor2; //floor2
-                				setBlock(w, x + xx, y, z + zz, floor2);
+                				setBlock(w, x + xx, y, z + zz, floor2.getTypeId(), floor2.getDataValue());
                 			}
                 			else
                 			{
                 				//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-                				setBlock(w, x + xx, y, z + zz, floor1);
+                				setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
                 			}
                 		}
                 		else
@@ -187,14 +189,14 @@ public class PlotPopulator extends BlockPopulator {
                 			if (found)
                 			{
 	                			//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-                				setBlock(w, x + xx, y, z + zz, floor1);
+                				setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
                 			}
                 			else
                 			{
 	                			if ((valz - n2 + mod1) % size == 0 || (valz + n2 + mod2) % size == 0)
 	                			{
 	                				//result[(x * 16 + z) * 128 + y] = floor2; //floor2
-	                				setBlock(w, x + xx, y, z + zz, floor2);
+	                				setBlock(w, x + xx, y, z + zz, floor2.getTypeId(), floor2.getDataValue());
 	                			}
 	                			else
 	                			{
@@ -211,7 +213,7 @@ public class PlotPopulator extends BlockPopulator {
 	                				if (found2)
 	                				{
 		                				//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-	                					setBlock(w, x + xx, y, z + zz, floor1);
+	                					setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
 	                				}
 		                			else
 		                			{
@@ -228,12 +230,12 @@ public class PlotPopulator extends BlockPopulator {
 		                				if (found3)
 		                				{
 		                					//result[(x * 16 + z) * 128 + y] = floor1; //floor1
-		                					setBlock(w, x + xx, y, z + zz, floor1);
+		                					setBlock(w, x + xx, y, z + zz, floor1.getTypeId(), floor1.getDataValue());
 		                				}
 		                				else
 		                				{
 		                					//result[(x * 16 + z) * 128 + y] = plotfloor; //plotfloor
-		                					setBlock(w, x + xx, y, z + zz, plotfloor);
+		                					setBlock(w, x + xx, y, z + zz, plotfloor.getTypeId(), plotfloor.getDataValue());
 		                				}
 		                			}
 	                			}
@@ -263,7 +265,7 @@ public class PlotPopulator extends BlockPopulator {
                 			else
                 			{
                 				//result[(x * 16 + z) * 128 + y] = wall;
-                				setBlock(w, x + xx, y, z + zz, wall);
+                				setBlock(w, x + xx, y, z + zz, wall.getTypeId(), wall.getDataValue());
                 			}
                 		}
                 		else
@@ -286,7 +288,7 @@ public class PlotPopulator extends BlockPopulator {
                 				if ((valz - n3 + mod1) % size == 0 || (valz + n3 + mod2) % size == 0)
                 				{
 	                				//result[(x * 16 + z) * 128 + y] = wall;
-                					setBlock(w, x + xx, y, z + zz, wall);
+                					setBlock(w, x + xx, y, z + zz, wall.getTypeId(), wall.getDataValue());
                 				}
 	                			else
 	                			{
@@ -297,7 +299,7 @@ public class PlotPopulator extends BlockPopulator {
                 		}
                 	}else{
                 		//result[(x * 16 + z) * 128 + y] = filling;
-                		setBlock(w, x + xx, y, z + zz, filling);
+                		setBlock(w, x + xx, y, z + zz, filling.getTypeId(), filling.getDataValue());
                 	}
                 }
             }
@@ -305,11 +307,11 @@ public class PlotPopulator extends BlockPopulator {
 	}
 
 	
-	private void setBlock(World w, int x, int y, int z, byte val)
+	private void setBlock(World w, int x, int y, int z, short typeId, short dataValue)
 	{
-		if (val != 0)
+		if (typeId >= 0)
 		{
-			w.getBlockAt(x, y, z).setData(val);
+			w.getBlockAt(x, y, z).setTypeIdAndData(typeId, (byte)dataValue, false);
 		}
 	}
 	

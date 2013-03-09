@@ -1,6 +1,7 @@
 package com.worldcretornica.plotme;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -19,7 +20,8 @@ import org.bukkit.block.BlockState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import com.worldcretornica.plotme.utils.ItemUtils;
+import com.worldcretornica.plotme.utils.Jakky89ItemUtils;
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
 import com.worldcretornica.plotme.utils.Pair;
 
 
@@ -34,27 +36,21 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean PlotsEnabled;
 	public int PlotSize;
 	public int PlotAutoLimit;
+	public boolean AutoClaimOnChestPlace;
+	public int DefaultPlayerPlotLimit;
+	public int DefaultFreePlotsPerPlayer;
 	public int PathWidth;
 	
-	public short BottomBlockId;
-	public byte BottomBlockValue;
-	public short WallBlockId;
-	public byte WallBlockValue;
-	public short ForSaleWallBlockId;
-	public byte ForSaleWallBlockValue;
-	public short AuctionWallBlockId;
-	public byte AuctionWallBlockValue;
-	public short ProtectedWallBlockId;
-	public byte ProtectedWallBlockValue;
-	public short PlotFloorBlockId;
-	public byte PlotFloorBlockValue;
-	public short PlotFillingBlockId;
-	public byte PlotFillingBlockValue;
+	public Jakky89ItemIdData BottomBlock;
+	public Jakky89ItemIdData WallBlock;
+	public Jakky89ItemIdData ForSaleWallBlock;
+	public Jakky89ItemIdData AuctionWallBlock;
+	public Jakky89ItemIdData ProtectedWallBlock;
+	public Jakky89ItemIdData PlotFloorBlock;
+	public Jakky89ItemIdData PlotFillingBlock;
 	
-	public short RoadMainBlockId;
-	public byte RoadMainBlockValue;
-	public short RoadStripeBlockId;
-	public byte RoadStripeBlockValue;
+	public Jakky89ItemIdData RoadMainBlock;
+	public Jakky89ItemIdData RoadStripeBlock;
 
 	public int RoadHeight;
 	public int DaysToExpiration;
@@ -86,8 +82,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean DisableNetherrackIgnition;
 	public boolean DisableObsidianIgnition;
 	
-	private HashSet<Pair<Integer, Byte>> ProtectedBlocks;
-	private HashSet<Pair<Integer, Byte>> PreventedItems;
+	private HashSet<Jakky89ItemIdData> ProtectedBlocks;
+	private HashSet<Jakky89ItemIdData> PreventedItems;
 	
 	public Map<PlotPosition, Plot> plotPositions;
 		
@@ -140,236 +136,102 @@ public class PlotWorld implements Comparable<PlotWorld>
 	
 	public List<String> getProtectedBlocksAsStringList()
 	{
-		return ItemUtils.itemIdValuesToStringList(ProtectedBlocks);
+		return Jakky89ItemUtils.itemIdValuesToStringList(ProtectedBlocks);
 	}
 
-	public boolean isProtectedBlock(Integer typeId, Byte dataValue)
+	public boolean isProtectedBlock(Short typeId, Short dataValue)
 	{
 		if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
-		{
 			return false;
-		}
-		if (typeId != null && !ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, dataValue)) && !ProtectedBlocks.contains(new Pair<Integer, Byte>(typeId, null)))
-		{
+		if (typeId != null && !ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, dataValue)) && !ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, null)))
 			return false;
-		}
 		return true;
 	}
 	
 	public boolean isProtectedBlock(Block block)
 	{
 		if (block != null)
-		{
-			return isProtectedBlock(block.getTypeId(), block.getData());
-		}
+			return isProtectedBlock((short)block.getTypeId(), (short)block.getData());
 		return true;
 	}
 	
-	public void setProtectedBlocks(Set<Pair<Integer, Byte>> blockSet)
+	public void setProtectedBlocks(Collection <Jakky89ItemIdData> blockSet)
 	{
 		if (blockSet != null)
-		{
-			ProtectedBlocks = new HashSet<Pair<Integer, Byte>>(blockSet);
-		}
+			ProtectedBlocks = new HashSet<Jakky89ItemIdData>(blockSet);
+		else
+			ProtectedBlocks = null;
 	}
 	
-	public void addToProtectedBlocks(Pair<Integer, Byte> itemIdValue)
+	public void addToProtectedBlocks(Jakky89ItemIdData itemIdData)
 	{
-		if (itemIdValue != null)
+		if (itemIdData != null)
 		{
 			if (ProtectedBlocks == null)
-			{
-				ProtectedBlocks = new HashSet<Pair<Integer, Byte>>();
-			}
-			ProtectedBlocks.add(itemIdValue);
-		}
-	}
-	
-	public void addToProtectedBlocks(List<String> typeIdValues)
-	{
-		if (typeIdValues != null && typeIdValues.size() > 0)
-		{
-			if (ProtectedBlocks == null)
-			{
-				ProtectedBlocks = new HashSet<Pair<Integer, Byte>>();
-			}
+				ProtectedBlocks = new HashSet<Jakky89ItemIdData>();
 			
-			List<Pair<Integer, Byte>> tmpList = new ArrayList<Pair<Integer, Byte>>();
-			tmpList = ItemUtils.stringListToItemIdValues(typeIdValues);
-			if (tmpList != null && !tmpList.isEmpty())
-			{
-				ProtectedBlocks.addAll(tmpList);
-			}
-			else
-			{
-				PlotMe.logger.log(Level.WARNING, PlotMe.PREFIX + ChatColor.RED + "Could not add some protected blocks to the blacklist!");
-			}
+			ProtectedBlocks.add(itemIdData);
 		}
 	}
 
-	public void addToProtectedBlocks(Integer typeId)
-	{
-		if (typeId != null)
-		{
-			addToProtectedBlocks(new Pair<Integer, Byte>(typeId, null));
-		}
-	}
-	
-	public void addToProtectedBlocks(Integer typeId, Byte dataValue)
-	{
-		if (typeId != null)
-		{
-			addToProtectedBlocks(new Pair<Integer, Byte>(typeId, dataValue));
-		}
-	}
-	
-	public void addToProtectedBlocks(BlockState block)
-	{
-		if (block != null)
-		{
-			addToProtectedBlocks(block.getTypeId(), block.getRawData());
-		}
-	}
-	
-	public void addToProtectedBlocks(Block block)
-	{
-		if (block != null)
-		{
-			addToProtectedBlocks(block.getTypeId(), block.getData());
-		}
-	}
-	
-	public void addToProtectedBlocks(Material material, Byte dataValue)
-	{
-		if (material != null)
-		{
-			addToProtectedBlocks(material.getId(), dataValue);
-		}
-	}
-	
-	public void addToProtectedBlocks(Material material)
-	{
-		if (material != null)
-		{
-			addToProtectedBlocks(material.getId(), null);
-		}
-	}
-	
-	public void removeFromProtectedBlocks(Integer typeId, Byte dataValue)
+	public void removeFromProtectedBlocks(Jakky89ItemIdData itemIdData)
 	{
 		if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
-		{
 			return;
-		}
-		ProtectedBlocks.remove(new Pair<Integer, Byte>(typeId, dataValue));
+
+		ProtectedBlocks.remove(itemIdData);
 	}
 	
 	public List<String> getPreventedItemsAsStringList()
 	{
-		return ItemUtils.itemIdValuesToStringList(PreventedItems);
+		return Jakky89ItemUtils.itemIdValuesToStringList(PreventedItems);
 	}
 	
-	public boolean isPreventedItem(Integer typeId, Byte dataValue)
+	public boolean isPreventedItem(Short typeId, Short dataValue)
 	{
 		if (typeId != null)
 		{
 			if (PreventedItems == null || PreventedItems.isEmpty())
-			{
 				return false;
-			}
 			
-			if (!PreventedItems.contains(new Pair<Integer, Byte>(typeId, dataValue)) && !PreventedItems.contains(new Pair<Integer, Byte>(typeId, null)))
-			{
+			if (!PreventedItems.contains(new Jakky89ItemIdData(typeId, dataValue)) && !PreventedItems.contains(new Jakky89ItemIdData(typeId)))
 				return false;
-			}
 		}
 		return true;
 	}
 	
-	public boolean isPreventedItem(Material material, Byte dataValue)
+	public boolean isPreventedItem(Material material, Short dataValue)
 	{
 		if (material != null)
-		{
-			return isPreventedItem(material.getId(), dataValue);
-		}
+			return isPreventedItem((short)material.getId(), dataValue);
+
 		return true;
 	}
 	
 	public boolean isPreventedItem(Material material)
 	{
 		if (material != null)
-		{
-			return isPreventedItem(material.getId(), null);
-		}
+			return isPreventedItem((short)material.getId(), null);
+
 		return true;
 	}
 
-	public void setPreventedItems(Set<Pair<Integer, Byte>> itemSet)
+	public void setPreventedItems(Collection<Jakky89ItemIdData> itemSet)
 	{
 		if (itemSet != null && itemSet.size() > 0)
-		{
-			PreventedItems = new HashSet<Pair<Integer, Byte>>(itemSet);
-		}
+			PreventedItems = new HashSet<Jakky89ItemIdData>(itemSet);
+		else
+			PreventedItems = null;
 	}
-	
-	public void addToPreventedItems(List<String> typeIdValues)
+
+	public void addToPreventedItems(Jakky89ItemIdData itemIdData)
 	{
-		if (typeIdValues != null && typeIdValues.size() > 0)
+		if (itemIdData != null)
 		{
-			if (PreventedItems == null)
-			{
-				PreventedItems = new HashSet<Pair<Integer, Byte>>();
-			}
-			
-			List<Pair<Integer, Byte>> tmpList = new ArrayList<Pair<Integer, Byte>>();
-			tmpList = ItemUtils.stringListToItemIdValues(typeIdValues);
-			if (tmpList != null && !tmpList.isEmpty())
-			{
-				PreventedItems.addAll(tmpList);
-			}
-			else
-			{
-				PlotMe.logger.log(Level.WARNING, PlotMe.PREFIX + ChatColor.RED + "Could not add some prevented items to the blacklist!");
-			}
+			addToPreventedItems(itemIdData);
 		}
 	}
-	
-	public void addToPreventedItems(Integer typeId)
-	{
-		if (typeId != null)
-		{
-			PreventedItems.add(new Pair<Integer, Byte>(typeId, null));
-		}
-	}
-	
-	public void addToPreventedItems(Integer typeId, Byte dataValue)
-	{
-		if (typeId != null)
-		{
-			if (PreventedItems == null)
-			{
-				PreventedItems = new HashSet<Pair<Integer, Byte>>();
-			}
-			PreventedItems.add(new Pair<Integer, Byte>(typeId, dataValue));
-		}
-	}
-	
-	public void addToPreventedItems(Material material, Byte dataValue)
-	{
-		if (material != null)
-		{
-			addToPreventedItems(material.getId(), dataValue);
-		}
-	}
-	
-	public void addToPreventedItems(Material material)
-	{
-		if (material != null)
-		{
-			addToPreventedItems(material.getId());
-		}
-	}
-	
+
 	public void removeFromPreventedItems(int typeId, byte dataValue)
 	{
 		if (typeId < 0 || dataValue <= 0 || PreventedItems == null || PreventedItems.isEmpty())

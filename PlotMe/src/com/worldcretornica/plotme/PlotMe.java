@@ -48,6 +48,8 @@ import com.worldcretornica.plotme.Metrics.Graph;
 import com.worldcretornica.plotme.commands.PlotMeCommands;
 import com.worldcretornica.plotme.listener.PlotListener;
 import com.worldcretornica.plotme.listener.PlotWorldEditListener;
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
+import com.worldcretornica.plotme.utils.Jakky89ItemUtils;
 
 public class PlotMe extends JavaPlugin
 {
@@ -74,16 +76,25 @@ public class PlotMe extends JavaPlugin
     public static Boolean allowWorldTeleport;
     public static Boolean autoUpdate;
     
-    public static final int DEFAULT_PLOT_AUTO_LIMIT = 100;
-    public static final int DEFAULT_PLOT_SIZE = 32;
-    public static final int DEFAULT_PATH_WIDTH = 7;
-    public static final int DEFAULT_BOTTOM_BLOCK = 7;
-    public static final int DEFAULT_FLOOR_BLOCK = 2;
-    public static final int DEFAULT_WALL_BLOCK = 44;
-    public static final int DEFAULT_FILL_BLOCK = 3;
+    public static final int DEFAULT_PLOT_AUTO_LIMIT		= 100;
+    public static final int DEFAULT_PLAYER_PLOT_LIMIT	= 10;
+    public static final int DEFAULT_PLAYER_FREE_PLOTS	= 1;
+    public static final int DEFAULT_PLOT_SIZE			= 32;
+    public static final int DEFAULT_PATH_WIDTH			= 7;
+    
+    public static final Jakky89ItemIdData DEFAULT_BOTTOM_BLOCK		= new Jakky89ItemIdData((short)7,  (short)0);
+    public static final Jakky89ItemIdData DEFAULT_FLOOR_BLOCK		= new Jakky89ItemIdData((short)2,  (short)0);
+    public static final Jakky89ItemIdData DEFAULT_WALL_BLOCK		= new Jakky89ItemIdData((short)44, (short)0);
+    public static final Jakky89ItemIdData DEFAULT_FILL_BLOCK		= new Jakky89ItemIdData((short)3,  (short)0);
+    public static final Jakky89ItemIdData DEFAULT_FLOOR_1_BLOCK 	= new Jakky89ItemIdData((short)5,  (short)0);
+    public static final Jakky89ItemIdData DEFAULT_FLOOR_2_BLOCK 	= new Jakky89ItemIdData((short)5,  (short)0);
+    
+    public static final Jakky89ItemIdData DEFAULT_PILLAR_BLOCK		= new Jakky89ItemIdData((short)17, (short)0);
+    public static final Jakky89ItemIdData DEFAULT_PILLAR_H1_BLOCK	= new Jakky89ItemIdData((short)17, (short)4);
+    public static final Jakky89ItemIdData DEFAULT_PILLAR_H2_BLOCK	= new Jakky89ItemIdData((short)17, (short)8);
+    
+    
     public static final int DEFAULT_ROAD_HEIGHT = 64;
-    public static final int DEFAULT_FLOOR_1 = 5;
-    public static final int DEFAULT_FLOOR_2 = 5;
     
     public static final int DEFAULT_DAYS_EXPIRATION = 7;
     
@@ -296,43 +307,7 @@ public class PlotMe extends JavaPlugin
 		}
 		return false;
 	}
-	
-	private List<String> getDefaultProtectedBlocks()
-	{
-		List<String> protections = new ArrayList<String>();
-		
-		protections.add(Material.CHEST.toString());
-		protections.add(Material.FURNACE.toString());
-		protections.add(Material.BURNING_FURNACE.toString());
-		protections.add(Material.ENDER_PORTAL_FRAME.toString());
-		protections.add(Material.DIODE_BLOCK_ON.toString());
-		protections.add(Material.DIODE_BLOCK_OFF.toString());
-		protections.add(Material.JUKEBOX.toString());
-		protections.add(Material.NOTE_BLOCK.toString());
-		protections.add(Material.BED.toString());
-		protections.add(Material.CAULDRON.toString());
-		protections.add(Material.BREWING_STAND.toString());
-		protections.add(Material.BEACON.toString());
-		protections.add(Material.FLOWER_POT.toString());
-		protections.add(Material.ANVIL.toString());
-		
-		return protections;
-	}
-	
-	private List<String> getDefaultPreventedItems()
-	{
-		List<String> preventeditems = new ArrayList<String>();
 
-		preventeditems.add(Material.INK_SACK.toString() + ":15");
-		preventeditems.add(Material.FLINT_AND_STEEL.toString());
-		preventeditems.add(Material.MINECART.toString());
-		preventeditems.add(Material.POWERED_MINECART.toString());
-		preventeditems.add(Material.STORAGE_MINECART.toString());
-		preventeditems.add(Material.BOAT.toString());
-		
-		return preventeditems;
-	}
-	
 	public void loadConfiguration()
 	{
 		File configfile = new File(configpath, "config.yml");
@@ -375,8 +350,31 @@ public class PlotMe extends JavaPlugin
 		ConfigurationSection cfgWorld;
 		String cfgWorldName;
 		
-		List<String> defProtectedBlocks = getDefaultProtectedBlocks();
-		List<String> defPreventedItems = getDefaultPreventedItems();
+		List<Jakky89ItemIdData> defProtectedBlocks = new ArrayList<Jakky89ItemIdData>();
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.CHEST));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.FURNACE));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.BURNING_FURNACE));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.ENDER_PORTAL_FRAME));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.DIODE_BLOCK_ON));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.DIODE_BLOCK_OFF));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.JUKEBOX));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.NOTE_BLOCK));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.BED));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.CAULDRON));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.BREWING_STAND));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.BEACON));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.ITEM_FRAME));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.FLOWER_POT));
+		defProtectedBlocks.add(new Jakky89ItemIdData(Material.ANVIL));
+
+		
+		List<Jakky89ItemIdData> defPreventedItems = new ArrayList<Jakky89ItemIdData>();
+		defPreventedItems.add(new Jakky89ItemIdData(Material.INK_SACK));
+		defPreventedItems.add(new Jakky89ItemIdData(Material.FLINT_AND_STEEL));
+		defPreventedItems.add(new Jakky89ItemIdData(Material.MINECART));
+		defPreventedItems.add(new Jakky89ItemIdData(Material.POWERED_MINECART));
+		defPreventedItems.add(new Jakky89ItemIdData(Material.STORAGE_MINECART));
+		defPreventedItems.add(new Jakky89ItemIdData(Material.BOAT));
 		
 		if (config.contains("worlds"))
 		{
@@ -388,24 +386,26 @@ public class PlotMe extends JavaPlugin
 			
 			cfgWorld = cfgWorlds.createSection("Global");
 
-			cfgWorld.set("InheritWorld", "");
-			cfgWorld.set("PlotAutoLimit", DEFAULT_PLOT_AUTO_LIMIT);
-			cfgWorld.set("PathWidth", DEFAULT_PATH_WIDTH);
-			cfgWorld.set("PlotSize", DEFAULT_PLOT_SIZE);
+			cfgWorld.set("PlotAutoLimit",							DEFAULT_PLOT_AUTO_LIMIT);
+			cfgWorld.set("DefaultPlayerPlotLimit",					DEFAULT_PLAYER_PLOT_LIMIT);
+			cfgWorld.set("DefaultFreePlotsPerPlayer",				DEFAULT_PLAYER_FREE_PLOTS);
+			cfgWorld.set("AutoClaimOnChestPlace",					true);
+			cfgWorld.set("PathWidth",								DEFAULT_PATH_WIDTH);
+			cfgWorld.set("PlotSize",								DEFAULT_PLOT_SIZE);
 			
-			cfgWorld.set("BottomBlockId", String.valueOf(DEFAULT_BOTTOM_BLOCK));
-			cfgWorld.set("WallBlockId", String.valueOf(DEFAULT_WALL_BLOCK));
-			cfgWorld.set("PlotFloorBlockId", String.valueOf(DEFAULT_FLOOR_BLOCK));
-			cfgWorld.set("PlotFillingBlockId", String.valueOf(DEFAULT_FILL_BLOCK));
-			cfgWorld.set("RoadMainBlockId", "5");
-			cfgWorld.set("RoadStripeBlockId", "5:2");
+			cfgWorld.set("BottomBlockId",							String.valueOf(DEFAULT_BOTTOM_BLOCK));
+			cfgWorld.set("WallBlockId",								String.valueOf(DEFAULT_WALL_BLOCK));
+			cfgWorld.set("PlotFloorBlockId",						String.valueOf(DEFAULT_FLOOR_BLOCK));
+			cfgWorld.set("PlotFillingBlockId",						String.valueOf(DEFAULT_FILL_BLOCK));
+			cfgWorld.set("RoadMainBlock",							"WOOD:0");
+			cfgWorld.set("RoadStripeBlock",							"WOOD:2");
 			
-			cfgWorld.set("RoadHeight", DEFAULT_ROAD_HEIGHT);
-			cfgWorld.set("DaysToExpiration", DEFAULT_DAYS_EXPIRATION);
+			cfgWorld.set("RoadHeight",								DEFAULT_ROAD_HEIGHT);
+			cfgWorld.set("DaysToExpiration",						DEFAULT_DAYS_EXPIRATION);
 
-			cfgWorld.set("ProtectedBlocks", defProtectedBlocks);
-			cfgWorld.set("PreventedItems", defPreventedItems);
-			cfgWorld.set("ProtectedWallBlockId", "44:4");
+			cfgWorld.set("ProtectedBlocks",							defProtectedBlocks);
+			cfgWorld.set("PreventedItems",							defPreventedItems);
+			cfgWorld.set("ProtectedWallBlockId",					"STEP:4");
 			cfgWorld.set("ForSaleWallBlockId", "44:1");
 			cfgWorld.set("AuctionWallBlockId", "44:1");
 			cfgWorld.set("AutoLinkPlots", true);
@@ -414,6 +414,8 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("DisableIgnition", true);
 			cfgWorld.set("DisableNetherrackIgnition", false);
 			cfgWorld.set("DisableObsidianIgnition", false);
+			
+			cfgWorlds.set("Global", cfgWorld);
 			
 			ConfigurationSection cfgWorldEconomy = cfgWorld.createSection("economy");
 			
@@ -443,6 +445,8 @@ public class PlotMe extends JavaPlugin
 			cfgWorld = cfgWorlds.createSection("ExampleWorld");
 			cfgWorld.set("InheritWorld", "Global");
 			cfgWorld.set("PlotsEnabled", "true");
+			
+			cfgWorlds.set("ExampleWorld", cfgWorld);
 		}
 		
 		Iterator<String> cfgWorldsIterator = cfgWorlds.getKeys(false).iterator();
@@ -486,37 +490,32 @@ public class PlotMe extends JavaPlugin
 				continue;
 			}
 			
-			tmpPlotWorld.PlotAutoLimit							= cfgCurrWorld.getInt(					"PlotAutoLimit",			DEFAULT_PLOT_AUTO_LIMIT);
-			tmpPlotWorld.PlotAutoLimit 							= cfgCurrWorld.getInt(					"PathWidth",				DEFAULT_PATH_WIDTH);
-			tmpPlotWorld.PlotAutoLimit 							= cfgCurrWorld.getInt(					"PlotSize",					DEFAULT_PLOT_SIZE);
+			tmpPlotWorld.PlotAutoLimit							= cfgCurrWorld.getInt("PlotAutoLimit",											DEFAULT_PLOT_AUTO_LIMIT);
+			tmpPlotWorld.PathWidth 								= cfgCurrWorld.getInt("PathWidth",												DEFAULT_PATH_WIDTH);
+			tmpPlotWorld.PlotSize	 							= cfgCurrWorld.getInt("PlotSize",												DEFAULT_PLOT_SIZE);
 			
-			tmpPlotWorld.BottomBlockId 							= getBlockId(cfgCurrWorld,				"BottomBlockId",			"7:0");
-			tmpPlotWorld.BottomBlockValue 						= getBlockValue(cfgCurrWorld,			"BottomBlockId",			"7:0");
-			tmpPlotWorld.WallBlockId 							= getBlockId(cfgCurrWorld,				"WallBlockId",				"44:0");
-			tmpPlotWorld.WallBlockValue							= getBlockValue(cfgCurrWorld,			"WallBlockId",				"44:0");
-			tmpPlotWorld.ProtectedWallBlockId   				= getBlockId(cfgCurrWorld,				"ProtectedWallBlockId",		"44:4");
-			tmpPlotWorld.ProtectedWallBlockValue				= getBlockValue(cfgCurrWorld,			"ProtectedWallBlockId",		"44:4");
-			tmpPlotWorld.ForSaleWallBlockId 					= getBlockId(cfgCurrWorld,				"ForSaleWallBlockId",		"44:1");
-			tmpPlotWorld.ForSaleWallBlockValue 					= getBlockValue(cfgCurrWorld,			"ForSaleWallBlockId",		"44:1");
-			tmpPlotWorld.AuctionWallBlockId						= getBlockId(cfgCurrWorld,				"AuctionWallBlockId",		"44:1");
-			tmpPlotWorld.AuctionWallBlockValue					= getBlockValue(cfgCurrWorld,			"AuctionWallBlockId",		"44:1");
-			tmpPlotWorld.PlotFloorBlockId 						= getBlockId(cfgCurrWorld,				"PlotFloorBlockId",			"2:0");
-			tmpPlotWorld.PlotFloorBlockValue 					= getBlockValue(cfgCurrWorld,			"PlotFloorBlockId",			"2:0");
-			tmpPlotWorld.PlotFillingBlockId						= getBlockId(cfgCurrWorld,				"PlotFillingBlockId", 		"3:0");
-			tmpPlotWorld.PlotFillingBlockValue 					= getBlockValue(cfgCurrWorld,			"PlotFillingBlockId",		"3:0");
-			tmpPlotWorld.RoadMainBlockId						= getBlockId(cfgCurrWorld,				"RoadMainBlockId",			"5:0");
-			tmpPlotWorld.RoadMainBlockValue						= getBlockValue(cfgCurrWorld,			"RoadMainBlockId",			"5:0");
-			tmpPlotWorld.RoadStripeBlockId						= getBlockId(cfgCurrWorld,				"RoadStripeBlockId",		"5:2");
-			tmpPlotWorld.RoadStripeBlockValue					= getBlockValue(cfgCurrWorld,			"RoadStripeBlockId",		"5:2");
+			tmpPlotWorld.BottomBlock 							= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("BottomBlockId",			"7:0"));
+			tmpPlotWorld.WallBlock	 							= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("WallBlockId",				"44:0"));
+			tmpPlotWorld.ProtectedWallBlock   					= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("ProtectedWallBlockId",	"44:4"));
+			tmpPlotWorld.ForSaleWallBlock 						= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("ForSaleWallBlockId",		"44:1"));
+			tmpPlotWorld.AuctionWallBlock						= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("AuctionWallBlockId",		"44:1"));
+			tmpPlotWorld.PlotFloorBlock 						= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("PlotFloorBlockId",		"2:0"));
+			tmpPlotWorld.PlotFillingBlock						= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("PlotFillingBlockId", 		"3:0"));
+			tmpPlotWorld.RoadMainBlock							= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("RoadMainBlockId",			"5:0"));
+			tmpPlotWorld.RoadStripeBlock						= Jakky89ItemUtils.stringToItemIdData(cfgCurrWorld.getString("RoadStripeBlockId",		"5:2"));
 
-			tmpPlotWorld.AutoLinkPlots							= cfgCurrWorld.getBoolean("AutoLinkPlots",							true);
-			tmpPlotWorld.DisableExplosion 						= cfgCurrWorld.getBoolean("DisableExplosion",						true);
-			tmpPlotWorld.DisableIgnition 						= cfgCurrWorld.getBoolean("DisableIgnition",						true);
-			tmpPlotWorld.DisableNetherrackIgnition				= cfgCurrWorld.getBoolean("DisableNetherrackIgnition",				false);
-			tmpPlotWorld.DisableObsidianIgnition				= cfgCurrWorld.getBoolean("DisableObsidianIgnition",				false);
+			tmpPlotWorld.AutoLinkPlots							= cfgCurrWorld.getBoolean("AutoLinkPlots",										true);
+			tmpPlotWorld.DisableExplosion 						= cfgCurrWorld.getBoolean("DisableExplosion",									true);
+			tmpPlotWorld.DisableIgnition 						= cfgCurrWorld.getBoolean("DisableIgnition",									true);
+			tmpPlotWorld.DisableNetherrackIgnition				= cfgCurrWorld.getBoolean("DisableNetherrackIgnition",							false);
+			tmpPlotWorld.DisableObsidianIgnition				= cfgCurrWorld.getBoolean("DisableObsidianIgnition",							false);
 	
+			tmpPlotWorld.AutoClaimOnChestPlace					= cfgCurrWorld.getBoolean("AutoClaimOnChestPlace", 								true);
+			tmpPlotWorld.DefaultPlayerPlotLimit					= cfgCurrWorld.getInt("DefaultPlayerPlotLimit",									DEFAULT_PLAYER_PLOT_LIMIT);
+			tmpPlotWorld.DefaultFreePlotsPerPlayer				= cfgCurrWorld.getInt("DefaultFreePlotsPerPlayer",								DEFAULT_PLAYER_FREE_PLOTS);
 			
-			tmpPlotWorld.RoadHeight								= cfgCurrWorld.getInt("RoadHeight",		cfgCurrWorld.getInt("WorldHeight", 64));
+			
+			tmpPlotWorld.RoadHeight								= cfgCurrWorld.getInt("RoadHeight",												cfgCurrWorld.getInt("WorldHeight", 64));
 			if (tmpPlotWorld.RoadHeight > 250)
 			{
 				logger.severe(PREFIX + "RoadHeight above 250 is unsafe. This is the height at which your road is located. Normalized to 64.");
@@ -530,22 +529,14 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.DaysToExpiration			= cfgCurrWorld.getInt("DaysToExpiration",	DEFAULT_DAYS_EXPIRATION);
 			
 			if (cfgCurrWorld.contains("ProtectedBlocks"))
-			{
-				tmpPlotWorld.addToProtectedBlocks(cfgCurrWorld.getStringList("ProtectedBlocks"));
-			}
+				tmpPlotWorld.setProtectedBlocks(Jakky89ItemUtils.stringListToItemIdDataList(cfgCurrWorld.getStringList("ProtectedBlocks")));
 			else
-			{
-				tmpPlotWorld.addToProtectedBlocks(defProtectedBlocks);
-			}
+				tmpPlotWorld.setProtectedBlocks(defProtectedBlocks);
 			
 			if (cfgCurrWorld.contains("PreventedItems"))
-			{
-				tmpPlotWorld.addToPreventedItems(cfgCurrWorld.getStringList("PreventedItems"));
-			}
+				tmpPlotWorld.setPreventedItems(Jakky89ItemUtils.stringListToItemIdDataList(cfgCurrWorld.getStringList("PreventedItems")));
 			else
-			{
-				tmpPlotWorld.addToPreventedItems(defPreventedItems);
-			}
+				tmpPlotWorld.setPreventedItems(defPreventedItems);
 		
 			ConfigurationSection economysection;
 			
@@ -558,53 +549,53 @@ public class PlotMe extends JavaPlugin
 				economysection = cfgCurrWorld.getConfigurationSection("economy");
 			}
 
-			tmpPlotWorld.UseEconomy = economysection.getBoolean("UseEconomy", false);
-			tmpPlotWorld.CanPutOnSale = economysection.getBoolean("CanPutOnSale", false);
-			tmpPlotWorld.CanSellToBank = economysection.getBoolean("CanSellToBank", false);
-			tmpPlotWorld.RefundClaimPriceOnReset = economysection.getBoolean("RefundClaimPriceOnReset", false);
-			tmpPlotWorld.RefundClaimPriceOnSetOwner = economysection.getBoolean("RefundClaimPriceOnSetOwner", false);
-			tmpPlotWorld.ClaimPrice = economysection.getDouble("ClaimPrice", 0);
-			tmpPlotWorld.ClearPrice = economysection.getDouble("ClearPrice", 0);
-			tmpPlotWorld.AddPlayerPrice = economysection.getDouble("AddPlayerPrice", 0);
-			tmpPlotWorld.DenyPlayerPrice = economysection.getDouble("DenyPlayerPrice", 0);
-			tmpPlotWorld.RemovePlayerPrice = economysection.getDouble("RemovePlayerPrice", 0);
-			tmpPlotWorld.UndenyPlayerPrice = economysection.getDouble("UndenyPlayerPrice", 0);
-			tmpPlotWorld.PlotHomePrice = economysection.getDouble("PlotHomePrice", 0);
-			tmpPlotWorld.CanCustomizeSellPrice = economysection.getBoolean("CanCustomizeSellPrice", false);
-			tmpPlotWorld.SellToPlayerPrice = economysection.getDouble("SellToPlayerPrice", 0);
-			tmpPlotWorld.SellToBankPrice = economysection.getDouble("SellToBankPrice", 0);
-			tmpPlotWorld.BuyFromBankPrice = economysection.getDouble("BuyFromBankPrice", 0);
-			tmpPlotWorld.AddCommentPrice = economysection.getDouble("AddCommentPrice", 0);
-			tmpPlotWorld.BiomeChangePrice = economysection.getDouble("BiomeChangePrice", 0);
-			tmpPlotWorld.ProtectPrice = economysection.getDouble("ProtectPrice", 0);
-			tmpPlotWorld.DisposePrice = economysection.getDouble("DisposePrice", 0);
+			tmpPlotWorld.UseEconomy								= economysection.getBoolean("UseEconomy",					false);
+			tmpPlotWorld.CanPutOnSale							= economysection.getBoolean("CanPutOnSale",					false);
+			tmpPlotWorld.CanSellToBank							= economysection.getBoolean("CanSellToBank",				false);
+			tmpPlotWorld.RefundClaimPriceOnReset				= economysection.getBoolean("RefundClaimPriceOnReset",		false);
+			tmpPlotWorld.RefundClaimPriceOnSetOwner				= economysection.getBoolean("RefundClaimPriceOnSetOwner",	false);
+			tmpPlotWorld.ClaimPrice								= economysection.getDouble("ClaimPrice",					0);
+			tmpPlotWorld.ClearPrice								= economysection.getDouble("ClearPrice",					0);
+			tmpPlotWorld.AddPlayerPrice							= economysection.getDouble("AddPlayerPrice",				0);
+			tmpPlotWorld.DenyPlayerPrice						= economysection.getDouble("DenyPlayerPrice",				0);
+			tmpPlotWorld.RemovePlayerPrice						= economysection.getDouble("RemovePlayerPrice",				0);
+			tmpPlotWorld.UndenyPlayerPrice						= economysection.getDouble("UndenyPlayerPrice",				0);
+			tmpPlotWorld.PlotHomePrice							= economysection.getDouble("PlotHomePrice",					0);
+			tmpPlotWorld.CanCustomizeSellPrice					= economysection.getBoolean("CanCustomizeSellPrice",		false);
+			tmpPlotWorld.SellToPlayerPrice						= economysection.getDouble("SellToPlayerPrice",				0);
+			tmpPlotWorld.SellToBankPrice						= economysection.getDouble("SellToBankPrice",				0);
+			tmpPlotWorld.BuyFromBankPrice						= economysection.getDouble("BuyFromBankPrice",				0);
+			tmpPlotWorld.AddCommentPrice						= economysection.getDouble("AddCommentPrice",				0);
+			tmpPlotWorld.BiomeChangePrice						= economysection.getDouble("BiomeChangePrice",				0);
+			tmpPlotWorld.ProtectPrice							= economysection.getDouble("ProtectPrice",					0);
+			tmpPlotWorld.DisposePrice							= economysection.getDouble("DisposePrice",					0);
 			
 			
 			
-			cfgCurrWorld.set("PlotAutoLimit", tmpPlotWorld.PlotAutoLimit);
-			cfgCurrWorld.set("PathWidth", tmpPlotWorld.PathWidth);
-			cfgCurrWorld.set("PlotSize", tmpPlotWorld.PlotSize);
+			cfgCurrWorld.set("PlotAutoLimit",					tmpPlotWorld.PlotAutoLimit);
+			cfgCurrWorld.set("PathWidth",						tmpPlotWorld.PathWidth);
+			cfgCurrWorld.set("PlotSize",						tmpPlotWorld.PlotSize);
 			
-			cfgCurrWorld.set("BottomBlockId", getBlockValueId(tmpPlotWorld.BottomBlockId, tmpPlotWorld.BottomBlockValue));
-			cfgCurrWorld.set("WallBlockId", getBlockValueId(tmpPlotWorld.WallBlockId, tmpPlotWorld.WallBlockValue));
-			cfgCurrWorld.set("PlotFloorBlockId", getBlockValueId(tmpPlotWorld.PlotFloorBlockId, tmpPlotWorld.PlotFloorBlockValue));
-			cfgCurrWorld.set("PlotFillingBlockId", getBlockValueId(tmpPlotWorld.PlotFillingBlockId, tmpPlotWorld.PlotFillingBlockValue));
-			cfgCurrWorld.set("RoadMainBlockId", getBlockValueId(tmpPlotWorld.RoadMainBlockId, tmpPlotWorld.RoadMainBlockValue));
-			cfgCurrWorld.set("RoadStripeBlockId", getBlockValueId(tmpPlotWorld.RoadStripeBlockId, tmpPlotWorld.RoadStripeBlockValue));
+			cfgCurrWorld.set("BottomBlock",						Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.BottomBlock));
+			cfgCurrWorld.set("WallBlock",						Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.WallBlock));
+			cfgCurrWorld.set("PlotFloorBlock",					Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.PlotFloorBlock));
+			cfgCurrWorld.set("PlotFillingBlock",				Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.PlotFillingBlock));
+			cfgCurrWorld.set("RoadMainBlock",					Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.RoadMainBlock));
+			cfgCurrWorld.set("RoadStripeBlock",					Jakky89ItemUtils.itemIdDataToString(tmpPlotWorld.RoadStripeBlock));
 			
-			cfgCurrWorld.set("RoadHeight", tmpPlotWorld.RoadHeight);
-			cfgCurrWorld.set("WorldHeight", null);
-			cfgCurrWorld.set("DaysToExpiration", tmpPlotWorld.DaysToExpiration);
-			cfgCurrWorld.set("ProtectedBlocks", tmpPlotWorld.getProtectedBlocksAsStringList());
-			cfgCurrWorld.set("PreventedItems", tmpPlotWorld.getPreventedItemsAsStringList());
-			cfgCurrWorld.set("ProtectedWallBlockId", tmpPlotWorld.ProtectedWallBlockId);
-			cfgCurrWorld.set("ForSaleWallBlockId", tmpPlotWorld.ForSaleWallBlockId);
-			cfgCurrWorld.set("AuctionWallBlockId", tmpPlotWorld.AuctionWallBlockId);
-			cfgCurrWorld.set("AutoLinkPlots", tmpPlotWorld.AutoLinkPlots);
-			cfgCurrWorld.set("DisableExplosion", tmpPlotWorld.DisableExplosion);
-			cfgCurrWorld.set("DisableIgnition", tmpPlotWorld.DisableIgnition);
-			cfgCurrWorld.set("DisableNetherrackIgnition", false);
-			cfgCurrWorld.set("DisableObsidianIgnition", false);
+			cfgCurrWorld.set("RoadHeight",						tmpPlotWorld.RoadHeight);
+			cfgCurrWorld.set("WorldHeight",						null);
+			cfgCurrWorld.set("DaysToExpiration",				tmpPlotWorld.DaysToExpiration);
+			cfgCurrWorld.set("ProtectedBlocks",					tmpPlotWorld.getProtectedBlocksAsStringList());
+			cfgCurrWorld.set("PreventedItems",					tmpPlotWorld.getPreventedItemsAsStringList());
+			cfgCurrWorld.set("ProtectedWallBlockId",			tmpPlotWorld.ProtectedWallBlock);
+			cfgCurrWorld.set("ForSaleWallBlockId",				tmpPlotWorld.ForSaleWallBlock);
+			cfgCurrWorld.set("AuctionWallBlockId",				tmpPlotWorld.AuctionWallBlock);
+			cfgCurrWorld.set("AutoLinkPlots",					tmpPlotWorld.AutoLinkPlots);
+			cfgCurrWorld.set("DisableExplosion",				tmpPlotWorld.DisableExplosion);
+			cfgCurrWorld.set("DisableIgnition",					tmpPlotWorld.DisableIgnition);
+			cfgCurrWorld.set("DisableNetherrackIgnition",		false);
+			cfgCurrWorld.set("DisableObsidianIgnition",			false);
 			
 			economysection = cfgCurrWorld.createSection("economy");
 			
@@ -978,7 +969,7 @@ public class PlotMe extends JavaPlugin
 		properties.put("WordYes", "Yes");
 		properties.put("WordNo", "No");
 		properties.put("WordText", "text");
-		properties.put("WordFrom", "From");
+		properties.put("WordFrom", "from");
 		properties.put("WordTo", "to");
 		properties.put("WordBiomes", "Biomes");
 		properties.put("WordNotApplicable", "N/A");

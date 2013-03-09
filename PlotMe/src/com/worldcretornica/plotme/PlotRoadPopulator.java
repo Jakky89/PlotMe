@@ -3,69 +3,67 @@ package com.worldcretornica.plotme;
 import java.util.Random;
 
 import org.bukkit.Chunk;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
+
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
 
 public class PlotRoadPopulator extends BlockPopulator
 {
 	private double plotsize;
 	private double pathsize;
 
-	private byte wall;
-	private short wallid;
-	private byte floor1;
-	private short floor1id;
-	private byte floor2;
-	private short floor2id;
-	
-	private byte pillar;
-	private short pillarid;
-	
-	private byte pillarh1;
-	private short pillarh1id;
-	private byte pillarh2;
-	private short pillarh2id;
+	private Jakky89ItemIdData wall;
+	private Jakky89ItemIdData floor1;
+	private Jakky89ItemIdData floor2;
+	private Jakky89ItemIdData pillar;
+	private Jakky89ItemIdData pillarh1;
+	private Jakky89ItemIdData pillarh2;
 	
 	private int roadheight;
 	
+	
+	public void setDefaults()
+	{
+		plotsize	= PlotMe.DEFAULT_PLOT_SIZE;
+		pathsize	= PlotMe.DEFAULT_PATH_WIDTH;
+		roadheight	= PlotMe.DEFAULT_ROAD_HEIGHT;
+		
+		wall 		= PlotMe.DEFAULT_WALL_BLOCK;
+		floor1		= PlotMe.DEFAULT_FLOOR_1_BLOCK;
+		floor2		= PlotMe.DEFAULT_FLOOR_2_BLOCK;
+		
+		pillar		= PlotMe.DEFAULT_PILLAR_BLOCK;
+		pillarh1	= PlotMe.DEFAULT_PILLAR_H1_BLOCK;
+		pillarh2	= PlotMe.DEFAULT_PILLAR_H2_BLOCK;
+	}
+	
 	public PlotRoadPopulator()
 	{
-		plotsize = 32;
-		pathsize = 7;
-		wall = 0;
-		wallid = 44;
-		floor2 = 0;
-		floor2id = 5;
-		floor1 = 2;
-		floor1id = 5;
-		
-		pillar = 0;
-		pillarid = 17;
-		
-		pillarh1 = 4;
-		pillarh1id = 17;
-		
-		pillarh2 = 8;
-		pillarh2id = 17;
-		
-		roadheight = 64;
+		setDefaults();
+		PlotMe.logger.warning(PlotMe.PREFIX + "Unable to find configuration for PlotRoadPopulator! Using defaults.");
 	}
 	
 	public PlotRoadPopulator(PlotWorld pwi)
 	{
-		plotsize = pwi.PlotSize;
-		pathsize = pwi.PathWidth;
-		wall = pwi.WallBlockValue;
-		wallid = pwi.WallBlockId;
-		floor2 = pwi.RoadMainBlockValue;
-		floor2id = pwi.RoadMainBlockId;
-		floor1 = pwi.RoadStripeBlockValue;
-		floor1id = pwi.RoadStripeBlockId;
-		roadheight = pwi.RoadHeight;
+		if (pwi == null)
+		{
+			setDefaults();
+			PlotMe.logger.warning(PlotMe.PREFIX + "Unregistered PlotWorld in PlotRoadPopulator! Using defaults.");
+			return;
+		}
 		
-		pillar = 0;
-		pillarid = 17;
+		plotsize	= pwi.PlotSize;
+		pathsize	= pwi.PathWidth;
+		roadheight	= pwi.RoadHeight;
+		
+		wall		= pwi.WallBlock;
+		floor1		= pwi.RoadStripeBlock;
+		floor2		= pwi.RoadMainBlock;
+		
+		pillar		= PlotMe.DEFAULT_PILLAR_BLOCK;
+		pillarh1	= PlotMe.DEFAULT_PILLAR_H1_BLOCK;
+		pillarh2	= PlotMe.DEFAULT_PILLAR_H2_BLOCK;
 	}
 
 	@Override
@@ -78,6 +76,7 @@ public class PlotRoadPopulator extends BlockPopulator
 		int zz = cz << 4;
 		
 		double size = plotsize + pathsize;
+		double psh  = (double)(pathsize/2);
 		int valx;
 		int valz;
 		
@@ -87,20 +86,20 @@ public class PlotRoadPopulator extends BlockPopulator
 		int mod2 = 0;
 		int mod1 = 1;
 		
-		if(pathsize % 2 == 1)
+		if (pathsize % 2 == 1)
 		{
-			n1 = Math.ceil(((double)pathsize)/2) - 2;
-			n2 = Math.ceil(((double)pathsize)/2) - 1;
-			n3 = Math.ceil(((double)pathsize)/2);
+			n3 = Math.ceil(psh);
+			n1 = n3 - 2;
+			n2 = n3 - 1;
 		}
 		else
 		{
-			n1 = Math.floor(((double)pathsize)/2) - 2;
-			n2 = Math.floor(((double)pathsize)/2) - 1;
-			n3 = Math.floor(((double)pathsize)/2);
+			n3 = Math.floor(psh);
+			n1 = n3 - 2;
+			n2 = n3 - 1;
 		}
 		
-		if(pathsize % 2 == 1)
+		if (pathsize % 2 == 1)
 		{
 			mod2 = -1;
 		}
@@ -127,15 +126,17 @@ public class PlotRoadPopulator extends BlockPopulator
             			}	                			
         			}
 
-        			if(found)
+        			if (found)
         			{
-        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-        				setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
-        			}else{
-        				setBlock(w, x + xx, y, z + zz, pillarh2, pillarh2id);
-    					setBlock(w, x + xx, y+1, z + zz, wall, wallid);
+        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+        				setBlock(w, x + xx, y,     z + zz, floor1.getTypeId(), floor1.getDataValue());
+        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
+        			}
+        			else
+        			{
+        				setBlock(w, x + xx, y,   z + zz, pillarh2.getTypeId(), pillarh2.getDataValue());
+    					setBlock(w, x + xx, y+1, z + zz, wall.getTypeId(),     wall.getDataValue());
         			}
         		}
         		else
@@ -154,8 +155,8 @@ public class PlotRoadPopulator extends BlockPopulator
         			{
         				if((valz - n3 + mod1) % size == 0 || (valz + n3 + mod2) % size == 0)
         				{
-        					setBlock(w, x + xx, y, z + zz, pillarh1, pillarh1id);
-        					setBlock(w, x + xx, y+1, z + zz, wall, wallid);
+        					setBlock(w, x + xx, y,   z + zz, pillarh1.getTypeId(), pillarh1.getDataValue());
+        					setBlock(w, x + xx, y+1, z + zz, wall.getTypeId(),     wall.getDataValue());
         				}
         			}
         			
@@ -165,34 +166,35 @@ public class PlotRoadPopulator extends BlockPopulator
 	        			if((valz - n3 + mod1) % size == 0 || (valz + n3 + mod2) % size == 0
 	        					|| (valz - n2 + mod1) % size == 0 || (valz + n2 + mod2) % size == 0)
 	        			{
-	        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	        				setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-	        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	        				setBlock(w, x + xx, y,     z + zz, floor1.getTypeId(), floor1.getDataValue());
+	        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	        			}
 	        			else
 	        			{
-	        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	        				setBlock(w, x + xx, y, z + zz, floor2, floor2id);
-	        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	        				setBlock(w, x + xx, y,     z + zz, floor2.getTypeId(), floor2.getDataValue());
+	        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	        			}
-	        		}else if ((valx - n1 + mod1) % size == 0 || (valx + n1 + mod2) % size == 0) //middle+2
+	        		}
+        			else if ((valx - n1 + mod1) % size == 0 || (valx + n1 + mod2) % size == 0) //middle+2
 	        		{
 	        			if((valz - n2 + mod1) % size == 0 || (valz + n2 + mod2) % size == 0 
 	        				|| (valz - n1 + mod1) % size == 0 || (valz + n1 + mod2) % size == 0)
 	        			{
-	        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	        				setBlock(w, x + xx, y, z + zz, floor2, floor2id);
-	        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	        				setBlock(w, x + xx, y,     z + zz, floor2.getTypeId(), floor2.getDataValue());
+	        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	        			}
 	        			else
 	        			{
-	        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	        				setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-	        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	        				setBlock(w, x + xx, y,     z + zz, floor1.getTypeId(), floor1.getDataValue());
+	        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	        			}
 	        		}
 	        		else
@@ -209,22 +211,22 @@ public class PlotRoadPopulator extends BlockPopulator
 	
 	        			if(found)
 	        			{
-	        				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	        				setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-	        				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	        				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	        				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	        				setBlock(w, x + xx, y,     z + zz, floor1.getTypeId(), floor1.getDataValue());
+	        				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	        				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	        			}else{
 	            			if((valz - n2 + mod1) % size == 0 || (valz + n2 + mod2) % size == 0)
 	            			{
-	            				setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	            				setBlock(w, x + xx, y, z + zz, floor2, floor2id);
-	            				setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	            				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	            				setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	            				setBlock(w, x + xx, y,     z + zz, floor2.getTypeId(), floor2.getDataValue());
+	            				setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	            				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	            			}
 	            			else
 	            			{
 	            				boolean found2 = false;
-	                			for(double i = n1; i >= 0; i--)
+	                			for (double i = n1; i >= 0; i--)
 	                			{
 		                			if((valz - i + mod1) % size == 0 || (valz + i + mod2) % size == 0)
 		                			{
@@ -232,32 +234,30 @@ public class PlotRoadPopulator extends BlockPopulator
 		                				break;
 		                			}	                			
 	                			}
-	            				
-	            				if(found2)
+	            				if (found2)
 	            				{
-	            					setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	            					setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-	            					setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	                				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	            					setBlock(w, x + xx, y - 1, z + zz, pillar.getTypeId(), pillar.getDataValue());
+	            					setBlock(w, x + xx, y,     z + zz, floor1.getTypeId(), floor1.getDataValue());
+	            					setBlock(w, x + xx, y + 1, z + zz, (short)0, (short)0); // AIR
+	                				setBlock(w, x + xx, y + 2, z + zz, (short)0, (short)0); // AIR
 	            				}
 	                			else
 	                			{
 	                				boolean found3 = false;
-	                    			for(double i = n3; i >= 0; i--)
+	                    			for (double i = n3; i >= 0; i--)
 	                    			{
-	    	                			if((valx - i + mod1) % size == 0 || (valx + i + mod2) % size == 0)
+	    	                			if ((valx - i + mod1) % size == 0 || (valx + i + mod2) % size == 0)
 	    	                			{
 	    	                				found3 = true;
 	    	                				break;
 	    	                			}	                			
 	                    			}
-	                				
-	                				if(found3)
+	                				if (found3)
 	                				{
-	                					setBlock(w, x + xx, y - 1, z + zz, pillar, pillarid);
-	                					setBlock(w, x + xx, y, z + zz, floor1, floor1id);
-	                					setBlock(w, x + xx, y + 1, z + zz, (byte) 0, (short) Material.AIR.getId());
-	                    				setBlock(w, x + xx, y + 2, z + zz, (byte) 0, (short) Material.AIR.getId());
+	                					setBlock(w, x + xx, y - 1, z + zz,		pillar.getTypeId(),   pillar.getDataValue());
+	                					setBlock(w, x + xx, y,     z + zz,		floor1.getTypeId(),   floor1.getDataValue());
+	                					setBlock(w, x + xx, y + 1, z + zz,		(short)0, (short)0);  // AIR
+	                    				setBlock(w, x + xx, y + 2, z + zz,		(short)0, (short)0);  // AIR
 	                				}
 	                			}
 	            			}
@@ -268,13 +268,8 @@ public class PlotRoadPopulator extends BlockPopulator
         }
 	}
 
-	private void setBlock(World w, int x, int y, int z, byte val, short id)
+	private void setBlock(World w, int x, int y, int z, short typeId, short dataValue)
 	{
-		if(val != 0)
-		{
-			w.getBlockAt(x, y, z).setTypeIdAndData(id, val, false);
-		}else{
-			w.getBlockAt(x, y, z).setTypeId(id);
-		}
+		w.getBlockAt(x, y, z).setTypeIdAndData(typeId, (byte)dataValue, false);
 	}
 }

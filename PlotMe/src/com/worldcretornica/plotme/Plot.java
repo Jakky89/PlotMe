@@ -1,5 +1,6 @@
 package com.worldcretornica.plotme;
 
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -36,6 +37,8 @@ public class Plot implements Comparable<Plot>
 	private boolean isforsale;
 	private boolean isprotected;
 	private int auction;
+	private HashMap<String, BitSet> grouprights;
+	private HashMap<PlotPlayer, BitSet> playerrights;
 	private List<PlotAuctionBid> auctionbids;
 	
 	public void setPlotPosition(PlotWorld plotWorld, int plotX, int plotZ)
@@ -828,6 +831,12 @@ public class Plot implements Comparable<Plot>
 		}
 		
 		((LinkedList<Pair<String, String>>)allcomments).addFirst(newcomment);
+	}
+	
+	@Override
+	public int hashCode()
+	{
+		return id;
 	}
 
 	@Override

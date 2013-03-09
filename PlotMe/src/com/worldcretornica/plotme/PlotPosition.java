@@ -43,10 +43,6 @@ public class PlotPosition {
 	@Override
 	public final int hashCode()
 	{
-		if (this.w == null)
-		{
-			return (Integer.valueOf(x).hashCode() >> 7) ^ Integer.valueOf(z).hashCode();
-		}
 		return (w.hashCode() >> 13) ^ (Integer.valueOf(x).hashCode() >> 7) ^ Integer.valueOf(z).hashCode();
 	}
 

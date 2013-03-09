@@ -17,6 +17,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	private String realname;
 	private String displayname;
 	private Integer lastonline;
+	private Integer maxplotsamt;
 	private Set<Plot> ownplots;
 	private Set<PlotGroup> plotgroups;
 	
@@ -28,6 +29,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = playerName;
 		ownplots = null;
 		lastonline = null;
+		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -39,6 +41,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = playerName;
 		ownplots = null;
 		lastonline = lastOnlineTime;
+		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -50,6 +53,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = displayName;
 		ownplots = null;
 		lastonline = lastOnlineTime;
+		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -61,6 +65,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = displayName;
 		ownplots = null;
 		lastonline = null;
+		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -69,6 +74,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		id = ownerId;
 		setMinecraftPlayer(minecraftPlayer);
 		ownplots = null;
+		maxplotsamt = PlotMe.DEFAULT_PLAYER_PLOT_LIMIT;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -89,6 +95,11 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		realname = minecraftPlayer.getName();
 		displayname = minecraftPlayer.getDisplayName();
 		refreshLastOnlineTime();
+	}
+	
+	public void setMaxPlotCount(int maxPlots)
+	{
+		
 	}
 	
 	public int getId()
@@ -157,6 +168,12 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 			return 0;
 		}
 		return ownplots.size();
+	}
+	
+	@Override
+	public int hashCode()
+	{
+		return id;
 	}
 	
 	@Override

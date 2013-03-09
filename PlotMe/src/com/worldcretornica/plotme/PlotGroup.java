@@ -91,6 +91,12 @@ public class PlotGroup implements Comparable<PlotGroup>
 	}
 	
 	@Override
+	public int hashCode()
+	{
+		return id;
+	}
+	
+	@Override
 	public boolean equals(Object o)
 	{
 	    if (o == null) {

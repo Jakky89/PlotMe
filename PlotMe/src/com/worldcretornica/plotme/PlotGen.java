@@ -9,43 +9,61 @@ import org.bukkit.World;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
+import com.worldcretornica.plotme.utils.Pair;
+
 public class PlotGen extends ChunkGenerator {
 	
 	private double plotsize;
 	private double pathsize;
-	private short bottom;
-	private short wall;
-	private short plotfloor;
-	private short filling;
-	private short floor1;
-	private short floor2;
+	private Jakky89ItemIdData bottom;
+	private Jakky89ItemIdData wall;
+	private Jakky89ItemIdData plotfloor;
+	private Jakky89ItemIdData filling;
+	private Jakky89ItemIdData floor1;
+	private Jakky89ItemIdData floor2;
 	private int roadheight;
+	
+	
+	public void setDefaults()
+	{
+		plotsize	= PlotMe.DEFAULT_PLOT_SIZE;
+		pathsize	= PlotMe.DEFAULT_PATH_WIDTH;
+		roadheight	= PlotMe.DEFAULT_ROAD_HEIGHT;
+		
+		bottom		= PlotMe.DEFAULT_BOTTOM_BLOCK;
+		wall		= PlotMe.DEFAULT_WALL_BLOCK;
+		plotfloor	= PlotMe.DEFAULT_FLOOR_BLOCK;
+		
+		filling		= PlotMe.DEFAULT_FILL_BLOCK;
+		floor1		= PlotMe.DEFAULT_FLOOR_1_BLOCK;
+		floor2		= PlotMe.DEFAULT_FLOOR_2_BLOCK;
+	}
 	
 	public PlotGen()
 	{
-		plotsize = PlotMe.DEFAULT_PLOT_SIZE;
-		pathsize = PlotMe.DEFAULT_PATH_WIDTH;
-		bottom = PlotMe.DEFAULT_BOTTOM_BLOCK;
-		wall = PlotMe.DEFAULT_WALL_BLOCK;
-		plotfloor = PlotMe.DEFAULT_FLOOR_BLOCK;
-		filling = PlotMe.DEFAULT_FILL_BLOCK;
-		roadheight = PlotMe.DEFAULT_ROAD_HEIGHT;
-		floor1 = PlotMe.DEFAULT_FLOOR_1;
-		floor2 = PlotMe.DEFAULT_FLOOR_2;
-		PlotMe.logger.warning(PlotMe.PREFIX + "Unable to find configuration for PlotGenerator - using defaults.");
+		setDefaults();
+		PlotMe.logger.warning(PlotMe.PREFIX + "Unable to find configuration for PlotGen! Using defaults.");
 	}
 	
-	private void fetchPlotWorldProperties(PlotWorld pw)
+	private void fetchPlotWorldProperties(PlotWorld pwi)
 	{
-		plotsize = pw.PlotSize;
-		pathsize = pw.PathWidth;
-		bottom = pw.BottomBlockId;
-		wall = pw.WallBlockId;
-		plotfloor = pw.PlotFloorBlockId;
-		filling = pw.PlotFillingBlockId;
-		roadheight = pw.RoadHeight;
-		floor1 = pw.RoadMainBlockId;
-		floor2 = pw.RoadStripeBlockId;
+		if (pwi == null)
+		{
+			setDefaults();
+			PlotMe.logger.warning(PlotMe.PREFIX + "Unregistered PlotWorld in PlotGen! Using defaults.");
+			return;
+		}
+		
+		plotsize	= pwi.PlotSize;
+		pathsize	= pwi.PathWidth;
+		bottom		= pwi.BottomBlock;
+		wall		= pwi.WallBlock;
+		plotfloor	= pwi.PlotFloorBlock;
+		filling		= pwi.PlotFillingBlock;
+		roadheight	= pwi.RoadHeight;
+		floor1		= pwi.RoadMainBlock;
+		floor2		= pwi.RoadStripeBlock;
 	}
 
 	public PlotGen(World w)
