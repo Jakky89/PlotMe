@@ -37,7 +37,7 @@ public class Plot implements Comparable<Plot>
 	private boolean isforsale;
 	private boolean isprotected;
 	private int auction;
-	private HashMap<String, BitSet> grouprights;
+	private HashMap<PlotGroup, BitSet> grouprights;
 	private HashMap<PlotPlayer, BitSet> playerrights;
 	private List<PlotAuctionBid> auctionbids;
 	

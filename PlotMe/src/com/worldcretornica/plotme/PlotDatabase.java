@@ -57,19 +57,11 @@ public class PlotDatabase {
 				  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
 				  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
 				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL,"
-				  		+ "`properties` BLOB DEFAULT NULL,"
+				  		+ "`rights` TEXT DEFAULT NULL,"
 				  		+ "UNIQUE (world, xpos, zpos)" +
 				  	")";
 	
-	final static String LAYOUT_RIGHTS_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_rights` " +
-					"("
-						+ "`plot` UNSIGNED INTEGER NOT NULL,"
-						+ "`player` UNSIGNED INTEGER NOT NULL,"
-						+ "`rights` INTEGER NOT NULL DEFAULT 0," // rights are simply integer values where single bits will be toggled
-						+ "PRIMARY KEY(plot, player)" +
-					")";
-	
-	final static String LAYOUT_AUCTIONS_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_auctions` " +
+	final static String LAYOUT_PLOTAUCTION_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotauctions` " +
 					"("
 						+ "`date` UNSIGNED INTEGER NOT NULL,"
 						+ "`auction` UNSIGNED INTEGER NOT NULL,"
@@ -94,12 +86,12 @@ public class PlotDatabase {
 						+ "`binarydata` BLOB DEFAULT NULL" +
 					")";*/
 	
-	final static String LAYOUT_COMMENT_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_comments` " +
+	final static String LAYOUT_PLOTCOMMENT_TABLE =	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotcomments` " +
 				 	"("
 				 		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
 				 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
-				 		+ "`player` UNSIGNED INTEGER NOT NULL,"
 				 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
+				 		+ "`from` UNSIGNED INTEGER NOT NULL,"
 				 		+ "`message` TEXT" +
 				 	")";
 	
@@ -125,225 +117,6 @@ public class PlotDatabase {
 		 			+ "`value` TEXT DEFAULT NULL" +
 		 		");";
 	
-	public static Double getTablesVersion()
-	{
-		Connection con     = null;
-		Statement  st  	   = null;
-		ResultSet  infoset = null;
-		
-		try
-		{
-			con = PlotDatabase.getConnection();
-			if (con == null)
-			{
-				return null;
-			}
-			
-			st  = con.createStatement();
-			if (st == null)
-			{
-				return null;
-			}
-			
-	    	infoset = st.executeQuery("SELECT value FROM plotme_info WHERE key='PLOTME_VERSION'");
-	    	if (infoset != null && infoset.next())
-	    	{
-	   			try
-	    		{
-	    			return Double.valueOf(infoset.getString(1));
-	    		}
-	    		catch (NumberFormatException ex)
-	    		{
-	    			PlotMe.logger.warning(PlotMe.PREFIX + "Could not convert plugin version to double! Not autoupdating changes.");
-	    		}
-	    	}
-	    	else
-	    	{
-				PlotMe.logger.warning(PlotMe.PREFIX + "Could not get previous plugin version from database!");
-	    	}
-		}
-		catch (Exception ex)
-		{
-			PlotMe.logger.warning(PlotMe.PREFIX + "Could not get previous plugin version from database!");
-		}
-		finally
-		{
-            try 
-            {
-                if (st != null)
-                {
-                	st.close();
-                }
-                if (infoset != null)
-                {
-                	infoset.close();
-                }
-            } 
-            catch (SQLException ex) 
-            {
-            	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception (on close) :");
-            	PlotMe.logger.severe("  " + ex.getMessage());
-            }
-		}
-		return null;
-	}
-
-	public static boolean updateDatabase()
-    {
-        Connection con = null;
-        Statement st = null;
-        ResultSet rs = null;
-        
-        Double fromVersion = getTablesVersion();
-        Double toVersion = null;
-
-        try
-		{
-			toVersion = Double.valueOf(PlotMe.VERSION);
-		}
-		catch (NumberFormatException ex)
-		{
-			PlotMe.logger.warning(PlotMe.PREFIX + "Could not convert plugin version to double! Not autoupdating changes.");
-			return false;
-    	}
-        
-        if (fromVersion != null && fromVersion == toVersion)
-        {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "You are using the newest version. No database updates needed.");
-        	return true;
-        }
-       
-		try
-		{
-	        con = getConnection();
-			if (con == null)
-			{
-				PlotMe.logger.severe(PlotMe.PREFIX + "Could not establish database connection!");
-				return false;
-			}
-			
-			st  = con.createStatement();
-			if (st == null)
-			{
-				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create database statement!");
-				return false;
-			}
-			
-	        try
-	        {
-	        	con.setAutoCommit(false);
-	        	st.addBatch(LAYOUT_WORLD_TABLE);
-	        	st.addBatch(LAYOUT_PLAYER_TABLE);
-	        	st.addBatch(LAYOUT_PLOT_TABLE);
-	        	st.addBatch(LAYOUT_COMMENT_TABLE);
-	        	st.addBatch(LAYOUT_INFO_TABLE);
-	        	
-	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_WORLDS', '" + LAYOUT_WORLD_TABLE + "')");
-	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_PLAYERS', '" + LAYOUT_PLAYER_TABLE + "')");
-	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_PLOTS', '" + LAYOUT_PLOT_TABLE + "')");
-	        	st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES('TABLE_LAYOUT_COMMENTS', '" + LAYOUT_COMMENT_TABLE + "')");
-	        	
-	   			if (PlotDatabase.batchExecuteCommitOrRollback(st))
-	   			{
-	   				return true;
-	   			}
-	   			else
-	   			{
-	   				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create needed database tables!");
-	   				return false;
-	   			}
-	        }
-	        catch (SQLException ex) 
-	        {
-	        	PlotMe.logger.severe(PlotMe.PREFIX + "Exception occurred while creating needed database tables :");
-	        	PlotMe.logger.severe("  " + ex.getMessage());
-	        }
-	        
-			return true;
-		} catch (SQLException ex) {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception (on close) :");
-        	PlotMe.logger.severe("  " + ex.getMessage());
-		}
-		catch (Exception ex)
-		{
-			PlotMe.logger.warning(PlotMe.PREFIX + "Could not get previous plugin version from database!");
-		}
-		finally
-		{
-			try 
-			{
-				if (st != null)
-				{
-					st.close();
-				}
-			} 
-			catch (SQLException ex) 
-			{
-				PlotMe.logger.severe(PlotMe.PREFIX + "Could not close database statement ressource :");
-				PlotMe.logger.severe("  " + ex.getMessage());
-			}
-		}
-		return false;
-
-		/**
-         * TODO: Update from older versions by fetching data from the old tables and insert them to the new tables
-         */
-		
-        /*try
-        {
-   			// Save current layout in table
-   			st.addBatch("INSERT INTO `plotme_info` VALUES('LAYOUT_WORLDS_TABLE', '" + LAYOUT_WORLD_TABLE + "')");
-   			st.addBatch("INSERT INTO `plotme_info` VALUES('LAYOUT_PLAYERS_TABLE', '" + LAYOUT_PLAYER_TABLE + "')");
-   			st.addBatch("INSERT INTO `plotme_info` VALUES('LAYOUT_PLOTS_TABLE', '" + LAYOUT_PLOT_TABLE + "')");
-   			st.addBatch("INSERT INTO `plotme_info` VALUES('LAYOUT_COMMENTS_TABLE', '" + LAYOUT_COMMENT_TABLE + "')");
-   			st.addBatch("INSERT INTO `plotme_info` VALUES('LAYOUT_INFO_TABLE', '" + LAYOUT_INFO_TABLE + "')");
-   			
-   			if (!PlotMeSqlManager.batchExecuteCommitOrRollback(st))
-   			{
-   				PlotMe.logger.severe(PlotMe.PREFIX + " Error while trying to create the needed database tables!");
-   				return;
-   			}
-	    	set = statement.executeQuery("SELECT infovalue FROM plotmeInfo WHERE infokey='version'");
-	    	if (set.next()) {
-	    		set.getInt(0);
-	    	} else {
-	    		needsUpdate = true;
-	    		fromVersion = 8;
-	    	}
-	       	set.close();
-	      	conditionIterator = updateConditions.iterator();
-	        while (conditionIterator.hasNext())
-	        {
-	        	Pair<String, String> conditionPair = conditionIterator.next();
-	        	set = statement.executeQuery(conditionPair.getLeft());
-	        	if (!set.next())
-	        	{
-	        		statement.addBatch(conditionPair.getRight());
-	        	}
-	        }
-        }
-        catch (SQLException ex) 
-        {
-        	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception :");
-        	PlotMe.logger.severe("  " + ex.getMessage());
-        } 
-        finally 
-        {
-            try 
-            {
-                if (statement != null)
-                	statement.close();
-                if (set != null)
-                	set.close();
-            } 
-            catch (SQLException ex) 
-            {
-            	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception (on close) :");
-            	PlotMe.logger.severe("  " + ex.getMessage());
-            }
-        }*/
-    }
-
     public static Connection initialize()
     {
         try
@@ -376,61 +149,6 @@ public class PlotDatabase {
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         return con;
-    }
-    
-    public static String getSchema()
-    {
-    	String constr = PlotMe.mySQLconn;
-    	if (constr.lastIndexOf("/") > 0)
-    	{
-    		return constr.substring(constr.lastIndexOf("/") + 1);
-    	}
-    	return "";
-    }
-    
-    public static Connection getConnection()
-    {
-		if (con == null)
-		{
-			con = initialize();
-		}
-		if (PlotMe.usemySQL)
-		{
-			try
-			{
-				if (!con.isValid(10))
-				{
-					con = initialize();
-				}
-			} 
-			catch (SQLException ex) 
-			{
-				PlotMe.logger.severe(PlotMe.PREFIX + "Failed establishing SQL database connection :");
-				PlotMe.logger.severe("  " + ex.getMessage());
-			}
-		}
-		return con;
-	}
-
-    public static void closeConnection() {
-		if (con != null)
-		{
-			try
-			{
-				if (PlotMe.usemySQL)
-				{
-					if (con.isValid(10))
-					{
-						con.close();
-					}
-				}
-				else
-				{
-					con.close();
-				}
-				con = null;
-			} catch (SQLException ex) {}
-		}
     }
     
     public static boolean batchExecuteCommitOrRollback(Statement st) {
@@ -517,6 +235,287 @@ public class PlotDatabase {
 		}
 		return false;
     }
+	
+	
+	public static String getTablesVersion()
+	{
+		Connection con     = null;
+		Statement  st  	   = null;
+		ResultSet  infoset = null;
+		
+		try
+		{
+			con = PlotDatabase.getConnection();
+			if (con == null)
+			{
+				return null;
+			}
+			
+			st  = con.createStatement();
+			if (st == null)
+			{
+				return null;
+			}
+			
+	    	infoset = st.executeQuery("SELECT value FROM plotme_info WHERE key='PLOTME_VERSION'");
+	    	if (infoset != null && infoset.next())
+	    	{
+	   			try
+	    		{
+	    			return infoset.getString(1);
+	    		}
+	    		catch (NumberFormatException ex)
+	    		{
+	    			PlotMe.logger.warning(PlotMe.PREFIX + "Could not convert plugin version to double! Not autoupdating changes.");
+	    		}
+	    	}
+	    	else
+	    	{
+				PlotMe.logger.warning(PlotMe.PREFIX + "Could not get previous plugin version from database! Assuming previous version was 0.13");
+				return null;
+	    	}
+		}
+		catch (Exception ex)
+		{
+			PlotMe.logger.warning(PlotMe.PREFIX + "Could not get previous plugin version from database!");
+		}
+		finally
+		{
+            try 
+            {
+                if (st != null)
+                {
+                	st.close();
+                }
+                if (infoset != null)
+                {
+                	infoset.close();
+                }
+            } 
+            catch (SQLException ex) 
+            {
+            	PlotMe.logger.severe(PlotMe.PREFIX + " Update table exception (on close) :");
+            	PlotMe.logger.severe("  " + ex.getMessage());
+            }
+		}
+		return null;
+	}
+
+	public static boolean updateDatabase()
+    {
+        Connection con = null;
+        Statement st = null;
+        ResultSet rs = null;
+        PreparedStatement ps = null;
+        
+        String fromVersion = getTablesVersion();
+        
+        if (fromVersion != null && fromVersion == PlotMe.VERSION)
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "You are using the newest version. No database updates needed.");
+        	return true;
+        }
+       
+		try
+		{
+	        con = getConnection();
+			if (con == null)
+			{
+				PlotMe.logger.severe(PlotMe.PREFIX + "Could not establish database connection! Not creating or update tables.");
+				return false;
+			}
+			
+			st  = con.createStatement();
+			if (st == null)
+			{
+				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create database statement! Not creating or update tables.");
+				return false;
+			}
+			
+	        try
+	        {
+	        	con.setAutoCommit(false);
+	        	st.addBatch(LAYOUT_WORLD_TABLE);
+	        	st.addBatch(LAYOUT_PLAYER_TABLE);
+	        	st.addBatch(LAYOUT_PLOT_TABLE);
+	        	st.addBatch(LAYOUT_PLOTAUCTION_TABLE);
+	        	st.addBatch(LAYOUT_PLOTCOMMENT_TABLE);
+	        	st.addBatch(LAYOUT_INFO_TABLE);
+	   			if (PlotDatabase.batchExecuteCommitOrRollback(st))
+	   			{
+	   				return true;
+	   			}
+	   			else
+	   			{
+	   				PlotMe.logger.severe(PlotMe.PREFIX + "Could not create needed database tables!");
+	   				return false;
+	   			}
+	        }
+	        catch (SQLException ex) 
+	        {
+	        	PlotMe.logger.severe(PlotMe.PREFIX + "Exception occurred while creating needed database tables :");
+	        	PlotMe.logger.severe("  " + ex.getMessage());
+	        }
+	        finally
+	        {
+	        	if (st != null)
+	        	{
+	        		st.close();
+	        	}
+	        }
+	        
+	        try
+	        {
+	        	ps = con.prepareStatement("INSERT OR REPLACE INTO `" + PlotMe.databasePrefix + "plotme_info` (key, value) VALUES(?,?)");
+	        	ps.setString(1, "LAYOUT_WORLD_TABLE");
+	        	ps.setString(2, LAYOUT_WORLD_TABLE);
+	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_PLAYER_TABLE");
+	        	ps.setString(2, LAYOUT_PLAYER_TABLE);
+	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_PLOT_TABLE");
+	        	ps.setString(2, LAYOUT_PLOT_TABLE);
+	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_PLOTAUCTION_TABLE");
+	        	ps.setString(2, LAYOUT_PLOTAUCTION_TABLE);
+	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_PLOTCOMMENT_TABLE");
+	        	ps.setString(2, LAYOUT_PLOTCOMMENT_TABLE);
+	        	ps.execute();
+	        }
+	        catch (SQLException ex)
+	        {
+	        	PlotMe.logger.severe(PlotMe.PREFIX + "SQLEXCEPTION occurred while inserting current table layout:");
+	        	PlotMe.logger.severe("  " + ex.getMessage());
+	        }
+	        finally
+	        {
+				if (ps != null)
+				{
+					ps.close();
+				}
+	        }
+        	
+	        try
+	        {
+	        	if (fromVersion == null)
+	        	{
+	        		st = con.createStatement();
+	        		try
+	        		{
+	        			rs = st.executeQuery("SELECT * FROM plotmePlots LIMIT 5");
+		        		if (rs.next())
+		        		{
+		        			fromVersion = "0.13";
+		        		}
+	        		}
+	        		catch (SQLException ex) {}
+	        	}
+	        	
+	        	if (fromVersion.equals("0.13"))
+	        	{
+	        		PlotMe.logger.info(PlotMe.PREFIX + "Converting database from version 0.13 to the new table layout ...");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_worlds` (worldname) SELECT DISTINCT world FROM plotmePlots");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT owner FROM plotmePlots");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeAllowed`");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeDenied`");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeComments`");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (world, xpos, zpos, owner, biome, expireddate, finisheddate, price, isforsale, isprotected) SELECT (SELECT id FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE `" + PlotMe.databasePrefix + "plotme_worlds`.worldname LIKE plotmePlots.world), bottomX, bottomZ, (SELECT id FROM plotme_players WHERE `" + PlotMe.databasePrefix + "plotme_players`.playername LIKE plotmePlots.owner), biome, DATEDIFF(plotmePlots.expireddate, '19700101', GETDATE()), DATEDIFF(plotmePlots.finished, '19700101', GETDATE()), customprice, forsale, protected FROM plotmePlots, `" + PlotMe.databasePrefix + "plotme_plots`");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plotcomments` (plot, from, message) SELECT (SELECT id FROM `" + PlotMe.databasePrefix + "plotme_plots`, `plotmeComments` WHERE `" + PlotMe.databasePrefix + "plotme_plots`.xpos=plotmeComments.idX AND `" + PlotMe.databasePrefix + "plotme_plots`.zpos=plotmeComments.idZ AND `" + PlotMe.databasePrefix + "plotme_plots`.world=(SELECT id FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE worldname LIKE `plotmeComments`.world), (SELECT id` FROM `" + PlotMe.databasePrefix + "plotme_players` WHERE `" + PlotMe.databasePrefix + "`.playername LIKE `plotmeComments`.player), comment");
+	        		if (PlotDatabase.batchExecuteCommitOrRollback(st))
+	        		{
+	        			PlotMe.logger.info(PlotMe.PREFIX + "Success!");
+	        			return true;
+	        		}
+	        		else
+	        		{
+	        			PlotMe.logger.severe(PlotMe.PREFIX + "Could not convert old table contents to new table layout!");
+	        			return false;
+	        		}
+	        	}
+	        }
+	        catch (SQLException ex)
+	        {
+	        	PlotMe.logger.severe(PlotMe.PREFIX + "SQLEXCEPTION occurred while updating database tables:");
+	        	PlotMe.logger.severe("  " + ex.getMessage());
+	        }
+		}
+		catch (SQLException ex)
+		{
+        	PlotMe.logger.severe(PlotMe.PREFIX + "SQLEXCEPTION occurred:");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+		}
+		catch (Exception ex)
+		{
+			PlotMe.logger.warning(PlotMe.PREFIX + "EXCEPTION occurred while updating database tables:");
+			PlotMe.logger.severe("  " + ex.getMessage());
+		}
+		finally
+		{
+			try 
+			{
+				if (st != null)
+				{
+					st.close();
+				}
+				if (ps != null)
+				{
+					ps.close();
+				}
+			} 
+			catch (SQLException ex) 
+			{
+				PlotMe.logger.severe(PlotMe.PREFIX + "Could not close database statement ressource :");
+				PlotMe.logger.severe("  " + ex.getMessage());
+			}
+		}
+		return false;
+    }
+
+    public static Connection getConnection()
+    {
+		if (con == null)
+		{
+			con = initialize();
+		}
+		if (PlotMe.usemySQL)
+		{
+			try
+			{
+				if (!con.isValid(10))
+				{
+					con = initialize();
+				}
+			} 
+			catch (SQLException ex) 
+			{
+				PlotMe.logger.severe(PlotMe.PREFIX + "Failed establishing SQL database connection :");
+				PlotMe.logger.severe("  " + ex.getMessage());
+			}
+		}
+		return con;
+	}
+
+    public static void closeConnection() {
+		if (con != null)
+		{
+			try
+			{
+				if (PlotMe.usemySQL)
+				{
+					if (con.isValid(10))
+					{
+						con.close();
+					}
+				}
+				else
+				{
+					con.close();
+				}
+				con = null;
+			} catch (SQLException ex) {}
+		}
+    }
     
     public static PlotWorld getPlotWorld(World bukkitWorld)
     {
@@ -543,7 +542,7 @@ public class PlotDatabase {
             if (rs.next())
             {
             	worldId = rs.getInt(1);
-            	PlotMe.logger.info(PlotMe.PREFIX + "World \"" + bukkitWorld.getName() + "\" has id " + String.valueOf(worldId));
+            	PlotMe.logger.info(PlotMe.PREFIX + "Requested world \"" + bukkitWorld.getName() + "\" with id " + String.valueOf(worldId));
             }
             else
             {
@@ -567,7 +566,7 @@ public class PlotDatabase {
                 // error when we found more than one world with that name (should normally never happen)
                 if (rs.next())
                 {
-                	PlotMe.logger.severe(PlotMe.PREFIX + "World with name \"" + bukkitWorld.getName() + "\" is not unique in database!");
+                	PlotMe.logger.severe(PlotMe.PREFIX + "World with name \"" + bukkitWorld.getName() + "\" is not unique!");
                 	return null;
                 }
                 return new PlotWorld(worldId, bukkitWorld);
@@ -576,7 +575,7 @@ public class PlotDatabase {
         }
         catch (SQLException ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting data for world \"" + bukkitWorld.getName() + "\" from database :");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "SQLEXCEPTION occurred while getting data for world \"" + bukkitWorld.getName() + "\" from database :");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         finally
@@ -629,7 +628,6 @@ public class PlotDatabase {
             rs = st.getResultSet();
             if (rs.next())
             {
-            	PlotMe.logger.info(PlotMe.PREFIX + "Loading player " + rs.getString(2) + " (ID " + String.valueOf(plotPlayerId) + ") from database.");
                	return new PlotPlayer(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4));
             }
         	PlotMe.logger.severe(PlotMe.PREFIX + "Got no result from database while loading plot player with id " + String.valueOf(plotPlayerId) + "!");

@@ -3,7 +3,6 @@ package com.worldcretornica.plotme;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,6 +29,7 @@ import org.bukkit.scheduler.BukkitTask;
 import com.griefcraft.lwc.LWC;
 import com.griefcraft.model.Protection;
 import com.worldcretornica.plotme.utils.ExpiredPlotsComparator;
+import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
 import com.worldcretornica.plotme.utils.Pair;
 import com.worldcretornica.plotme.utils.RunnableExpiredPlotsRemover;
 
@@ -40,8 +40,6 @@ public class PlotManager {
 	public static Map<String, Boolean> enabledWorlds;
 	// Maps player names to PlotMePlayer instances 
 	public static Map<String, PlotPlayer> plotPlayers;
-	public static List<PlotGroup> plotGroups;
-	private static boolean plotGroupsSorted;
 	public static List<Plot> allPlots;
 	public static boolean allPlotsSorted;
 	
@@ -60,10 +58,7 @@ public class PlotManager {
 		plotWorlds = new HashMap<World, PlotWorld>();
 		
 		plotPlayers = new HashMap<String, PlotPlayer>();
-		
-		plotGroups = new ArrayList<PlotGroup>();
-		plotGroupsSorted = false;
-		
+	
 		allPlots = new ArrayList<Plot>();
 		allPlotsSorted = false;
 		expiredPlots = new LinkedList<Plot>();
@@ -130,7 +125,12 @@ public class PlotManager {
 		
 		if (!plotPlayers.containsKey(playerName))
 		{
-			plotPlayers.put(playerName, PlotDatabase.getPlotPlayer(playerName, displayName));
+			PlotPlayer ppres = PlotDatabase.getPlotPlayer(playerName, displayName);
+			if (ppres != null)
+			{
+				plotPlayers.put(playerName, ppres);
+				PlotMe.logger.info(PlotMe.PREFIX + "Loaded player \"" + playerName + "\" with id " + String.valueOf(ppres.getId()) + ".");
+			}
 		}
 	}
 	
@@ -173,58 +173,7 @@ public class PlotManager {
 		}
 		plotPlayers.remove(bukkitPlayer.getName());
 	}
-	
-	public static int getPlotGroupIndex(int plotGroupId)
-	{
-		if (plotGroupId < 0)
-		{
-			return -1;
-		}
-		
-		if (!plotGroupsSorted)
-		{
-			Collections.sort(plotGroups);
-			plotGroupsSorted = true;
-		}
-		
-        int low = 0;
-        int high = plotGroups.size() - 1;
-        int mid;
 
-        while ( low <= high )
-        {
-            mid = ( low + high ) / 2;
-            if ( plotGroups.get( mid ).getId() < plotGroupId )
-            {
-                low = mid + 1;
-            }
-            else if( plotGroups.get( mid ).getId() > plotGroupId )
-            {
-                high = mid - 1;
-            }
-            else
-            {
-                return mid;
-            }
-        }
-        
-        return -1;
-	}
-	
-	public static void registerPlotGroup(PlotGroup plotGroup)
-	{
-		if (plotGroup == null || plotGroup.getId() < 0)
-		{
-			return;
-		}
-		
-		if (getPlotGroupIndex(plotGroup.getId()) < 0)
-		{
-			plotGroups.add(plotGroup);
-		}
-
-	}
-	
 	public static PlotWorld getPlotWorld(World bukkitWorld)
 	{
 		if (bukkitWorld != null && isPlotWorld(bukkitWorld))
@@ -312,22 +261,10 @@ public class PlotManager {
 		
 		double multi = pwi.getPlotBlockPositionMultiplier();
 		
-    	final int minX = (int)Math.floor((centerBlockX - (blockRange / 2)) / multi);
-    	final int minZ = (int)Math.floor((centerBlockZ - (blockRange / 2)) / multi);
-    	final int maxX = (int)Math.ceil((centerBlockX + (blockRange / 2)) / multi);
-    	final int maxZ = (int)Math.ceil((centerBlockX + (blockRange / 2)) / multi);
+    	final int x = (int)Math.round(centerBlockX / multi);
+    	final int z = (int)Math.round(centerBlockZ / multi);
     	
-    	for (int x=minX; x<maxX; x++)
-    	{
-    		for (int z=minZ; z<maxZ; z++)
-    		{
-    			if (pwi.getPlotAtPlotPosition(x, z) == null)
-    			{
-    				PlotDatabase.loadPlots(pwi, x, z, (int)Math.round(blockRange / multi));
-    				return;
-    			}
-    		}
-    	}
+		PlotDatabase.loadPlots(pwi, x, z, (int)Math.round(blockRange / multi));
 	}
 	
 	public static PlotPlayer getPlotPlayer(Player bukkitPlayer)
@@ -389,7 +326,7 @@ public class PlotManager {
 		
 		return null;
 	}
-	
+
 	public static List<Player> getPlayersInPlot(Plot plot)
 	{
 		if (plot == null)
@@ -728,11 +665,11 @@ public class PlotManager {
 					{
 						if (isWallX && (x == minX || x == maxX))
 						{
-							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlockId, plot1.getPlotWorld().WallBlockValue, true);
+							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlock.getTypeId(), (byte)plot1.getPlotWorld().WallBlock.getDataValue(), true);
 						}
 						else if(!isWallX && (z == minZ || z == maxZ))
 						{
-							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlockId, plot1.getPlotWorld().WallBlockValue, true);
+							plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().WallBlock.getTypeId(), (byte)plot1.getPlotWorld().WallBlock.getDataValue(), true);
 						}
 						else
 						{
@@ -741,7 +678,7 @@ public class PlotManager {
 					}
 					else
 					{
-						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().PlotFloorBlockId, plot1.getPlotWorld().PlotFloorBlockValue, true);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeIdAndData(plot1.getPlotWorld().PlotFloorBlock.getTypeId(), (byte)plot1.getPlotWorld().PlotFloorBlock.getDataValue(), true);
 					}
 				}
 			}
@@ -791,7 +728,7 @@ public class PlotManager {
 					}
 					else
 					{
-						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeId(plot1.getPlotWorld().PlotFloorBlockId);
+						plot1.getMinecraftWorld().getBlockAt(x, y, z).setTypeId(plot1.getPlotWorld().PlotFloorBlock.getTypeId());
 					}
 				}
 			}
@@ -1195,15 +1132,15 @@ public class PlotManager {
 					
 					if (y == 0)
 					{
-						block.setTypeId(pwi.BottomBlockId);
+						block.setTypeIdAndData(pwi.BottomBlock.getTypeId(), (byte)pwi.BottomBlock.getDataValue(), false);
 					}
 					else if (y < pwi.RoadHeight)
 					{
-						block.setTypeId(pwi.PlotFillingBlockId);
+						block.setTypeIdAndData(pwi.PlotFillingBlock.getTypeId(), (byte)pwi.PlotFillingBlock.getDataValue(), false);
 					}
 					else if (y == pwi.RoadHeight)
 					{
-						block.setTypeId(pwi.PlotFloorBlockId);
+						block.setTypeIdAndData(pwi.PlotFloorBlock.getTypeId(), (byte)pwi.PlotFloorBlock.getDataValue(), false);
 					}
 					else
 					{
@@ -1252,23 +1189,23 @@ public class PlotManager {
 			return;
 		}
 		
-		List<Pair<Short, Byte>> wallids = new ArrayList<Pair<Short, Byte>>();
+		List<Jakky89ItemIdData> wallids = new ArrayList<Jakky89ItemIdData>();
 
 		if (plot.isProtected())
 		{
-			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().ProtectedWallBlockId, null));
+			wallids.add(plot.getPlotWorld().ProtectedWallBlock);
 		}
 		if (plot.isAuctioned())
 		{
-			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().AuctionWallBlockId, null));
+			wallids.add(plot.getPlotWorld().AuctionWallBlock);
 		}
 		if (plot.isForSale())
 		{
-			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().ForSaleWallBlockId, null));
+			wallids.add(plot.getPlotWorld().ForSaleWallBlock);
 		}
 
 		if (wallids.size() == 0){
-			wallids.add(new Pair<Short, Byte>(plot.getPlotWorld().WallBlockId, plot.getPlotWorld().WallBlockValue));
+			wallids.add(plot.getPlotWorld().WallBlock);
 		}
 		
 		int ctr = 0;
@@ -1278,7 +1215,7 @@ public class PlotManager {
 		int x;
 		int z;
 		
-		Pair<Short, Byte> currentblockid;
+		Jakky89ItemIdData currentblockid;
 		Block block;
 		
 		for (x = locations.getLeft().getBlockX() - 1; x < locations.getRight().getBlockX() + 1; x++)
@@ -1340,7 +1277,7 @@ public class PlotManager {
 	}
 	
 	
-	private static void setWall(Block block, Pair<Short, Byte> blockIdData)
+	private static void setWall(Block block, Jakky89ItemIdData blockIdData)
 	{
 		if (block == null)
 		{
@@ -1355,18 +1292,10 @@ public class PlotManager {
 		
 		if (blockIdData != null)
 		{
-			if (blockIdData.getLeft() != null && blockIdData.getRight() != null)
-			{
-				block.setTypeIdAndData(blockIdData.getLeft(), blockIdData.getRight(), true);
-				return;
-			}
-			else if (blockIdData.getRight() == null)
-			{
-				block.setTypeId(blockIdData.getLeft());
-				return;
-			}
+			block.setTypeIdAndData(blockIdData.getTypeId(), (byte)blockIdData.getDataValue(), true);
+			return;
 		}
-		block.setTypeIdAndData(pwi.WallBlockId, pwi.WallBlockValue, true);
+		block.setTypeIdAndData(pwi.WallBlock.getTypeId(), (byte)pwi.WallBlock.getDataValue(), true);
 	}
 	
 	
@@ -1525,7 +1454,7 @@ public class PlotManager {
 					}
 					else
 					{
-						sourceBlock.setTypeIdAndData(pwiFrom.BottomBlockId, pwiFrom.BottomBlockValue, false);
+						sourceBlock.setTypeIdAndData(pwiFrom.BottomBlock.getTypeId(), (byte)pwiFrom.BottomBlock.getDataValue(), false);
 					}
 					
 					// Move to destination
@@ -1647,7 +1576,7 @@ public class PlotManager {
 					}
 					else
 					{
-						block1.setTypeIdAndData(plotWorld1.BottomBlockId, plotWorld1.BottomBlockValue, false);
+						block1.setTypeIdAndData(plotWorld1.BottomBlock.getTypeId(), (byte)plotWorld1.BottomBlock.getDataValue(), false);
 					}
 					lwcprotection1 = lwc.findProtection(block1);
 					
@@ -1671,7 +1600,7 @@ public class PlotManager {
 					}
 					else
 					{
-						block2.setTypeIdAndData(plotWorld2.BottomBlockId, plotWorld2.BottomBlockValue, false);
+						block2.setTypeIdAndData(plotWorld2.BottomBlock.getTypeId(), (byte)plotWorld2.BottomBlock.getDataValue(), false);
 					}
 					lwcprotection2 = lwc.findProtection(block2);
 
@@ -1790,6 +1719,22 @@ public class PlotManager {
 		if  (blockState != null)
 		{
 			return isPlotWorld(blockState.getWorld());
+		}
+		return false;
+	}
+	
+	public static boolean isEconomyEnabled(PlotWorld plotWorld)
+	{
+		if (plotWorld != null)
+		{
+			if (isPlotWorld(plotWorld.getMinecraftWorld()))
+			{
+				PlotWorld pwi = plotWorlds.get(plotWorld.getMinecraftWorld());
+				if (pwi != null)
+				{
+					return pwi.UseEconomy;
+				}
+			}
 		}
 		return false;
 	}

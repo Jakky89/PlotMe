@@ -10,7 +10,6 @@ import org.bukkit.generator.BlockPopulator;
 import org.bukkit.generator.ChunkGenerator;
 
 import com.worldcretornica.plotme.utils.Jakky89ItemIdData;
-import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotGen extends ChunkGenerator {
 	
@@ -91,15 +90,15 @@ public class PlotGen extends ChunkGenerator {
 		
 		if (pathsize % 2 == 1)
 		{
-			n1 = Math.ceil(((double)pathsize)/2) - 2;
-			n2 = Math.ceil(((double)pathsize)/2) - 1;
 			n3 = Math.ceil(((double)pathsize)/2);
+			n2 = n3 - 1;
+			n1 = n3 - 2;
 		}
 		else
 		{
-			n1 = Math.floor(((double)pathsize)/2) - 2;
-			n2 = Math.floor(((double)pathsize)/2) - 1;
 			n3 = Math.floor(((double)pathsize)/2);
+			n2 = n3 - 1;
+			n1 = n3 - 2;
 		}
 
 		if(pathsize % 2 == 1)
@@ -307,11 +306,11 @@ public class PlotGen extends ChunkGenerator {
 		return result;
 	}
 	
-	private void setBlock(short[][] result, int x, int y, int z, short blkid) {
+	private void setBlock(short[][] result, int x, int y, int z, Jakky89ItemIdData blk) {
         if (result[y >> 4] == null) {
             result[y >> 4] = new short[4096];
         }
-        result[y >> 4][((y & 0xF) << 8) | (z << 4) | x] = blkid;
+        result[y >> 4][((y & 0xF) << 8) | (z << 4) | x] = blk.getTypeId();
     }
 	
 	public List<BlockPopulator> getDefaultPopulators(World world)
@@ -322,7 +321,7 @@ public class PlotGen extends ChunkGenerator {
 		}
 		else
 		{
-			return Arrays.asList((BlockPopulator)new PlotPopulator(world));
+			return Arrays.asList((BlockPopulator)new PlotPopulator(PlotManager.getPlotWorld(world)));
 		}
     }
 

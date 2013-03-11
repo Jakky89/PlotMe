@@ -45,19 +45,19 @@ public class CommandHelp extends PlotMeCommandBase {
 		
 		if (PlotMe.cPerms(sender, "plotme.admin.reload"))
 			allowed_commands.add("reload");
-		
-		int maxplots = PlotMe.getPlotLimit(player);
-		int ownedplots = ppl.getOwnPlotsCount();
-		
+		int maxplots = 0;
+		int ownedplots = 0;
+		boolean isInPlotWorld = false;
+		PlotWorld pwi = null;
 		if (sender instanceof Player)
 		{
 			Player player = (Player)sender;
-			boolean isInPlotWorld = PlotManager.isPlotWorld(player);
-			PlotWorld pwi = null;
-			if (isInPlotWorld)
+			PlotPlayer plotPlayer = PlotManager.getPlotPlayer(player);
+			isInPlotWorld = PlotManager.isPlotWorld(player);
+			maxplots = PlotMe.getPlotLimit(player);
+			if (plotPlayer != null)
 			{
-				pwi = PlotManager.getPlotWorld(player);
-				maxplots = 
+				ownedplots = plotPlayer.getOwnPlotsCount();
 			}
 			if (PlotMe.cPerms(sender, "plotme.use.limit"))
 				allowed_commands.add("limit");
@@ -155,32 +155,21 @@ public class CommandHelp extends PlotMeCommandBase {
 			String allowedcmd = allowed_commands.get(ctr).toLowerCase();
 			if (allowedcmd.equals("limit"))
 			{
+				if (maxplots == -1)
 				{
-					/**
-					 * TODO: rewrite plot limit calculations
-					 */
-
-					
-					if (maxplots == -1)
-					{
-						sender.sendMessage(ChatColor.GREEN + C("HelpYourPlotLimitWorld") + " : " + ChatColor.AQUA + String.valueOf(ownedplots) + 
-								ChatColor.GREEN + " " + C("HelpUsedOf") + " " + ChatColor.AQUA + C("WordInfinite"));
-					}
-					else
-					{
-						sender.sendMessage(ChatColor.GREEN + C("HelpYourPlotLimitWorld") + " : " + ChatColor.AQUA + String.valueOf(ownedplots) + 
-								ChatColor.GREEN + " " + C("HelpUsedOf") + " " + ChatColor.AQUA + String.valueOf(maxplots));
-					}
+					sender.sendMessage(ChatColor.GREEN + C("HelpYourPlotLimitWorld") + " : " + ChatColor.AQUA + String.valueOf(ownedplots) + 
+							ChatColor.GREEN + " " + C("HelpUsedOf") + " " + ChatColor.AQUA + C("WordInfinite"));
 				}
 				else
 				{
-					sender.sendMessage(ChatColor.GREEN + C("HelpYourPlotLimitWorld") + " : " + ChatColor.AQUA + C("MsgNotPlotWorld"));
+					sender.sendMessage(ChatColor.GREEN + C("HelpYourPlotLimitWorld") + " : " + ChatColor.AQUA + String.valueOf(ownedplots) + 
+							ChatColor.GREEN + " " + C("HelpUsedOf") + " " + ChatColor.AQUA + String.valueOf(maxplots));
 				}
 			}
 			else if (allowedcmd.equals("claim"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandClaim"));
-				if(ecoon && pwi != null && pwi.ClaimPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.ClaimPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpClaim") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.ClaimPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpClaim"));
@@ -188,7 +177,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("claim.other"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandClaim") + " <" + C("WordPlayer") + ">");
-				if(ecoon && pwi != null && pwi.ClaimPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.ClaimPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpClaimOther") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.ClaimPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpClaimOther"));
@@ -200,7 +189,7 @@ public class CommandHelp extends PlotMeCommandBase {
 				else
 					sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandAuto"));
 				
-				if(ecoon && pwi != null && pwi.ClaimPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.ClaimPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpAuto") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.ClaimPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpAuto"));
@@ -212,7 +201,7 @@ public class CommandHelp extends PlotMeCommandBase {
 				else
 					sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandHome") + "[:#]");
 				
-				if(ecoon && pwi != null && pwi.PlotHomePrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.PlotHomePrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpHome") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.PlotHomePrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpHome"));
@@ -224,7 +213,7 @@ public class CommandHelp extends PlotMeCommandBase {
 				else
 					sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandHome") + "[:#] <" + C("WordPlayer") + ">");
 				
-				if(ecoon && pwi != null && pwi.PlotHomePrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.PlotHomePrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpHomeOther") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.PlotHomePrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpHomeOther"));
@@ -237,7 +226,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("comment"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandComment") + " <" + C("WordComment") + ">");
-				if(ecoon && pwi != null && pwi.AddCommentPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.AddCommentPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpComment") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.AddCommentPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpComment"));
@@ -265,7 +254,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("biome"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandBiome") + " <" + C("WordBiome") + ">");
-				if(ecoon && pwi != null && pwi.BiomeChangePrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.BiomeChangePrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpBiome") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.BiomeChangePrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpBiome"));
@@ -293,7 +282,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("clear"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandClear"));
-				if(ecoon && pwi != null && pwi.ClearPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.ClearPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpId") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.ClearPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpClear"));
@@ -306,7 +295,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("add"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandAdd") + " <" + C("WordPlayer") + ">");
-				if(ecoon && pwi != null && pwi.AddPlayerPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.AddPlayerPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpAdd") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.AddPlayerPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpAdd"));
@@ -314,21 +303,21 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("deny"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandDeny") + " <" + C("WordPlayer") + ">");
-				if(ecoon && pwi != null && pwi.DenyPlayerPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.DenyPlayerPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpDeny") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.DenyPlayerPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpDeny"));
 			}
 			else if (allowedcmd.equals("remove")){
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandRemove") + " <" + C("WordPlayer") + ">");
-				if(ecoon && pwi != null && pwi.RemovePlayerPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.RemovePlayerPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpRemove") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.RemovePlayerPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpRemove"));
 			}
 			else if (allowedcmd.equals("undeny")){
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandUndeny") + " <" + C("WordPlayer") + ">");
-				if(ecoon && pwi != null && pwi.UndenyPlayerPrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.UndenyPlayerPrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpUndeny") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.UndenyPlayerPrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpUndeny"));
@@ -376,7 +365,7 @@ public class CommandHelp extends PlotMeCommandBase {
 			else if (allowedcmd.equals("dispose"))
 			{
 				sender.sendMessage(ChatColor.GREEN + " /plot " + C("CommandDispose"));
-				if(ecoon && pwi != null && pwi.DisposePrice != 0)
+				if(PlotManager.isEconomyEnabled(pwi) && pwi != null && pwi.DisposePrice != 0)
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpDispose") + " " + C("WordPrice") + " : " + ChatColor.RESET + f(pwi.DisposePrice));
 				else
 					sender.sendMessage(ChatColor.AQUA + " " + C("HelpDispose"));
@@ -417,8 +406,7 @@ public class CommandHelp extends PlotMeCommandBase {
 
 	@Override
 	public String getUsage() {
-		// TODO Auto-generated method stub
-		return null;
+		return "/plotme help <" + C("HelpTitle") + ">";
 	}
 
 }

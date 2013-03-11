@@ -64,16 +64,16 @@ public class Jakky89ItemUtils {
 		if (itemStr.isEmpty())
 			return null;
 		
-		Short iid = null;
-		Short iiv = null;
+		short iid = -1;
+		short iiv = 0;
 		String itemTypeStr;
 		String itemDataStr;
 		
 		int dbp = itemStr.indexOf(':');
-		if (dbp > 0 || dbp >= itemStr.length()-1)
+		if (dbp > 0)
 		{
 			itemTypeStr = itemStr.substring(0, dbp);
-			itemDataStr = itemStr.substring(dbp);
+			itemDataStr = itemStr.substring(dbp + 1);
 			itemDataStr = itemDataStr.trim();
 			if (!itemDataStr.isEmpty())
 			{
@@ -83,7 +83,7 @@ public class Jakky89ItemUtils {
 				}
 				catch (NumberFormatException ex)
 				{
-					iiv = null;
+					iiv = 0;
 				}
 			}
 		}
@@ -106,22 +106,19 @@ public class Jakky89ItemUtils {
 			}
 			catch (NumberFormatException ex)
 			{
-				iid = null;
+				iid = -1;
 			}
 		}
-		if (iid == null)
+		try
 		{
-			try
-			{
-				iid = (short)Material.valueOf(itemTypeStr.toUpperCase()).getId();
-			}
-			catch (IllegalArgumentException ia)
-			{
-				return null;
-			}
+			iid = (short)Material.valueOf(itemTypeStr.toUpperCase()).getId();
+		}
+		catch (IllegalArgumentException ia)
+		{
+			return null;
 		}
 		
-		if (iid == null || iid < 0)
+		if (iid < 0)
 			return null;
 		
 		return new Jakky89ItemIdData(iid, iiv);
@@ -169,12 +166,12 @@ public class Jakky89ItemUtils {
 	
 	public static String itemIdDataToString(Jakky89ItemIdData itemIdData)
 	{
-		if (itemIdData == null || itemIdData.getTypeId() == null || itemIdData.getTypeId() < 0 || (itemIdData.getDataValue() != null && itemIdData.getDataValue() < 0))
+		if (itemIdData == null)
 			return "NONE";
 
 		try {
 			// Try to get the material name (preferred to use this instead of number)
-			if (itemIdData.getDataValue() != null && itemIdData.getDataValue() >= 0)
+			if (itemIdData.getDataValue() > 0)
 				return Material.getMaterial(itemIdData.getTypeId()).toString() + ":" + String.valueOf(itemIdData.getDataValue());
 			else
 				return Material.getMaterial(itemIdData.getTypeId()).toString();
@@ -182,7 +179,7 @@ public class Jakky89ItemUtils {
 		catch (IllegalArgumentException ex) {}
 
 		// Fallback
-		if (itemIdData.getDataValue() != null && itemIdData.getDataValue() >= 0)
+		if (itemIdData.getDataValue() > 0)
 			return String.valueOf(itemIdData.getTypeId()) + ":" + String.valueOf(itemIdData.getDataValue());
 		else
 			return String.valueOf(itemIdData.getTypeId());

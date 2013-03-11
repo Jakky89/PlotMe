@@ -22,5 +22,4 @@ public class CommandClaim extends PlotMeCommandBase {
 		return null;
 	}
 	
-	
 }

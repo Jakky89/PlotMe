@@ -141,7 +141,6 @@ public class PlotMe extends JavaPlugin
 		playersignoringwelimit = null;
 		captions = null;
 		update = null;
-		defaultWEAnywhere = null;
 		self = null;
 	}
 	
@@ -731,6 +730,15 @@ public class PlotMe extends JavaPlugin
 			return 1;
 		}
 		
+		return 0;
+	}
+	
+	public static int getPlotLimit(PlotPlayer player)
+	{
+		if (player.getPlayer() != null)
+		{
+			return getPlotLimit(player.getPlayer());
+		}
 		return 0;
 	}
 	

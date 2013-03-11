@@ -50,33 +50,33 @@ import org.bukkit.Material;
 
 public class Jakky89ItemIdData {
 
-	private Short typeId;
+	private short typeId;
 	// We need to use short instead of byte because of potions data values go to max 32768
-	private Short dataValue;
+	private short dataValue;
 	
 	
-	public Jakky89ItemIdData(Short itemTypeId, Short itemDataValue)
+	public Jakky89ItemIdData(short itemTypeId, short itemDataValue)
 	{
 		typeId = itemTypeId;
 		dataValue = itemDataValue;
 	}
 	
-	public Jakky89ItemIdData(Material itemMaterial, Short itemDataValue)
+	public Jakky89ItemIdData(Material itemMaterial, short itemDataValue)
 	{
 		typeId = (short)itemMaterial.getId();
 		dataValue = itemDataValue;
 	}
 	
-	public Jakky89ItemIdData(Short itemTypeId)
+	public Jakky89ItemIdData(short itemTypeId)
 	{
 		typeId = itemTypeId;
-		dataValue = null;
+		dataValue = 0;
 	}
 	
 	public Jakky89ItemIdData(Material itemMaterial)
 	{
 		typeId = (short)itemMaterial.getId();
-		dataValue = null;
+		dataValue = 0;
 	}
 	
 	public Short getTypeId()
@@ -84,17 +84,17 @@ public class Jakky89ItemIdData {
 		return typeId;
 	}
 	
-	public Short getDataValue()
+	public short getDataValue()
 	{
 		return dataValue;
 	}
 	
-	public void setTypeId(Short itemTypeId)
+	public void setTypeId(short itemTypeId)
 	{
 		typeId = itemTypeId;
 	}
 	
-	public void setDataValue(Short itemDataValue)
+	public void setDataValue(short itemDataValue)
 	{
 		dataValue = itemDataValue;
 	}
@@ -102,24 +102,20 @@ public class Jakky89ItemIdData {
 	@Override
 	public String toString()
 	{
-		if (typeId != null)
+		try
 		{
-			try
-			{
-				// Try to get the material name (preferred to use this instead of number)
-				if (dataValue != null && dataValue >= 0)
-					return Material.getMaterial(typeId).toString() + ":" + String.valueOf(dataValue);
-				else
-					return Material.getMaterial(typeId).toString();
-			}
-			catch (IllegalArgumentException ex) {}
-			
-			if (dataValue != null && dataValue >= 0)
-				return String.valueOf(typeId) + ":" + String.valueOf(dataValue);
+			// Try to get the material name (preferred to use this instead of number)
+			if (dataValue >= 0)
+				return Material.getMaterial(typeId).toString() + ":" + String.valueOf(dataValue);
 			else
-				return String.valueOf(typeId);
+				return Material.getMaterial(typeId).toString();
 		}
-		return "NONE";
+		catch (IllegalArgumentException ex) {}
+			
+		if (dataValue >= 0)
+			return String.valueOf(typeId) + ":" + String.valueOf(dataValue);
+		else
+			return String.valueOf(typeId);
 	}
 	
 	@Override

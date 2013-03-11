@@ -4,13 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
 
-import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -139,11 +135,11 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return Jakky89ItemUtils.itemIdValuesToStringList(ProtectedBlocks);
 	}
 
-	public boolean isProtectedBlock(Short typeId, Short dataValue)
+	public boolean isProtectedBlock(short typeId, short dataValue)
 	{
 		if (ProtectedBlocks == null || ProtectedBlocks.isEmpty())
 			return false;
-		if (typeId != null && !ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, dataValue)) && !ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, null)))
+		if (!ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, dataValue)) && !ProtectedBlocks.contains(new Jakky89ItemIdData(typeId, (short)-1)))
 			return false;
 		return true;
 	}
@@ -187,20 +183,16 @@ public class PlotWorld implements Comparable<PlotWorld>
 		return Jakky89ItemUtils.itemIdValuesToStringList(PreventedItems);
 	}
 	
-	public boolean isPreventedItem(Short typeId, Short dataValue)
+	public boolean isPreventedItem(short typeId, short dataValue)
 	{
-		if (typeId != null)
-		{
-			if (PreventedItems == null || PreventedItems.isEmpty())
-				return false;
-			
-			if (!PreventedItems.contains(new Jakky89ItemIdData(typeId, dataValue)) && !PreventedItems.contains(new Jakky89ItemIdData(typeId)))
-				return false;
-		}
+		if (PreventedItems == null || PreventedItems.isEmpty())
+			return false;
+		if (!PreventedItems.contains(new Jakky89ItemIdData(typeId, dataValue)) && !PreventedItems.contains(new Jakky89ItemIdData(typeId, (short)-1)))
+			return false;
 		return true;
 	}
 	
-	public boolean isPreventedItem(Material material, Short dataValue)
+	public boolean isPreventedItem(Material material, short dataValue)
 	{
 		if (material != null)
 			return isPreventedItem((short)material.getId(), dataValue);
@@ -211,7 +203,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean isPreventedItem(Material material)
 	{
 		if (material != null)
-			return isPreventedItem((short)material.getId(), null);
+			return isPreventedItem((short)material.getId(), (short)-1);
 
 		return true;
 	}

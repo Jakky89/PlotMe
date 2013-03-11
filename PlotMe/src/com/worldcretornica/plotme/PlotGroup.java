@@ -23,7 +23,6 @@ public class PlotGroup implements Comparable<PlotGroup>
 		groupname = groupName;
 		plotplayers = null;
 		ownplots = null;
-		PlotManager.registerPlotGroup(this);
 	}
 	
 	public PlotGroup(int groupId, String groupName, int lastOnlineTime)
@@ -32,7 +31,6 @@ public class PlotGroup implements Comparable<PlotGroup>
 		groupname = groupName;
 		plotplayers = null;
 		ownplots = null;
-		PlotManager.registerPlotGroup(this);
 	}
 
 	public void addPlotPlayer(PlotPlayer plotPlayer)

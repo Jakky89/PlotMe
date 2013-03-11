@@ -47,6 +47,7 @@ public class PlotMeCommands implements CommandExecutor {
 		// USER COMMANDS
 		helpCommandRunner = new CommandHelp(this);
 		commands.put(C("CommandHelp"), helpCommandRunner);
+		commands.put(C("CommandAuto"), new CommandAuto(this));
 		commands.put(C("CommandClaim"), new CommandClaim(this));
 		
 		// ADMIN COMMANDS
@@ -93,10 +94,6 @@ public class PlotMeCommands implements CommandExecutor {
 								 * TODO: FIRST CONFIGURABLE X PLOTS ARE FOR FREE (after that it costs something)
 								 */
 								return claim(player, args);
-							}
-							if (arg0.equals(C("CommandAuto")))
-							{
-								return auto(player, args);
 							}
 							if (arg0.equals(C("CommandInfo")) || arg0.equals("i"))
 							{
@@ -1554,121 +1551,6 @@ public class PlotMeCommands implements CommandExecutor {
 							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> [" + C("WordWorld") + "] " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
 						else
 							Send(player, C("WordUsage") + ": " + RED + "/plotme " + C("CommandTp") + " <" + C("WordId") + "> " + RESET + C("WordExample") + ": " + RED + "/plotme " + C("CommandTp") + " 5;-1 ");
-					}
-				}
-			}
-			else
-			{
-				Send(player, RED + C("MsgPermissionDenied"));
-			}
-			return true;
-		}
-
-		private boolean auto(Player player, String[] args)
-		{
-			if (PlotMe.cPerms(player, "PlotMe.use.auto"))
-			{			
-				if(!PlotManager.isPlotWorld(player) && !PlotMe.allowWorldTeleport)
-				{
-					Send(player, RED + C("MsgNotPlotWorld"));
-				}
-				else
-				{
-					World w;
-					
-					if(!PlotManager.isPlotWorld(player) && PlotMe.allowWorldTeleport)
-					{
-						if(args.length == 2)
-						{
-							w = Bukkit.getWorld(args[1]);
-						}
-						else
-						{
-							w = PlotManager.getFirstWorld();
-						}
-						
-						if(w == null || !PlotManager.isPlotWorld(w))
-						{
-							Send(player, RED + args[1] + " " + C("MsgWorldNotPlot"));
-							return true;
-						}
-					}
-					else
-					{
-						w = p.getWorld();
-					}
-					
-					if(w == null)
-					{
-						Send(player, RED + C("MsgNoPlotworldFound"));
-					}
-					else
-					{
-						if(PlotManager.getNbOwnedPlot(p, w) >= PlotMe.getPlotLimit(player) && !PlotMe.cPerms(player, "PlotMe.admin"))
-							Send(player, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
-									PlotManager.getNbOwnedPlot(p, w) + "/" + PlotMe.getPlotLimit(player) + "). " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
-						else
-						{
-							PlotWorld pwi = PlotManager.getMap(w);
-							int limit = pwi.PlotAutoLimit;
-							
-							for(int i = 0; i < limit; i++)
-							{
-								for(int x = -i; x <= i; x++)
-								{
-									for(int z = -i; z <= i; z++)
-									{
-										String id = "" + x + ";" + z;
-										
-										if(PlotManager.isPlotAvailable(id, w))
-										{									
-											String name = player.getName();
-											
-											double price = 0;
-											
-											if(PlotManager.isEconomyEnabled(w))
-											{
-												price = pwi.ClaimPrice;
-												double balance = PlotMe.economy.getBalance(name);
-												
-												if(balance >= price)
-												{
-													EconomyResponse er = PlotMe.economy.withdrawPlayer(name, price);
-													
-													if(!er.transactionSuccess())
-													{
-														Send(player, RED + er.errorMessage);
-														warn(er.errorMessage);
-														return true;
-													}
-												}
-												else
-												{
-													Send(player, RED + C("MsgNotEnoughAuto") + " " + C("WordMissing") + " " + RESET + f(price - balance, false));
-													return true;
-												}
-											}
-											
-											Plot plot = PlotManager.createPlot(w, id, name);
-											
-											//PlotManager.adjustLinkedPlots(id, w);
-											
-											p.teleport(new Location(w, PlotManager.bottomX(plot.getId(), w) + (PlotManager.topX(plot.getId(), w) - 
-													PlotManager.bottomX(plot.getId(), w))/2, pwi.RoadHeight + 2, PlotManager.bottomZ(plot.getId(), w) - 2));
-				
-											Send(player, C("MsgThisPlotYours") + " " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt") + " " + f(-price));
-											
-											if(isAdv)
-												PlotMe.logger.info(LOG + name + " " + C("MsgClaimedPlot") + " " + String.valueOf(plot.getId()) + ((price != 0) ? " " + C("WordFor") + " " + price : ""));
-											
-											return true;
-										}
-									}
-								}
-							}
-						
-							Send(player, RED + C("MsgNoPlotFound1") + " " + (limit^2) + " " + C("MsgNoPlotFound2"));
-						}
 					}
 				}
 			}
