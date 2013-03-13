@@ -1887,8 +1887,9 @@ public class PlotMeCommands implements CommandExecutor {
 		
 		private boolean comment(Player player, String[] args)
 		{
-			if (PlotMe.cPerms(player, "PlotMe.use.comment"))
+			if (PlotMe.cPerms(player, "plotme.use.comment"))
 			{
+				
 				if(!PlotManager.isPlotWorld(player))
 				{
 					Send(player, RED + C("MsgNotPlotWorld"));

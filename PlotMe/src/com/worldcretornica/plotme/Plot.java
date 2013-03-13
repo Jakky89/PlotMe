@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Bukkit;
@@ -20,7 +21,7 @@ import com.worldcretornica.plotme.utils.Pair;
 
 public class Plot implements Comparable<Plot>
 {
-	private int id;
+	private Integer id;
 	
 	private PlotPosition position;
 	private Plot[] neighbourplots;
@@ -29,72 +30,68 @@ public class Plot implements Comparable<Plot>
 	private Biome biome;
 	
 	private Jakky89Properties properties; // Flexible plot properties
-	private Set<PlotRoom> plotRooms;
+	private Set<PlotRoom> plotrooms;
 
-	private long expireddate;
-	private long finisheddate;
-	private double price;
-	private boolean isforsale;
-	private boolean isprotected;
-	private int auction;
-	private HashMap<PlotGroup, BitSet> grouprights;
-	private HashMap<PlotPlayer, BitSet> playerrights;
+	private Double claimprice;
+	private Long expirationdate;
+	private Long completiondate;
+	
+	private Integer auctionnumber;
+	private Map<PlotGroup, BitSet> grouprights;
+	private Map<PlotPlayer, BitSet> playerrights;
 	private List<PlotAuctionBid> auctionbids;
+
+	public void setPlotPosition(PlotPosition plotPosition)
+	{
+		resetNeighbourPlots();
+		position = plotPosition;
+		PlotDatabase.updatePlotPosition(this);
+		refreshNeighbourPlots();
+	}
 	
 	public void setPlotPosition(PlotWorld plotWorld, int plotX, int plotZ)
 	{
-		resetNeighbourPlots();
+		if (plotWorld == null)
+			return;
 		position = new PlotPosition(plotWorld, plotX, plotZ);
-		refreshNeighbourPlots();
+		if (neighbourplots == null)
+			neighbourplots = new Plot[8];
+		plotWorld.refreshNeighbours(this);
+		PlotDatabase.updatePlotPosition(this);
 	}
 	
 	public Plot(int plotId, PlotPosition plotPosition)
 	{
 		id = plotId;
-		position = plotPosition;
-		owner = null;
-		properties = null;
-		biome = Biome.PLAINS;
-		setDaysUntilExpiration(7);
-		price = plotPosition.getPlotWorld().ClaimPrice;
-		isforsale = true;
-		finisheddate = 0;
-		isprotected = false;
 		neighbourplots = null;
+		setPlotPosition(plotPosition);
+		owner = null;
+		biome = Biome.PLAINS;
+		properties = null;
+		plotrooms = null;
+		setDaysUntilExpiration(PlotMe.DEFAULT_DAYS_UNTIL_EXPIRATION);
+		claimprice = null;
+		expirationdate = null;
+		completiondate = null;
 		auctionbids = null;
-		auction = 0;
-		if (plotPosition != null && plotPosition.getPlotWorld() != null)
-		{
-			plotPosition.getPlotWorld().refreshNeighbours(this);
-		}
+		auctionnumber = null;
 	}
 	
-	public Plot(int plotId, PlotPosition plotPosition, PlotPlayer plotOwner, Biome plotBiome, long plotExpiredDate,
-				long plotFinishedDate, double plotPrice, boolean plotIsForSale, boolean plotIsProtected)
+	public Plot(int plotId, PlotPosition plotPosition, PlotPlayer plotOwner, Biome plotBiome, Double plotClaimPrice, Long plotExpirationDate, Long plotCompletionDate)
 	{
 		id = plotId;
-		position = plotPosition;
-		owner = plotOwner;
-		properties = null;
-		if (owner != null)
-		{
-			owner.addOwnPlot(this);
-		}
-		biome = plotBiome;
-		expireddate = plotExpiredDate;
-		PlotManager.checkPlotExpiration(this);
-		finisheddate = plotFinishedDate;
-		price = plotPrice;
-		isforsale = plotIsForSale;
-		isprotected = plotIsProtected;
 		neighbourplots = null;
+		setPlotPosition(plotPosition);
+		owner = plotOwner;
+		biome = plotBiome;
+		properties = null;
+		plotrooms = null;
+		claimprice = plotClaimPrice;
+		expirationdate = plotExpirationDate;
+		PlotManager.checkPlotExpiration(this);
+		completiondate = plotCompletionDate;
 		auctionbids = null;
-		auction = 0;
-		if (plotPosition != null && plotPosition.getPlotWorld() != null)
-		{
-			plotPosition.getPlotWorld().refreshNeighbours(this);
-		}
-		
+		auctionnumber = null;
 	}
 
 	public int getId()
@@ -290,7 +287,7 @@ public class Plot implements Comparable<Plot>
 	
 	public int getAuctionNumber()
 	{
-		return auction;
+		return auctionnumber;
 	}
 	
 	public int getAuctionBidsCount()
@@ -323,7 +320,7 @@ public class Plot implements Comparable<Plot>
 	
 	public boolean addAuctionBid(PlotPlayer bidder, Double bidAmount)
 	{
-		if (auction < 1)
+		if (auctionnumber == null || auctionnumber < 1)
 		{
 			return false;
 		}
@@ -336,7 +333,7 @@ public class Plot implements Comparable<Plot>
 		PlotAuctionBid highestbid = getHighestAuctionBid();
 		if (highestbid == null || bidAmount > highestbid.getMoneyAmount())
 		{
-			((LinkedList<PlotAuctionBid>)auctionbids).addFirst(new PlotAuctionBid(auction, bidder.getName(), bidAmount));
+			((LinkedList<PlotAuctionBid>)auctionbids).addFirst(new PlotAuctionBid(auctionnumber, bidder.getName(), bidAmount));
 			PlotManager.actualizePlotSigns(this);
 			return true;
 		}
@@ -344,36 +341,40 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 	
-	public void enableSelling()
+	public void enableSelling(double claimPrice)
 	{
-		if (isforsale != true)
+		if ((claimprice == null || claimprice != claimPrice) && claimPrice >= 0)
 		{
-			isforsale = true;
+			claimprice = claimPrice;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotDatabase.updateData(id, "plots", "isforsale", 1);
+			PlotDatabase.updateData(id, "plots", "claimprice", claimPrice);
 		}
 	}
 	
 	public void disableSelling()
 	{
-		if (isforsale != false)
+		if (claimprice != null)
 		{
-			isforsale = false;
+			claimprice = null;
 			PlotManager.actualizePlotSigns(this);
 			PlotManager.adjustWall(this);
-			PlotDatabase.updateData(id, "plots", "isforsale", 0);
+			PlotDatabase.updateData(id, "plots", "claimprice", null);
 		}
 	}
 	
 	public boolean isForSale()
 	{
-		return isforsale;
+		if (claimprice != null && claimprice >= 0)
+		{
+			return true;
+		}
+		return false;
 	}
 	
 	public void setProtected(boolean protect)
 	{
-		if (protect != isprotected)
+		if (isprotected != null)
 		{
 			isprotected = protect;
 			PlotManager.actualizePlotSigns(this);

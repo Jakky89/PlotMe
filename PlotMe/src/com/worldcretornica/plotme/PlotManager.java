@@ -355,6 +355,10 @@ public class PlotManager {
 		return null;
 	}
 	
+	public static void getPlayerPlotCount(PlotPlayer plotPlayer, PlotWorld plotWorld) {
+		
+	}
+	
 	public static void resetNeighbours(Plot plot)
 	{
 		if (plot == null)

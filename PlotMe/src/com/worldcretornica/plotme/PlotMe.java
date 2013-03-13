@@ -28,6 +28,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.World;
+import org.bukkit.block.Biome;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.RemoteConsoleCommandSender;
@@ -75,10 +76,10 @@ public class PlotMe extends JavaPlugin
     public static String language;
     public static Boolean allowWorldTeleport;
     public static Boolean autoUpdate;
-    
-    public static final int DEFAULT_PLOT_AUTO_LIMIT		= 100;
+
     public static final int DEFAULT_PLAYER_PLOT_LIMIT	= 10;
     public static final int DEFAULT_PLAYER_FREE_PLOTS	= 1;
+    public static final int DEFAULT_PLOT_CLAIM_PRICE    = 100;
     public static final int DEFAULT_PLOT_SIZE			= 32;
     public static final int DEFAULT_PATH_WIDTH			= 7;
     
@@ -95,8 +96,9 @@ public class PlotMe extends JavaPlugin
     
     
     public static final int DEFAULT_ROAD_HEIGHT = 64;
+    public static final Biome DEFAULT_PLOT_BIOME = Biome.PLAINS;
     
-    public static final int DEFAULT_DAYS_EXPIRATION = 7;
+    public static final int DEFAULT_DAYS_UNTIL_EXPIRATION = 7;
     
     public static final int MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR = 100;
     
@@ -383,11 +385,11 @@ public class PlotMe extends JavaPlugin
 		{
 			cfgWorlds = config.createSection("worlds");
 			
-			cfgWorld = cfgWorlds.createSection("Global");
+			cfgWorld = cfgWorlds.createSection("default");
 
-			cfgWorld.set("PlotAutoLimit",							DEFAULT_PLOT_AUTO_LIMIT);
 			cfgWorld.set("DefaultPlayerPlotLimit",					DEFAULT_PLAYER_PLOT_LIMIT);
 			cfgWorld.set("DefaultFreePlotsPerPlayer",				DEFAULT_PLAYER_FREE_PLOTS);
+			cfgWorld.set("DefaultClaimPrice",						DEFAULT_PLOT_CLAIM_PRICE);
 			cfgWorld.set("AutoClaimOnChestPlace",					true);
 			cfgWorld.set("PathWidth",								DEFAULT_PATH_WIDTH);
 			cfgWorld.set("PlotSize",								DEFAULT_PLOT_SIZE);
@@ -414,7 +416,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("DisableNetherrackIgnition", false);
 			cfgWorld.set("DisableObsidianIgnition", false);
 			
-			cfgWorlds.set("Global", cfgWorld);
+			cfgWorlds.set("default", cfgWorld);
 			
 			ConfigurationSection cfgWorldEconomy = cfgWorld.createSection("economy");
 			
@@ -442,7 +444,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("economy", cfgWorldEconomy);
 			
 			cfgWorld = cfgWorlds.createSection("ExampleWorld");
-			cfgWorld.set("InheritWorld", "Global");
+			cfgWorld.set("InheritWorld", "global");
 			cfgWorld.set("PlotsEnabled", "true");
 			
 			cfgWorlds.set("ExampleWorld", cfgWorld);
@@ -489,7 +491,6 @@ public class PlotMe extends JavaPlugin
 				continue;
 			}
 			
-			tmpPlotWorld.PlotAutoLimit							= cfgCurrWorld.getInt("PlotAutoLimit",											DEFAULT_PLOT_AUTO_LIMIT);
 			tmpPlotWorld.PathWidth 								= cfgCurrWorld.getInt("PathWidth",												DEFAULT_PATH_WIDTH);
 			tmpPlotWorld.PlotSize	 							= cfgCurrWorld.getInt("PlotSize",												DEFAULT_PLOT_SIZE);
 			
@@ -1227,34 +1228,4 @@ public class PlotMe extends JavaPlugin
 		return ChatColor.translateAlternateColorCodes('&', string);
     }
 
-	private short getBlockId(ConfigurationSection cs, String section, String def)
-	{
-		String idvalue = cs.getString(section, def.toString());
-		if(idvalue.indexOf(":") > 0)
-		{
-			return Short.parseShort(idvalue.split(":")[0]);
-		}
-		else
-		{
-			return Short.parseShort(idvalue);
-		}
-	}
-	
-	private byte getBlockValue(ConfigurationSection cs, String section, String def)
-	{
-		String idvalue = cs.getString(section, def.toString());
-		if(idvalue.indexOf(":") > 0)
-		{
-			return Byte.parseByte(idvalue.split(":")[1]);
-		}
-		else
-		{
-			return 0;
-		}
-	}
-	
-	private String getBlockValueId(Short id, Byte value)
-	{
-		return (value == 0) ? id.toString() : id.toString() + ":" + value.toString();
-	}
 }

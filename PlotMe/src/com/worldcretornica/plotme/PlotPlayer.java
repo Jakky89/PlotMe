@@ -1,8 +1,7 @@
 package com.worldcretornica.plotme;
 
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.bukkit.entity.Player;
@@ -12,14 +11,13 @@ import org.bukkit.entity.Player;
 public class PlotPlayer implements Comparable<PlotPlayer>
 {
 	
-	private Integer id;
+	private int id;
 	private Player player;
 	private String realname;
 	private String displayname;
 	private Integer lastonline;
-	private Integer maxplotsamt;
 	private Set<Plot> ownplots;
-	private Set<PlotGroup> plotgroups;
+
 	
 	public PlotPlayer(int playerId, String playerName)
 	{
@@ -29,7 +27,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = playerName;
 		ownplots = null;
 		lastonline = null;
-		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -41,7 +38,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = playerName;
 		ownplots = null;
 		lastonline = lastOnlineTime;
-		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -53,7 +49,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = displayName;
 		ownplots = null;
 		lastonline = lastOnlineTime;
-		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -65,7 +60,6 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = displayName;
 		ownplots = null;
 		lastonline = null;
-		maxplotsamt = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -74,7 +68,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		id = ownerId;
 		setMinecraftPlayer(minecraftPlayer);
 		ownplots = null;
-		maxplotsamt = PlotMe.DEFAULT_PLAYER_PLOT_LIMIT;
+		lastonline = null;
 		PlotManager.registerPlotPlayer(this);
 	}
 	
@@ -96,12 +90,7 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		displayname = minecraftPlayer.getDisplayName();
 		refreshLastOnlineTime();
 	}
-	
-	public void setMaxPlotCount(int maxPlots)
-	{
-		
-	}
-	
+
 	public int getId()
 	{
 		return id;
@@ -143,25 +132,13 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		}
 		ownplots.remove(plot);
 	}
-	
-	public void addToPlotGroup(PlotGroup plotGroup)
-	{
-		plotgroups.add(plotGroup);
-		plotGroup.addPlotPlayer(this);
-	}
-	
-	public void removeFromPlotGroup(PlotGroup plotGroup)
-	{
-		plotgroups.remove(plotGroup);
-		plotGroup.removePlotPlayer(this);
-	}
-	
+
 	public Player getPlayer()
 	{
 		return player;
 	}
 	
-	public int getOwnPlotsCount()
+	public int getPlotCount()
 	{
 		if (ownplots == null || ownplots.isEmpty())
 		{
@@ -169,6 +146,28 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		}
 		return ownplots.size();
 	}
+	
+	
+	public int getPlotCount(PlotWorld plotWorld)
+	{
+		if (ownplots == null || ownplots.isEmpty())
+		{
+			return 0;
+		}
+		Iterator<Plot> plotIterator = ownplots.iterator();
+		int cnt = 0;
+		Plot plot;
+		while (plotIterator.hasNext())
+		{
+			plot = plotIterator.next();
+			if (plot.getPlotWorld().equals(plotWorld))
+			{
+				cnt++;
+			}
+		}
+		return cnt;
+	}
+	
 	
 	@Override
 	public int hashCode()

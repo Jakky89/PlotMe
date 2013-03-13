@@ -82,6 +82,11 @@ public class PlotWorld implements Comparable<PlotWorld>
 	private HashSet<Jakky89ItemIdData> PreventedItems;
 	
 	public Map<PlotPosition, Plot> plotPositions;
+	
+	private int minPlotX;
+	private int minPlotZ;
+	private int maxPlotX;
+	private int maxPlotZ;
 		
 	
 	public PlotWorld()
@@ -109,6 +114,13 @@ public class PlotWorld implements Comparable<PlotWorld>
 		plotPositions = new HashMap<PlotPosition, Plot>();
 		ProtectedBlocks = null;
 		PreventedItems = null;
+	}
+	
+	public void setPlotRect(int x1, int z1, int x2, int z2) {
+		minPlotX = Math.min(x1, x2);
+		maxPlotX = Math.max(x1, x2);
+		minPlotZ = Math.min(z1, z2);
+		maxPlotZ = Math.max(z1, z2);
 	}
 
 	public int getId()
@@ -275,6 +287,14 @@ public class PlotWorld implements Comparable<PlotWorld>
 			return false;
 		}
 
+		if (plot.getPlotX() < minPlotX)
+			minPlotX = plot.getPlotX();
+		if (plot.getPlotX() > maxPlotX)
+			maxPlotX = plot.getPlotX();
+		if (plot.getPlotZ() < minPlotZ)
+			minPlotZ = plot.getPlotZ();
+		if (plot.getPlotZ() > maxPlotZ)
+			maxPlotZ = plot.getPlotZ();
 		plotPositions.put(plot.getPlotPosition(), plot);
 		plot.refreshNeighbourPlots();
 		return true;

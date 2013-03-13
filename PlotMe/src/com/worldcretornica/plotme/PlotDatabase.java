@@ -8,6 +8,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,15 +52,20 @@ public class PlotDatabase {
 		  		  		+ "`zpos` INTEGER,"
 		  		  		+ "`owner` UNSIGNED INTEGER DEFAULT NULL INDEX,"
 		  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
-		  		  		+ "`expireddate` UNSIGNED INTEGER DEFAULT NULL,"
-				  		+ "`finisheddate` UNSIGNED INTEGER DEFAULT NULL,"
-				  		+ "`price` DOUBLE DEFAULT 0,"
-				  		+ "`isforsale` UNSIGNED TINYINT(1) NOT NULL DEFAULT 1,"
-				  		+ "`isprotected` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL,"
-				  		+ "`rights` TEXT DEFAULT NULL,"
+		  		  		+ "`expiredate` UNSIGNED INTEGER DEFAULT NULL,"
+				  		+ "`finishdate` UNSIGNED INTEGER DEFAULT NULL,"
+				  		+ "`claimprice` UNSIGNED DOUBLE DEFAULT NULL,"
+				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL "
 				  		+ "UNIQUE (world, xpos, zpos)" +
 				  	")";
+	
+	final static String LAYOUT_PLOTRIGHTS_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotrights` " +
+		 	"("
+		  		+ "`plot` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+  		  		+ "`type` UNSIGNED TINYINT(1) NOT NULL," // player/group
+  		  		+ "`name` VARCHAR(16) NOT NULL,"
+  		  		+ "`perms` VARCHAR(16) NOT NULL" +
+		  	")";
 	
 	final static String LAYOUT_PLOTAUCTION_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotauctions` " +
 					"("
@@ -67,7 +73,7 @@ public class PlotDatabase {
 						+ "`auction` UNSIGNED INTEGER NOT NULL,"
 						+ "`plot` UNSIGNED INTEGER NOT NULL,"
 						+ "`player` UNSIGNED INTEGER NOT NULL,"
-						+ "`amount` UNSIGNED INTEGER NOT NULL"
+						+ "`amount` UNSIGNED INTEGER NOT NULL,"
 						+ "INDEX(plot, auction)" +
 					")";
 	
@@ -90,8 +96,8 @@ public class PlotDatabase {
 				 	"("
 				 		+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
 				 		+ "`plot` UNSIGNED INTEGER NOT NULL,"
-				 		+ "`type` UNSIGNED TINYINT(1) NOT NULL DEFAULT 0,"
-				 		+ "`from` UNSIGNED INTEGER NOT NULL,"
+				 		+ "`player` UNSIGNED INTEGER NOT NULL,"
+				 		+ "`type` UNSIGNED TINYINT(2) NOT NULL DEFAULT 0,"
 				 		+ "`message` TEXT" +
 				 	")";
 	
@@ -338,6 +344,7 @@ public class PlotDatabase {
 	        	st.addBatch(LAYOUT_WORLD_TABLE);
 	        	st.addBatch(LAYOUT_PLAYER_TABLE);
 	        	st.addBatch(LAYOUT_PLOT_TABLE);
+	        	st.addBatch(LAYOUT_PLOTRIGHTS_TABLE);
 	        	st.addBatch(LAYOUT_PLOTAUCTION_TABLE);
 	        	st.addBatch(LAYOUT_PLOTCOMMENT_TABLE);
 	        	st.addBatch(LAYOUT_INFO_TABLE);
@@ -375,6 +382,9 @@ public class PlotDatabase {
 	        	ps.execute();
 	        	ps.setString(1, "LAYOUT_PLOT_TABLE");
 	        	ps.setString(2, LAYOUT_PLOT_TABLE);
+	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_PLOTRIGHTS_TABLE");
+	        	ps.setString(2, LAYOUT_PLOTRIGHTS_TABLE);
 	        	ps.execute();
 	        	ps.setString(1, "LAYOUT_PLOTAUCTION_TABLE");
 	        	ps.setString(2, LAYOUT_PLOTAUCTION_TABLE);
@@ -420,7 +430,7 @@ public class PlotDatabase {
 	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeAllowed`");
 	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeDenied`");
 	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) SELECT DISTINCT player FROM `plotmeComments`");
-	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (world, xpos, zpos, owner, biome, expireddate, finisheddate, price, isforsale, isprotected) SELECT (SELECT id FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE `" + PlotMe.databasePrefix + "plotme_worlds`.worldname LIKE plotmePlots.world), bottomX, bottomZ, (SELECT id FROM plotme_players WHERE `" + PlotMe.databasePrefix + "plotme_players`.playername LIKE plotmePlots.owner), biome, DATEDIFF(plotmePlots.expireddate, '19700101', GETDATE()), DATEDIFF(plotmePlots.finished, '19700101', GETDATE()), customprice, forsale, protected FROM plotmePlots, `" + PlotMe.databasePrefix + "plotme_plots`");
+	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plots` (world, xpos, zpos, owner, biome, expiredate, finishdate, claimprice, protected) SELECT (SELECT id FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE `" + PlotMe.databasePrefix + "plotme_worlds`.worldname LIKE plotmePlots.world), bottomX, bottomZ, (SELECT id FROM plotme_players WHERE `" + PlotMe.databasePrefix + "plotme_players`.playername LIKE plotmePlots.owner), biome, DATEDIFF(plotmePlots.expireddate, '19700101', GETDATE()), DATEDIFF(plotmePlots.finished, '19700101', GETDATE()), customprice, forsale, protected FROM plotmePlots, `" + PlotMe.databasePrefix + "plotme_plots`");
 	        		st.addBatch("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plotcomments` (plot, from, message) SELECT (SELECT id FROM `" + PlotMe.databasePrefix + "plotme_plots`, `plotmeComments` WHERE `" + PlotMe.databasePrefix + "plotme_plots`.xpos=plotmeComments.idX AND `" + PlotMe.databasePrefix + "plotme_plots`.zpos=plotmeComments.idZ AND `" + PlotMe.databasePrefix + "plotme_plots`.world=(SELECT id FROM `" + PlotMe.databasePrefix + "plotme_worlds` WHERE worldname LIKE `plotmeComments`.world), (SELECT id` FROM `" + PlotMe.databasePrefix + "plotme_players` WHERE `" + PlotMe.databasePrefix + "`.playername LIKE `plotmeComments`.player), comment");
 	        		if (PlotDatabase.batchExecuteCommitOrRollback(st))
 	        		{
@@ -936,67 +946,55 @@ public class PlotDatabase {
     	{
     		return null;
     	}
-    	
-    	int id;
-    	PlotPosition plotpos;
-    	Plot plot;
+
     	Statement st = null;
     	ResultSet rs = null;
-    	byte[] buf;
     	
-    	ObjectInputStream oin = null;
-    	Jakky89Properties properties = null;
-    	
-		try {
+		try
+		{
 			st = con.createStatement();
-			rs = st.executeQuery("SELECT id,world,xpos,zpos,owner,biome," +
-										"expireddate,finisheddate,price," +
-										"isforsale,isprotected,auction,properties " +
+			rs = st.executeQuery("SELECT world,xpos,zpos,owner,biome," +
+										"expiredate,finishdate,claimprice," +
+										"auction,properties " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
 								 		"id=" + String.valueOf(plotId) +
 								 "LIMIT 1"
 								);
 
-			if (rs.next()) 
+			if (rs.next())
 			{
-				id = rs.getInt(1);
-				int xpos = rs.getInt(3);
-				int zpos = rs.getInt(4);
-					
-				plotpos = new PlotPosition(PlotManager.getPlotWorld(rs.getInt(2)), xpos, zpos);
-					
-				boolean isforsale = false;
-				if (rs.getInt(10) == 1)
-				{
-					isforsale = true;
-				}
-				boolean isprotected = true;
-				if (rs.getInt(11) == 0)
-				{
-					isprotected = false;
+				PlotPosition plotpos = new PlotPosition(PlotManager.getPlotWorld(rs.getInt(1)), rs.getInt(2), rs.getInt(3));
+				Biome biome = null;
+				String biomestr =  rs.getString(5);
+				if (rs.wasNull()) {
+					biome = PlotMe.DEFAULT_PLOT_BIOME;
+				} else {
+					biome = Biome.valueOf(biomestr);
 				}
 				
-				plot = new Plot(
-									id,
-									plotpos,
-									PlotManager.getPlotPlayer(rs.getInt(5)),
-									Biome.valueOf(rs.getString(6)),
-									rs.getLong(7),
-									rs.getLong(8),
-									rs.getDouble(9),
-									isforsale,
-									isprotected
-								);
+					
+				Plot plot = new Plot(
+										plotId,
+										plotpos,
+										PlotManager.getPlotPlayer(rs.getInt(4)),
+										biome,
+										rs.getLong(6),
+										rs.getLong(7),
+										rs.getDouble(8),
+										rs.getInt(9)==1?true:false,
+										rs.getInt(10)==0?false:true
+									);
 		
 				PlotManager.registerPlot(plot);
 						
-				if (rs.getInt(12) > 0)
+				if (rs.getInt(11) > 0)
 				{
 					plot.setAuctionNumber(rs.getInt(12));
 				}
 				
 				return plot;
+				
 			}
 			return null;
 		}
@@ -1050,14 +1048,11 @@ public class PlotDatabase {
     	Statement st = null;
     	ResultSet rs = null;
     	byte[] buf;
-    	
-    	ObjectInputStream oin = null;
-    	Jakky89Properties properties = null;
-    	
+
 		try {
 			st = con.createStatement();
-			rs = st.executeQuery("SELECT id,world,xpos,zpos,owner,biome," +
-										"expireddate,finisheddate,price," +
+			rs = st.executeQuery("SELECT id,xpos,zpos,owner,biome," +
+										"expireddate,finishdate,claimprice," +
 										"isforsale,isprotected,auction,properties " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
@@ -1069,40 +1064,27 @@ public class PlotDatabase {
 
 			while (rs.next()) 
 			{
-				id = rs.getInt(1);
-				int xpos = rs.getInt(3);
-				int zpos = rs.getInt(4);
-				plotpos = new PlotPosition(plotWorld, xpos, zpos);
+				plotpos = new PlotPosition(plotWorld, rs.getInt(2), rs.getInt(3));
 				if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
 				{
-					boolean isforsale = false;
-					if (rs.getInt(10) == 1)
-					{
-						isforsale = true;
-					}
-					boolean isprotected = true;
-					if (rs.getInt(11) == 0)
-					{
-						isprotected = false;
-					}
 					plot = new Plot(
-						id,
+						rs.getInt(1),
 						plotpos,
-		    			getPlotPlayer(rs.getInt(5)),
-		    			Biome.valueOf(rs.getString(6)),
+		    			getPlotPlayer(rs.getInt(4)),
+		    			Biome.valueOf(rs.getString(5)),
+		    			rs.getLong(6),
 		    			rs.getLong(7),
-		    			rs.getLong(8),
-		    			rs.getDouble(9),
-		    			isforsale,
-		    			isprotected
+		    			rs.getDouble(8),
+		    			rs.getInt(9)==1?true:false,
+		    			rs.getInt(10)==0?false:true
 					);
 
 					if (rs.getInt(11) > 0)
 					{
-						plot.setAuctionNumber(rs.getInt(12));
+						plot.setAuctionNumber(rs.getInt(11));
 					}
 						
-					loadPlotProperties(plot, rs.getBytes(13));
+					loadPlotProperties(plot, rs.getBytes(12));
 		
 					PlotManager.registerPlot(plot);
 				}
@@ -1657,10 +1639,9 @@ public class PlotDatabase {
         return 0;
     }
 
-    public static void addPlotBid(int auctionNumber, long bidDate, int auctionPlotId, int playerId, double amount)
+    private static void addPlotBid(int auctionNumber, long bidDate, int auctionPlotId, int playerId, double amount)
     {
     	PreparedStatement ps = null;
-
     	//Auctions
         try 
         {
@@ -1698,32 +1679,85 @@ public class PlotDatabase {
     	addPlotBid(auctionPlot.getAuctionNumber(), Math.round(System.currentTimeMillis() / 1000), auctionPlot.getId(), auctionBidder.getId(), amount);
     }
     
-    public static int addPlotComment(int plotId, int playerId, String message)
+
+    private static boolean clearPlotBids(int plotId)
     {
+        Statement st = null;
+        try 
+        {
+            con = getConnection();
+            st = con.createStatement();
+            st.executeUpdate("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plotauctions` WHERE plot=" + String.valueOf(plotId));
+            con.commit();
+            return true;
+        } 
+        catch (SQLException ex) 
+        {
+        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while trying to delete auction bids of plot " + String.valueOf(plotId) + ":");
+        	PlotMe.logger.severe("  " + ex.getMessage());
+        	return false;
+        } 
+        finally 
+        {
+            try 
+            {
+                if (st != null) 
+                {
+                    st.close();
+                }
+            }
+            catch (SQLException e) {}
+        }
+    }
+    
+    public static void clearPlotBids(Plot plot)
+    {
+    	clearPlotBids(plot.getId());
+    }
+
+    
+    
+    private static Integer addPlotComment(int plotId, int playerId, int messageType, String messageText)
+    {
+    	if (plotId<=0 || playerId<=0 || messageType<0 || messageText == null)
+    	{
+    		return null;
+    	}
+    	messageText = messageText.trim();
+    	if (messageText.isEmpty())
+    	{
+    		return null;
+    	}
     	PreparedStatement ps = null;
     	ResultSet rs = null;
-    	int id = -1;
-        
+    	Integer id = null;
     	//Comments
         try 
         {
             con = getConnection();
-            
-            ps = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_comments` (plot, player, type, message) VALUES (?,?,?,?)");
-            
+            ps = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_plotcomments` (plot, player, type, message) VALUES (?,?,?,?)");
             ps.setInt(1, plotId);
             ps.setInt(2, playerId);
-            ps.setInt(3, 0);
-            ps.setString(4, message);
+            ps.setInt(3, messageType);
+            ps.setString(4, messageText);
             
-            if (ps.executeUpdate() > 0) {
+            if (ps.executeUpdate() == 1)
+            {
             	rs = ps.getGeneratedKeys();
             	if (rs.next())
             	{
             		id = rs.getInt(1);
+            		if (id <= 0 || rs.next())
+            		{
+            			id = null;
+            		}
+            	}
+            	else
+            	{
+            		id = null;
             	}
             }
-            if (id > 0)
+            if (id != null)
             {
             	con.commit();
             }
@@ -1738,7 +1772,7 @@ public class PlotDatabase {
         {
         	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while inserting comment:");
         	PlotMe.logger.severe("  " + ex.getMessage());
-        	return -1;
+        	return null;
         } 
         finally 
         {
@@ -1748,81 +1782,73 @@ public class PlotDatabase {
                 {
                     ps.close();
                 }
-            } catch (SQLException e) {}
+            }
+            catch (SQLException e) {}
         }
     }
+    
+    public static Integer addPlotComment(Plot plot, PlotPlayer player, String message)
+    {
+    	return addPlotComment(plot.getId(), player.getId(), 0, message);
+    }
 
-    public static void deletePlotComment(Plot plot, int commentId) {
-        PreparedStatement ps = null;
-        try {
+    // For security reasons we take both, plotId and commentId
+    private static boolean deletePlotComment(int plotId, int commentId)
+    {
+        Statement st = null;
+        try
+        {
         	con = getConnection();
-            ps = con.prepareStatement("DELETE FROM `" + PlotMe.databasePrefix + "plotme_comments` WHERE id=? AND plot=?");
-            ps.setInt(1, commentId);
-            ps.setInt(2, plot.getId());
-            ps.executeUpdate();
+        	st = con.createStatement();
+        	st.executeUpdate("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plotcomments` WHERE id=" + String.valueOf(commentId) + " AND plot=" + String.valueOf(plotId));
             con.commit();
-        } catch (SQLException ex) {
+            return true;
+        }
+        catch (SQLException ex)
+        {
         	PlotMe.logger.severe(PlotMe.PREFIX + " Delete Exception :");
         	PlotMe.logger.severe("  " + ex.getMessage());
-        } finally {
-            try {
-                if (ps != null) {
-                    ps.close();
-                }
-            } catch (SQLException ex) {
-            	PlotMe.logger.severe(PlotMe.PREFIX + " Delete Exception (on close) :");
-            	PlotMe.logger.severe("  " + ex.getMessage());
-            }
+        	return false;
         }
-    }
-
-    public static void deleteAllPlotBids(Plot plot)
-    {
-        PreparedStatement ps = null;
-        try 
+        finally
         {
-            con = getConnection();
-
-            ps = con.prepareStatement("DELETE FROM `" + PlotMe.databasePrefix + "plotme_auctions` WHERE plot=?");
-            ps.setInt(1, plot.getId());
-            
-            ps.executeUpdate();
-            
-            con.commit();
-        } 
-        catch (SQLException ex) 
-        {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while trying to delete auctions of plot " + String.valueOf(plot.getId()) + ":");
-        	PlotMe.logger.severe("  " + ex.getMessage());
-        } 
-        finally 
-        {
-            try 
+            try
             {
-                if (ps != null) 
+                if (st != null)
                 {
-                    ps.close();
+                    st.close();
                 }
-            } catch (SQLException e) {}
+            }
+            catch (SQLException ex) {}
         }
     }
-
-	public static boolean removePlot(Plot plot) {
+    
+    public static void deletePlotComment(Plot plot, int commentId)
+    {
+    	deletePlotComment(plot.getId(), commentId);
+    }
+    
+	private static boolean removePlot(int plotId)
+	{
+		if (plotId <= 0)
+		{
+			return false;
+		}
         Statement st = null;
+        String idStr = String.valueOf(plotId);
         try 
         {
             con = getConnection();
-
             st = con.createStatement();
-            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plots` WHERE id=" + String.valueOf(plot.getId()));
-            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_auctions` WHERE plot=" + String.valueOf(plot.getId()));
-            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_comments` WHERE plot=" + String.valueOf(plot.getId()));
-            
+            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plots` WHERE id=" + idStr);
+            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plotrights` WHERE plot=" + idStr);
+            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plotauctions` WHERE plot=" + idStr);
+            st.addBatch("DELETE FROM `" + PlotMe.databasePrefix + "plotme_plotcomments` WHERE plot=" + idStr);
             return batchExecuteCommitOrRollback(st);
         } 
         catch (SQLException ex) 
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "Plot removal database exception :");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "SQLEXCEPTION occurred while plot removal process:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         	return false;
         } 
@@ -1834,8 +1860,14 @@ public class PlotDatabase {
                 {
                     st.close();
                 }
-            } catch (SQLException e) {}
+            }
+            catch (SQLException e) {}
         }
+	}
+	
+	public static boolean removePlot(Plot plot)
+	{
+		return removePlot(plot.getId());
 	}
  
 }

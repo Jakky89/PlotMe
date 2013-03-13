@@ -10,6 +10,8 @@ import org.bukkit.entity.Player;
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotManager;
 import com.worldcretornica.plotme.PlotMe;
+import com.worldcretornica.plotme.PlotPlayer;
+import com.worldcretornica.plotme.PlotWorld;
 
 public class CommandAuto extends PlotMeCommandBase {
 
@@ -42,35 +44,38 @@ public class CommandAuto extends PlotMeCommandBase {
 						Send(player, ChatColor.RED + args[1] + " " + C("MsgWorldNotPlot"));
 						return true;
 					}
+					else
+					{
+						w = player.getWorld();
+					}
+					if (w == null)
+					{
+						Send(player, ChatColor.RED + C("MsgNoPlotworldFound"));
 					}
 					else
 					{
-						w = p.getWorld();
-					}
-					
-					if(w == null)
-					{
-						Send(player, RED + C("MsgNoPlotworldFound"));
-					}
-					else
-					{
-						if(PlotManager.getNbOwnedPlot(p, w) >= PlotMe.getPlotLimit(player) && !PlotMe.cPerms(player, "PlotMe.admin"))
-							Send(player, RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
-									PlotManager.getNbOwnedPlot(p, w) + "/" + PlotMe.getPlotLimit(player) + "). " + C("WordUse") + " " + RED + "/plotme " + C("CommandHome") + RESET + " " + C("MsgToGetToIt"));
+						PlotWorld pwi = PlotManager.getPlotWorld(w);
+						PlotPlayer ppl = PlotManager.getPlotPlayer(player);
+						int plc = ppl.getPlotCount(pwi);
+						if (plc >= PlotMe.getPlotLimit(player) && !PlotMe.cPerms(player, "plotme.admin"))
+						{
+							Send(player, ChatColor.RED + C("MsgAlreadyReachedMaxPlots") + " (" + 
+								 String.valueOf(plc) + "/" + PlotMe.getPlotLimit(player) + "). " + C("WordUse") + " " + ChatColor.RED + "/plot " + C("CommandHome") + ChatColor.RESET + " " + C("MsgToGetToIt"));
+						}
 						else
 						{
-							PlotWorld pwi = PlotManager.getMap(w);
 							int limit = pwi.PlotAutoLimit;
+
 							
-							for(int i = 0; i < limit; i++)
+							for (int i = 0; i < limit; i++)
 							{
-								for(int x = -i; x <= i; x++)
+								for (int x = -i; x <= i; x++)
 								{
-									for(int z = -i; z <= i; z++)
+									for (int z = -i; z <= i; z++)
 									{
 										String id = "" + x + ";" + z;
 										
-										if(PlotManager.isPlotAvailable(id, w))
+										if (PlotManager.isPlotAvailable(id, w))
 										{									
 											String name = player.getName();
 											
