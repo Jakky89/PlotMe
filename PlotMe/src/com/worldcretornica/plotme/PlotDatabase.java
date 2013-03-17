@@ -1385,7 +1385,7 @@ public class PlotDatabase {
             ps.setDouble(9, plot.getClaimPrice());
             
             // EXPIRATION
-            ps.setLong(7, plot.getExpiration());
+            ps.setLong(7, plot.getExpireDate());
             
             // FINISH
             ps.setLong(8, plot.getFinishDate());

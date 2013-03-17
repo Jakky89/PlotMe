@@ -19,6 +19,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockFadeEvent;
 import org.bukkit.event.block.BlockFormEvent;
 import org.bukkit.event.block.BlockFromToEvent;
@@ -51,6 +52,7 @@ import org.bukkit.event.world.WorldInitEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.generator.BlockPopulator;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
 import com.worldcretornica.plotme.Plot;
 import com.worldcretornica.plotme.PlotDatabase;
@@ -127,7 +129,7 @@ public class PlotListener implements Listener
 			Plot plot = pwi.getPlotAtBlockPosition(block);
 			if (plot != null && plot.isAllowed(player.getName()))
 			{
-				plot.resetExpiration(pwi.DaysToExpiration);
+				plot.setDaysToExpiration(pwi.DaysToExpiration);
 				return;
 			}
 		}
@@ -158,15 +160,20 @@ public class PlotListener implements Listener
 			Plot plot = PlotManager.getPlotAtBlockPosition(block);
 			if (plot != null && plot.isAllowed(player.getName()))
 			{
-				plot.resetExpiration(pwi.DaysToExpiration);
+				plot.setDaysToExpiration(pwi.DaysToExpiration);
 				return;
 			}
+		}
+		
+		if (block.getType() == Material.FIRE || block.getType() == Material.SAPLING) {
+			event.setCancelled(true);
+			return;
 		}
 		
 		player.sendMessage(PlotMe.caption("ErrCannotBuild"));
 		event.setCancelled(true);
 	}
-	
+
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onPlayerMove(PlayerMoveEvent event)
 	{
@@ -211,7 +218,7 @@ public class PlotListener implements Listener
 			Plot plot = PlotManager.getPlotAtBlockPosition(block);
 			if (plot != null && plot.isAllowed(player.getName()))
 			{
-				plot.resetExpiration(pwi.DaysToExpiration);
+				plot.setDaysToExpiration(pwi.DaysToExpiration);
 				return;
 			}
 		}
@@ -268,26 +275,51 @@ public class PlotListener implements Listener
 			}
 		}
 	}
-	
-	/*@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onBlockDispense(BlockDispenseEvent event)
+
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+	public void onDispense(BlockDispenseEvent event)
 	{
-		Block block = event.getBlock();
-		if (!PlotManager.isPlotWorld(block))
+		Block fromblock = event.getBlock();
+		if (!PlotManager.isPlotWorld(fromblock.getWorld()))
 		{
 			return;
 		}
 		
-		PlotWorld pwi = PlotManager.getPlotWorld(block);
-		if (pwi != null)
+		PlotWorld pwi = PlotManager.getPlotWorld(fromblock.getWorld());
+		if (pwi == null)
 		{
-			Dispenser disp = (Dispenser)event.getBlock().getState().getData();
-			
-			Vector velocity = event.getVelocity();
-			
-
+			event.setCancelled(true);
+			return;
 		}
-    }*/
+
+		Vector velocity = event.getVelocity();
+		int deltax = 0;
+		int deltaz = 0;
+		if (Math.abs(velocity.getX()) > Math.abs(velocity.getZ()))
+		{
+			if (velocity.getX() > 0)
+				deltax = 1;
+			else
+				deltax = -1;	
+		}
+		else
+		{
+			if (velocity.getZ() > 0)
+				deltaz = 1;
+			else
+				deltaz = -1;
+		}
+
+		Block toblock = fromblock.getRelative(deltax, 0, deltaz);
+
+		Plot fromplot = pwi.getPlotAtBlockPosition(fromblock);
+		Plot toplot = pwi.getPlotAtBlockPosition(toblock);
+
+		if (toplot.equals(fromplot) || toplot.isAllowed(fromplot.getOwnerName()))
+			return;
+
+		event.setCancelled(true);
+	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onBlockBurn(BlockBurnEvent event)
@@ -297,7 +329,7 @@ public class PlotListener implements Listener
 		{
 			return;
 		}
-		
+
 		PlotWorld pwi = PlotManager.getPlotWorld(block);
 		/**
 		 * TODO: maybe send message to player that it burns on his plot
@@ -328,7 +360,7 @@ public class PlotListener implements Listener
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onPlayerBucketEmpty(final PlayerBucketEmptyEvent event)
+	public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event)
 	{
 		BlockFace bf = event.getBlockFace();
 		BlockState block = event.getBlockClicked().getLocation().add(bf.getModX(), bf.getModY(), bf.getModZ()).getBlock().getState();
@@ -351,7 +383,7 @@ public class PlotListener implements Listener
 			Plot plot = pwi.getPlotAtBlockPosition(block);
 			if (plot != null && plot.isAllowed(player.getName()))
 			{
-				plot.resetExpiration(pwi.DaysToExpiration);
+				plot.setDaysToExpiration(pwi.DaysToExpiration);
 				return;
 			}
 		}
@@ -361,7 +393,7 @@ public class PlotListener implements Listener
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onPlayerBucketFill(final PlayerBucketFillEvent event)
+	public void onPlayerBucketFill(PlayerBucketFillEvent event)
 	{
 		Block block = event.getBlockClicked();
         if (!PlotManager.isPlotWorld(block))
@@ -382,7 +414,7 @@ public class PlotListener implements Listener
 			Plot plot = pwi.getPlotAtBlockPosition(block);
 			if (plot != null && plot.isAllowed(player.getName()))
 			{
-				plot.resetExpiration(plot.getPlotWorld().DaysToExpiration);
+				plot.setDaysToExpiration(plot.getPlotWorld().DaysToExpiration);
 				return;
 			}
 		}
@@ -393,7 +425,7 @@ public class PlotListener implements Listener
 	
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onPlayerInteract(final PlayerInteractEvent event)
+	public void onPlayerInteract(PlayerInteractEvent event)
 	{
 		Block block = event.getClickedBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -449,17 +481,25 @@ public class PlotListener implements Listener
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onBlockSpread(final BlockSpreadEvent event)
+	public void onBlockSpread(BlockSpreadEvent event)
 	{
-		Plot plot = PlotManager.getPlotAtBlockPosition(event.getBlock());
-		if (plot != null)
-		{			
+		Block block = event.getBlock();
+		if (!PlotManager.isPlotWorld(block))
+		{
+			return;
+		}
+		
+		Block sourceblock = event.getSource();
+		Plot plot = PlotManager.getPlotAtBlockPosition(block);
+		Plot sourceplot = PlotManager.getPlotAtBlockPosition(sourceblock);
+		if (plot==null || sourceplot==null || (plot.equals(sourceplot) && !plot.isAllowed(sourceplot.getOwnerName())))
+		{
 			event.setCancelled(true);
 		}
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onBlockForm(final BlockFormEvent event)
+	public void onBlockForm(BlockFormEvent event)
 	{
 		Block block = event.getBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -482,7 +522,7 @@ public class PlotListener implements Listener
 	
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onBlockDamage(final BlockDamageEvent event)
+	public void onBlockDamage(BlockDamageEvent event)
 	{
 		Block block = event.getBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -504,7 +544,7 @@ public class PlotListener implements Listener
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onBlockFade(final BlockFadeEvent event)
+	public void onBlockFade(BlockFadeEvent event)
 	{
 		Block block = event.getBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -526,30 +566,33 @@ public class PlotListener implements Listener
 	}
 	
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onBlockFromTo(final BlockFromToEvent event)
+	public void onBlockFromTo(BlockFromToEvent event)
 	{
-		Block toblock = event.getToBlock();
-		if (!PlotManager.isPlotWorld(toblock))
+		if (event.getFace() == BlockFace.DOWN)
+			return;
+		
+		Block fromblock = event.getBlock();
+		if (!PlotManager.isPlotWorld(fromblock))
 		{
 			return;
 		}
 		
-		Block fromblock = event.getBlock();
-
 		PlotWorld pwi = PlotManager.getPlotWorld(fromblock);
-		if (pwi != null && fromblock != null && toblock != null)
+		if (pwi != null)
 		{
 			Plot fromplot = pwi.getPlotAtBlockPosition(fromblock);
+			Block toblock = event.getToBlock();
 			Plot toplot = pwi.getPlotAtBlockPosition(toblock);
-			if (fromplot != null && toplot != null)
+			
+			if (fromplot.equals(toplot))
+				return;
+
+			if (toplot != null && toplot.isAllowed(fromplot.getOwner().getName()))
 			{
-				if (fromplot.equals(toplot) || fromplot.getOwner().equals(toplot.getOwner()))
-				{
-					return;
-				}
+				return;
 			}
 		}
-
+		
 		event.setCancelled(true);
 	}
 	
@@ -594,56 +637,70 @@ public class PlotListener implements Listener
 			event.setCancelled(true);
 			return;
 		}
+
+		Plot fromplot = pwi.getPlotAtBlockPosition(block);
+		if (fromplot == null)
+		{
+			event.setCancelled(true);
+			block.breakNaturally();
+			block.setType(Material.AIR);
+			return;
+		}
+
+		BlockFace face = event.getDirection();
+		Block overblock = block.getRelative(face);
+		Plot overplot = pwi.getPlotAtBlockPosition(overblock.getLocation());
+		if (overplot == null)
+		{
+			event.setCancelled(true);
+			block.breakNaturally();
+			block.setType(Material.AIR);
+			return;
+		}
 		
 		List<Block> blocks = event.getBlocks();
 		if (blocks == null || blocks.isEmpty())
 		{
-			return;
-		}
-		
-		Location nxtloc;
-		BlockFace face = event.getDirection();
-		nxtloc = block.getLocation().add(face.getModX(), face.getModY(), face.getModZ());
-		
-		Plot fromplot = pwi.getPlotAtBlockPosition(block);
-		Plot overplot = pwi.getPlotAtBlockPosition(nxtloc);
-		
-		if (overplot != null)
-		{
-			if (fromplot == null || overplot == null || (!fromplot.equals(overplot) && !fromplot.getOwner().equals(overplot.getOwner())))
-			{
+			if (!fromplot.equals(overplot) && !overplot.isAllowed(fromplot.getOwnerName())) {
 				event.setCancelled(true);
 				block.breakNaturally();
+				block.setType(Material.AIR);
 				return;
 			}
+			return;
 		}
 
 		Iterator<Block> blockIterator = blocks.iterator();
-		Block nxtblock;
-
 		while (blockIterator.hasNext())
 		{
-			nxtblock = blockIterator.next();
-			if (nxtblock != null)
+			overblock = blockIterator.next();
+			overplot = pwi.getPlotAtBlockPosition(overblock.getLocation());
+			if (overplot==null || (!fromplot.equals(overplot) && !overplot.isAllowed(fromplot.getOwnerName())))
 			{
-				nxtloc = nxtblock.getLocation().add(face.getModX(), face.getModY(), face.getModZ());
-				overplot = pwi.getPlotAtBlockPosition(nxtloc);
-				if (overplot != null)
-				{
-					if (fromplot == null || overplot == null || (!fromplot.equals(overplot) && !fromplot.getOwner().equals(overplot.getOwner())))
-					{
-						event.setCancelled(true);
-						block.breakNaturally();
-						return;
-					}
-				}
+				event.setCancelled(true);
+				block.breakNaturally();
+				block.setType(Material.AIR);
+				return;
 			}
+		}
+		
+		overblock = overblock.getRelative(event.getDirection());
+		overplot = pwi.getPlotAtBlockPosition(overblock.getLocation());
+		if (overplot==null || (!fromplot.equals(overplot) && !overplot.isAllowed(fromplot.getOwnerName())))
+		{
+			event.setCancelled(true);
+			block.breakNaturally();
+			block.setType(Material.AIR);
+			return;
 		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
 	public void onBlockPistonRetract(final BlockPistonRetractEvent event)
 	{
+		if (!event.isSticky())
+			return;
+		
 		Location retractloc = event.getRetractLocation();
 		if (!PlotManager.isPlotWorld(retractloc))
 		{
@@ -804,7 +861,7 @@ public class PlotListener implements Listener
 				{
 					if (plot.getOwnerName() == player.getName() || plot.isAllowed(player.getName()))
 					{
-						plot.resetExpiration(pwi.DaysToExpiration);
+						plot.setDaysToExpiration(pwi.DaysToExpiration);
 						return;
 					}
 				}

@@ -69,7 +69,7 @@ public class Plot implements Comparable<Plot>
 		biome = Biome.PLAINS;
 		properties = null;
 		plotrooms = null;
-		setDaysLeftUntilExpiration(PlotMe.DEFAULT_DAYS_TO_EXPIRATION);
+		setDaysToExpiration(PlotMe.DEFAULT_DAYS_TO_EXPIRATION);
 		claimprice = null;
 		expiredate = null;
 		finishdate = null;
@@ -372,7 +372,7 @@ public class Plot implements Comparable<Plot>
 		return false;
 	}
 
-	public void setDaysLeftUntilExpiration(int days)
+	public void setDaysToExpiration(int days)
 	{
 		if (days > 0)
 		{
