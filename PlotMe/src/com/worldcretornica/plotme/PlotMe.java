@@ -98,7 +98,7 @@ public class PlotMe extends JavaPlugin
     public static final int DEFAULT_ROAD_HEIGHT = 64;
     public static final Biome DEFAULT_PLOT_BIOME = Biome.PLAINS;
     
-    public static final int DEFAULT_DAYS_UNTIL_EXPIRATION = 7;
+    public static final int DEFAULT_DAYS_TO_EXPIRATION = 7;
     
     public static final int MAX_EXPIRED_PLOT_DELETIONS_PER_HOUR = 100;
     
@@ -402,7 +402,7 @@ public class PlotMe extends JavaPlugin
 			cfgWorld.set("RoadStripeBlock",							"WOOD:2");
 			
 			cfgWorld.set("RoadHeight",								DEFAULT_ROAD_HEIGHT);
-			cfgWorld.set("DaysToExpiration",						DEFAULT_DAYS_EXPIRATION);
+			cfgWorld.set("DaysToExpiration",						DEFAULT_DAYS_TO_EXPIRATION);
 
 			cfgWorld.set("ProtectedBlocks",							defProtectedBlocks);
 			cfgWorld.set("PreventedItems",							defPreventedItems);
@@ -526,7 +526,7 @@ public class PlotMe extends JavaPlugin
 				logger.severe(PREFIX + "RoadHeight below 1 is invalid. This is the height at which your road is located. Normalized to 64.");
 				tmpPlotWorld.RoadHeight 						= 64;
 			}
-			tmpPlotWorld.DaysToExpiration			= cfgCurrWorld.getInt("DaysToExpiration",	DEFAULT_DAYS_EXPIRATION);
+			tmpPlotWorld.DaysToExpiration			= cfgCurrWorld.getInt("DaysToExpiration",	DEFAULT_DAYS_TO_EXPIRATION);
 			
 			if (cfgCurrWorld.contains("ProtectedBlocks"))
 				tmpPlotWorld.setProtectedBlocks(Jakky89ItemUtils.stringListToItemIdDataList(cfgCurrWorld.getStringList("ProtectedBlocks")));
@@ -554,21 +554,21 @@ public class PlotMe extends JavaPlugin
 			tmpPlotWorld.CanSellToBank							= economysection.getBoolean("CanSellToBank",				false);
 			tmpPlotWorld.RefundClaimPriceOnReset				= economysection.getBoolean("RefundClaimPriceOnReset",		false);
 			tmpPlotWorld.RefundClaimPriceOnSetOwner				= economysection.getBoolean("RefundClaimPriceOnSetOwner",	false);
-			tmpPlotWorld.ClaimPrice								= economysection.getDouble("ClaimPrice",					0);
-			tmpPlotWorld.ClearPrice								= economysection.getDouble("ClearPrice",					0);
-			tmpPlotWorld.AddPlayerPrice							= economysection.getDouble("AddPlayerPrice",				0);
-			tmpPlotWorld.DenyPlayerPrice						= economysection.getDouble("DenyPlayerPrice",				0);
-			tmpPlotWorld.RemovePlayerPrice						= economysection.getDouble("RemovePlayerPrice",				0);
-			tmpPlotWorld.UndenyPlayerPrice						= economysection.getDouble("UndenyPlayerPrice",				0);
-			tmpPlotWorld.PlotHomePrice							= economysection.getDouble("PlotHomePrice",					0);
+			tmpPlotWorld.ClaimPrice								= (float)economysection.getDouble("ClaimPrice",					0);
+			tmpPlotWorld.ClearPrice								= (float)economysection.getDouble("ClearPrice",					0);
+			tmpPlotWorld.AddPlayerPrice							= (float)economysection.getDouble("AddPlayerPrice",				0);
+			tmpPlotWorld.DenyPlayerPrice						= (float)economysection.getDouble("DenyPlayerPrice",				0);
+			tmpPlotWorld.RemovePlayerPrice						= (float)economysection.getDouble("RemovePlayerPrice",				0);
+			tmpPlotWorld.UndenyPlayerPrice						= (float)economysection.getDouble("UndenyPlayerPrice",				0);
+			tmpPlotWorld.PlotHomePrice							= (float)economysection.getDouble("PlotHomePrice",					0);
 			tmpPlotWorld.CanCustomizeSellPrice					= economysection.getBoolean("CanCustomizeSellPrice",		false);
-			tmpPlotWorld.SellToPlayerPrice						= economysection.getDouble("SellToPlayerPrice",				0);
-			tmpPlotWorld.SellToBankPrice						= economysection.getDouble("SellToBankPrice",				0);
-			tmpPlotWorld.BuyFromBankPrice						= economysection.getDouble("BuyFromBankPrice",				0);
-			tmpPlotWorld.AddCommentPrice						= economysection.getDouble("AddCommentPrice",				0);
-			tmpPlotWorld.BiomeChangePrice						= economysection.getDouble("BiomeChangePrice",				0);
-			tmpPlotWorld.ProtectPrice							= economysection.getDouble("ProtectPrice",					0);
-			tmpPlotWorld.DisposePrice							= economysection.getDouble("DisposePrice",					0);
+			tmpPlotWorld.SellToPlayerPrice						= (float)economysection.getDouble("SellToPlayerPrice",				0);
+			tmpPlotWorld.SellToBankPrice						= (float)economysection.getDouble("SellToBankPrice",				0);
+			tmpPlotWorld.BuyFromBankPrice						= (float)economysection.getDouble("BuyFromBankPrice",				0);
+			tmpPlotWorld.AddCommentPrice						= (float)economysection.getDouble("AddCommentPrice",				0);
+			tmpPlotWorld.BiomeChangePrice						= (float)economysection.getDouble("BiomeChangePrice",				0);
+			tmpPlotWorld.ProtectPrice							= (float)economysection.getDouble("ProtectPrice",					0);
+			tmpPlotWorld.DisposePrice							= (float)economysection.getDouble("DisposePrice",					0);
 			
 			
 			

@@ -8,6 +8,6 @@ public class PlotFinishedComparator implements Comparator<Plot>
 {
 	public int compare(Plot plot1, Plot plot2)
 	{
-		return (int)(plot1.getFinish() - plot2.getFinish());
+		return (int)(plot1.getFinishDate() - plot2.getFinishDate());
 	}
 }

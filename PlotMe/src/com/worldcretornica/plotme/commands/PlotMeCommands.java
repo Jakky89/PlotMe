@@ -57,6 +57,11 @@ public class PlotMeCommands implements CommandExecutor {
 		commands.put(C("CommandResetExpired"), new CommandResetExpired(this));
 
 	}
+	
+	public PlotMe getPlugin()
+	{
+		return plugin;
+	}
 		
 	public boolean onCommand(CommandSender sender, Command command, String start, String[] args)
 	{

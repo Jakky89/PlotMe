@@ -41,6 +41,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
@@ -73,24 +74,29 @@ public class PlotListener implements Listener
 		}
 		
 		PlotManager.registerPlotPlayer(player);
-
-		if (PlotManager.isPlotWorld(player.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
+		World minecraftWorld = player.getWorld();
+		if (minecraftWorld != null)
 		{
-			Plot plot = PlotManager.getPlotAtBlockPosition(player);
-			if (plot != null)
+			if (PlotManager.isPlotWorld(minecraftWorld))
 			{
-				if (plot.isDenied(player.getName()))
+				if (!PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
 				{
-					player.teleport(PlotManager.getPlotHome(plot));
+					Plot plot = PlotManager.getPlotAtBlockPosition(player);
+					if (plot != null)
+					{
+						if (plot.isDenied(player.getName()))
+						{
+							player.teleport(minecraftWorld.getSpawnLocation());
+						}
+					}
 				}
 			}
 		}
-
 	}
 	
-	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-	public void onPlayerQuit(PlayerJoinEvent event) 
-	{	
+	@EventHandler(priority = EventPriority.HIGH)
+	public void onPlayerQuit(PlayerQuitEvent event) 
+	{
 		Player player = event.getPlayer();
 		if (player == null)
 		{
@@ -100,8 +106,8 @@ public class PlotListener implements Listener
 		PlotManager.unregisterPlotPlayer(player);
 	}
 	
-	@EventHandler(priority = EventPriority.HIGH)
-	public void onBlockBreak(final BlockBreakEvent event) 
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onBlockBreak(BlockBreakEvent event) 
 	{	
 		Block block = event.getBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -114,7 +120,7 @@ public class PlotListener implements Listener
 		{
 			return;
 		}
-		
+
 		PlotWorld pwi = PlotManager.getPlotWorld(block);
 		if (pwi != null)
 		{
@@ -131,8 +137,8 @@ public class PlotListener implements Listener
 	}
 	
 	
-	@EventHandler(priority = EventPriority.HIGH) //, ignoreCancelled = true
-	public void onBlockPlace(final BlockPlaceEvent event)
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onBlockPlace(BlockPlaceEvent event)
 	{
 		Block block = event.getBlock();
 		if (!PlotManager.isPlotWorld(block))
@@ -161,27 +167,21 @@ public class PlotListener implements Listener
 		event.setCancelled(true);
 	}
 	
-	@EventHandler(priority = EventPriority.HIGH)
-	public void onPlayerMove(final PlayerMoveEvent event)
-	{		
-		Player player = event.getPlayer();
-		if (player == null)
-		{
-			event.setCancelled(true);
-			return;
-		}
-		
+	@EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+	public void onPlayerMove(PlayerMoveEvent event)
+	{
 		Location fromloc = event.getFrom();
 		Location toloc = event.getTo();
 		
-		if (fromloc == null || toloc == null || fromloc.getWorld() != toloc.getWorld() || fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ())
+		if (fromloc.getBlockX() != toloc.getBlockX() || fromloc.getBlockZ() != toloc.getBlockZ() || fromloc.getWorld() != toloc.getWorld())
 		{
-			if (PlotManager.isPlotWorld(toloc.getWorld()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
+			if (PlotManager.isPlotWorld(toloc))
 			{
 				Plot plot = PlotManager.getPlotAtBlockPosition(toloc);
 				if (plot != null)
 				{
-					if (plot.isDenied(player.getName()))
+					Player player = event.getPlayer();
+					if (plot.isDenied(player.getName()) && !PlotMe.cPerms(player, "plotme.admin.bypassdeny"))
 					{
 						event.setCancelled(true);
 					}

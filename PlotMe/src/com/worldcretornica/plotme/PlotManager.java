@@ -50,7 +50,7 @@ public class PlotManager {
 	public static Long lastExpiredPlotDeletion;
 	public static int expiredPlotDeletionsProcessed;
 	public static Integer expiredPlotsCheckTaskId;
-	public static Long nextExpiredPlotsCheck;
+	public static Integer nextExpiredPlotsCheck;
 
 	
 	public PlotManager()
@@ -379,17 +379,17 @@ public class PlotManager {
 	
 	public static void checkPlotExpiration(Plot plot)
 	{
-		if (plot.getExpiration() > 0)
+		if (plot.getExpireDate() > 0)
 		{
-			if (nextExpiredPlotsCheck == null || plot.getExpiration() < nextExpiredPlotsCheck)
+			if (nextExpiredPlotsCheck == null || plot.getExpireDate() < nextExpiredPlotsCheck)
 			{
 				if (expiredPlotsCheckTaskId != null)
 				{
 					Bukkit.getScheduler().cancelTask(expiredPlotsCheckTaskId);
 					expiredPlotsCheckTaskId = null;
 				}
-				nextExpiredPlotsCheck = plot.getExpiration();
-				Long ticksUntilExpiration = (long)Math.round((plot.getExpiration() * 20) + (System.currentTimeMillis() / 50));
+				nextExpiredPlotsCheck = plot.getExpireDate();
+				Long ticksUntilExpiration = (long)Math.round((plot.getExpireDate() * 20) + (System.currentTimeMillis() / 50));
 				BukkitTask expiredPlotsCheckTask = null;
 				if (ticksUntilExpiration > 0)
 				{
@@ -455,7 +455,7 @@ public class PlotManager {
 	
 	public static void registerPlot(Plot plot)
 	{
-		if (plot == null || plot.getId() <= 0 || plot.getPlotPosition() == null || plot.getPlotWorld() == null || (plot.getExpiration() > 0 && plot.getExpiration() < (System.currentTimeMillis()/1000)))
+		if (plot == null || plot.getId() <= 0 || plot.getPlotPosition() == null || plot.getPlotWorld() == null || (plot.getExpireDate() != null && plot.getExpireDate() > 0 && plot.getExpireDate() < (System.currentTimeMillis()/1000)))
 		{
 			return;
 		}
@@ -885,15 +885,11 @@ public class PlotManager {
 				{
 					infosign.setLine(3, PlotMe.caption("InfoFinished"));
 				}
-				else if (plot.isProtected())
-				{
-					infosign.setLine(3, PlotMe.caption("InfoProtected"));
-				}
 				else
 				{
-					if (plot.getExpiration() > 0)
+					if (plot.getExpireDate() > 0)
 					{
-						int secsRemain = Math.round(plot.getExpiration() - currentTime);
+						int secsRemain = Math.round(plot.getExpireDate() - currentTime);
 						if (secsRemain > 0)
 						{
 							if (secsRemain < 2592000)
@@ -930,7 +926,7 @@ public class PlotManager {
 				if (sellsign != null)
 				{
 					sellsign.setLine(0, PlotMe.caption("SignForSale"));
-					int tmpPrice = (int)Math.round(plot.getPrice() * 100);
+					int tmpPrice = (int)Math.round(plot.getClaimPrice() * 100);
 					sellsign.setLine(1, PlotMe.caption("SignPrice"));
 					sellsign.setLine(2, PlotMe.caption("SignPriceColor") + String.valueOf(tmpPrice / 100));
 					sellsign.setLine(3, "/plot " + PlotMe.caption("CommandBuy"));

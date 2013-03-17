@@ -54,7 +54,7 @@ public class PlotDatabase {
 		  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
 		  		  		+ "`expiredate` UNSIGNED INTEGER DEFAULT NULL,"
 				  		+ "`finishdate` UNSIGNED INTEGER DEFAULT NULL,"
-				  		+ "`claimprice` UNSIGNED DOUBLE DEFAULT NULL,"
+				  		+ "`claimprice` UNSIGNED FLOAT DEFAULT NULL,"
 				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL "
 				  		+ "UNIQUE (world, xpos, zpos)" +
 				  	")";
@@ -73,7 +73,7 @@ public class PlotDatabase {
 						+ "`auction` UNSIGNED INTEGER NOT NULL,"
 						+ "`plot` UNSIGNED INTEGER NOT NULL,"
 						+ "`player` UNSIGNED INTEGER NOT NULL,"
-						+ "`amount` UNSIGNED INTEGER NOT NULL,"
+						+ "`amount` UNSIGNED FLOAT NOT NULL,"
 						+ "INDEX(plot, auction)" +
 					")";
 	
@@ -777,7 +777,7 @@ public class PlotDatabase {
             	playerId = rs.getInt(1);
             	if (displayName != null)
             	{
-            		updateData(playerId, "players", "displayname", displayName);
+            		updateStringCell(playerId, "players", "displayname", displayName);
             	}
             	else
             	{
@@ -812,7 +812,7 @@ public class PlotDatabase {
                 }
                 if (displayName != null && !displayName.isEmpty())
                 {
-                	updateData(playerId, "players", "displayname", displayName);
+                	updateStringCell(playerId, "players", "displayname", displayName);
                 	return new PlotPlayer(playerId, playerName, displayName);
                 }
                 else
@@ -954,8 +954,7 @@ public class PlotDatabase {
 		{
 			st = con.createStatement();
 			rs = st.executeQuery("SELECT world,xpos,zpos,owner,biome," +
-										"expiredate,finishdate,claimprice," +
-										"auction,properties " +
+										"claimprice,expiredate,finishdate " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
 								 		"id=" + String.valueOf(plotId) +
@@ -965,6 +964,7 @@ public class PlotDatabase {
 			if (rs.next())
 			{
 				PlotPosition plotpos = new PlotPosition(PlotManager.getPlotWorld(rs.getInt(1)), rs.getInt(2), rs.getInt(3));
+				
 				Biome biome = null;
 				String biomestr =  rs.getString(5);
 				if (rs.wasNull()) {
@@ -979,11 +979,9 @@ public class PlotDatabase {
 										plotpos,
 										PlotManager.getPlotPlayer(rs.getInt(4)),
 										biome,
-										rs.getLong(6),
-										rs.getLong(7),
-										rs.getDouble(8),
-										rs.getInt(9)==1?true:false,
-										rs.getInt(10)==0?false:true
+										rs.getFloat(6),
+										rs.getInt(7),
+										rs.getInt(8)
 									);
 		
 				PlotManager.registerPlot(plot);
@@ -1052,8 +1050,7 @@ public class PlotDatabase {
 		try {
 			st = con.createStatement();
 			rs = st.executeQuery("SELECT id,xpos,zpos,owner,biome," +
-										"expireddate,finishdate,claimprice," +
-										"isforsale,isprotected,auction,properties " +
+										"claimprice,expiredate,finishdate " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
 								 		"world=" + String.valueOf(plotWorld.getId()) + " " +
@@ -1065,18 +1062,25 @@ public class PlotDatabase {
 			while (rs.next()) 
 			{
 				plotpos = new PlotPosition(plotWorld, rs.getInt(2), rs.getInt(3));
+				
+				Biome biome = null;
+				String biomestr =  rs.getString(5);
+				if (rs.wasNull()) {
+					biome = PlotMe.DEFAULT_PLOT_BIOME;
+				} else {
+					biome = Biome.valueOf(biomestr);
+				}
+				
 				if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
 				{
 					plot = new Plot(
 						rs.getInt(1),
 						plotpos,
 		    			getPlotPlayer(rs.getInt(4)),
-		    			Biome.valueOf(rs.getString(5)),
-		    			rs.getLong(6),
-		    			rs.getLong(7),
-		    			rs.getDouble(8),
-		    			rs.getInt(9)==1?true:false,
-		    			rs.getInt(10)==0?false:true
+		    			biome,
+		    			rs.getFloat(6),
+		    			rs.getInt(7),
+		    			rs.getInt(8)
 					);
 
 					if (rs.getInt(11) > 0)
@@ -1169,7 +1173,7 @@ public class PlotDatabase {
 			rs = st.executeQuery("SELECT id " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
-									"finisheddate IS NOT NULL AND finisheddate>0 AND finisheddate<=" + String.valueOf(currentTime));
+									"finishdate IS NOT NULL AND finishdate>0 AND finishdate<=" + String.valueOf(currentTime));
 
 			List<Integer> tmpList = new ArrayList<Integer>();
 			
@@ -1223,19 +1227,15 @@ public class PlotDatabase {
 			rs = st.executeQuery("SELECT id " +
 								 "FROM `" + PlotMe.databasePrefix + "plotme_plots` " +
 								 "WHERE " +
-										"expireddate IS NOT NULL" +
+										"expiredate IS NOT NULL" +
 									" AND " +
-										"expireddate>0" + 
+										"expiredate>0" + 
 									" AND " +
-										"expireddate<=" + String.valueOf(currentTime) +
+										"expiredate<=" + String.valueOf(currentTime) +
 									" AND " +
-											"(finisheddate IS NULL" +
+											"(finishdate IS NULL" +
 										" OR " +
-											"finisheddate<=0)" +
-									" AND " +
-										"isprotected=0" +
-									" AND " +
-										"isforsale=0" +
+											"finishdate<=0)" +
 									" AND " +
 											"(auction IS NULL" +
 										" OR " +
@@ -1347,7 +1347,7 @@ public class PlotDatabase {
         try 
         {
             conn = getConnection();
-            ps = conn.prepareStatement("INSERT OR REPLACE INTO `" + PlotMe.databasePrefix + "plotme_plots` (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, price, isforsale, isprotected, auction, properties) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT OR REPLACE INTO `" + PlotMe.databasePrefix + "plotme_plots` (id, world, xpos, zpos, owner, biome, claimprice, expiredate, finishdate, auction) VALUES (?,?,?,?,?,?,?,?,?,?)");
             
             ps.setInt(1, plot.getId());
             ps.setInt(2, plot.getPlotWorld().getId());
@@ -1355,52 +1355,43 @@ public class PlotDatabase {
             ps.setInt(4, plot.getPlotZ());
             
             // OWNER
-            if (plot.getOwner() != null)
+            if (plot.getOwner() != null && plot.getOwner().getId() >= 0)
             {
             	ps.setInt(5, plot.getOwner().getId());
             }
             else
             {
-            	ps.setInt(5, 0);
+            	ps.setNull(5, java.sql.Types.INTEGER);
             }
             
             // BIOME
-            ps.setString(6, plot.getBiome().toString());
+			if (plot.getBiome() != null)
+			{
+				String biomestr = plot.getBiome().toString();
+				if (biomestr != null)
+				{
+					ps.setString(6, biomestr);
+				}
+				else
+				{
+					ps.setNull(6, java.sql.Types.VARCHAR);
+				}
+			}
+			else
+			{
+				ps.setNull(6, java.sql.Types.VARCHAR);
+			}
+            // PRICE
+            ps.setDouble(9, plot.getClaimPrice());
             
             // EXPIRATION
             ps.setLong(7, plot.getExpiration());
             
             // FINISH
-            ps.setLong(8, plot.getFinish());
-            
-            // PRICE
-            ps.setDouble(9, plot.getPrice());
-            
-            // FORSALE
-            if (plot.isForSale())
-            {
-            	ps.setByte(10, (byte)1);
-            }
-            else
-            {
-            	ps.setByte(10, (byte)0);
-            }
-            
-            // PROTECTED
-            if (plot.isProtected())
-            {
-            	ps.setByte(11, (byte)1);
-            }
-            else
-            {
-            	ps.setByte(11, (byte)0);
-            }
+            ps.setLong(8, plot.getFinishDate());
             
             // AUCTION
             ps.setInt(12, plot.getAuctionNumber());
-            
-            // PROPERTIES
-            ps.setObject(13, plot.getProperties());
             
             ps.executeUpdate();
             conn.commit();
@@ -1465,7 +1456,7 @@ public class PlotDatabase {
         }
     }
     
-    public static void updateProperties(int rowId, String databaseSuffix, String colName, Jakky89Properties cellValue)
+    public static void updatePropertiesCell(int rowId, String databaseSuffix, String colName, Jakky89Properties cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -1475,7 +1466,10 @@ public class PlotDatabase {
 
             ps = conn.prepareStatement("UPDATE `" + PlotMe.databasePrefix + "plotme_" + databaseSuffix + "` SET " + colName + "=? WHERE id=?");
             
-            ps.setObject(1, cellValue);
+            if (cellValue != null)
+            	ps.setObject(1, cellValue);
+            else
+            	ps.setNull(1, java.sql.Types.BLOB);
             ps.setInt(2, rowId);
             
             ps.executeUpdate();
@@ -1499,7 +1493,7 @@ public class PlotDatabase {
         }
     }
     
-    public static void updateData(int rowId, String databaseSuffix, String colName, String cellValue)
+    public static void updateStringCell(int rowId, String databaseSuffix, String colName, String cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -1509,7 +1503,10 @@ public class PlotDatabase {
 
             ps = conn.prepareStatement("UPDATE `" + PlotMe.databasePrefix + "plotme_" + databaseSuffix + "` SET " + colName + "=? WHERE id=?");
             
-            ps.setString(1, cellValue);
+            if (cellValue != null)
+            	ps.setString(1, cellValue);
+            else
+            	ps.setNull(1, java.sql.Types.VARCHAR);
             ps.setInt(2, rowId);
             
             ps.executeUpdate();
@@ -1533,7 +1530,7 @@ public class PlotDatabase {
         }
     }
     
-    public static void updateData(int rowId, String databaseSuffix, String colName, double cellValue)
+    public static void updateFloatCell(int rowId, String databaseSuffix, String colName, Float cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -1543,7 +1540,10 @@ public class PlotDatabase {
 
             ps = conn.prepareStatement("UPDATE `" + PlotMe.databasePrefix + "plotme_" + databaseSuffix + "` SET " + colName + "=? WHERE id=?");
             
-            ps.setDouble(1, cellValue);
+            if (cellValue != null)
+            	ps.setFloat(1, cellValue);
+            else
+            	ps.setNull(1, java.sql.Types.FLOAT);
             ps.setInt(2, rowId);
             
             ps.executeUpdate();
@@ -1567,7 +1567,7 @@ public class PlotDatabase {
         }
     }
     
-    public static void updateData(int rowId, String databaseSuffix, String colName, int cellValue)
+    public static void updateIntegerCell(int rowId, String databaseSuffix, String colName, Integer cellValue)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -1577,7 +1577,10 @@ public class PlotDatabase {
 
             ps = conn.prepareStatement("UPDATE `" + PlotMe.databasePrefix + "plotme_" + databaseSuffix + "` SET " + colName + "=? WHERE id=?");
             
-            ps.setInt(1, cellValue);
+            if (cellValue != null)
+            	ps.setInt(1, cellValue);
+            else
+            	ps.setNull(1, java.sql.Types.INTEGER);
             ps.setInt(2, rowId);
             
             ps.executeUpdate();
@@ -1600,7 +1603,7 @@ public class PlotDatabase {
             } catch (SQLException ex) {}
         }
     }
-  
+    
     public static int getNextAuctionNumber()
     {
         Connection con = null;
