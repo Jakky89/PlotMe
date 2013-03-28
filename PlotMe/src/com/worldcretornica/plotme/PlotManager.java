@@ -38,6 +38,8 @@ public class PlotManager {
     // Maps bukkits world names to PlotWorld instances
 	public static Map<World, PlotWorld> plotWorlds;
 	public static Map<String, Boolean> enabledWorlds;
+	public static PlotPlayer npcBank;
+	public static PlotPlayer npcServer;
 	// Maps player names to PlotMePlayer instances 
 	public static Map<String, PlotPlayer> plotPlayers;
 	public static List<Plot> allPlots;
@@ -57,6 +59,9 @@ public class PlotManager {
 	{
 		plotWorlds = new HashMap<World, PlotWorld>();
 		
+		npcServer = new PlotPlayer(-1, "SERVER");
+		npcBank = new PlotPlayer(-2, "BANK");
+	
 		plotPlayers = new HashMap<String, PlotPlayer>();
 	
 		allPlots = new ArrayList<Plot>();
@@ -85,38 +90,25 @@ public class PlotManager {
 		enabledWorlds.put(worldName, false);
 	}
 	
-	public static boolean registerPlotWorld(PlotWorld plotWorld)
+	public static void registerPlotWorld(PlotWorld plotWorld)
 	{
-		if (plotWorld == null || plotWorld.getMinecraftWorld() == null)
+		if (plotWorld == null)
 		{
-			return false;
+			return;
 		}
-		
-		if (!plotWorlds.containsKey(plotWorld.getMinecraftWorld()))
-		{
-			if (plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld) == null)
-			{
-				return true;
-			}
-		}
-		
-		return false;
+		plotWorlds.put(plotWorld.getMinecraftWorld(), plotWorld);
 	}
 	
 	public static void registerPlotPlayer(PlotPlayer plotPlayer)
 	{
-		if (plotPlayer == null || plotPlayer.getId() < 0 || plotPlayer.getName().isEmpty())
+		if (plotPlayer == null || plotPlayer.getName().isEmpty())
 		{
 			return;
 		}
-		
-		if (!plotPlayers.containsKey(plotPlayer.getName()))
-		{
-			plotPlayers.put(plotPlayer.getName(), plotPlayer);
-		}
+		plotPlayers.put(plotPlayer.getName(), plotPlayer);
 	}
 	
-	public static void registerPlotPlayer(String playerName, String displayName)
+	public static void registerPlotPlayer(String playerName)
 	{
 		if (playerName == null || playerName.isEmpty())
 		{
@@ -125,25 +117,32 @@ public class PlotManager {
 		
 		if (!plotPlayers.containsKey(playerName))
 		{
-			PlotPlayer ppres = PlotDatabase.getPlotPlayer(playerName, displayName);
+			PlotPlayer ppres = PlotDatabase.getPlotPlayer(playerName);
 			if (ppres != null)
 			{
 				plotPlayers.put(playerName, ppres);
 				PlotMe.logger.info(PlotMe.PREFIX + "Loaded player \"" + playerName + "\" with id " + String.valueOf(ppres.getId()) + ".");
 			}
+			else
+			{
+				PlotMe.logger.warning(PlotMe.PREFIX + "Could not load player \"" + playerName + "\" from database!");
+			}
 		}
 	}
 	
-	public static void registerPlotPlayer(Player bukkitPlayer)
+	public static void registerPlotPlayer(Player player)
 	{
-		if (bukkitPlayer == null)
+		if (player == null)
 		{
 			return;
 		}
 		
-		if (!plotPlayers.containsKey(bukkitPlayer.getName()))
+		if (!plotPlayers.containsKey(player.getName()))
 		{
-			plotPlayers.put(bukkitPlayer.getName(), PlotDatabase.getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName()));
+			PlotPlayer ppi = PlotDatabase.getPlotPlayer(player.getName());
+			ppi.setDisplayName(player.getDisplayName());
+			ppi.setMinecraftPlayer(player);
+			plotPlayers.put(player.getName(), ppi);
 		}
 	}
 	
@@ -255,32 +254,34 @@ public class PlotManager {
 		return null;
 	}
 	
-	public static void loadPlots(World bukkitWorld, final int centerBlockX, final int centerBlockZ, int blockRange)
+	public static void loadPlots(PlotWorld plotWorld, final int centerBlockX, final int centerBlockZ)
 	{
-		PlotWorld pwi = getPlotWorld(bukkitWorld);
+		if (plotWorld == null)
+			return;
 		
-		double multi = pwi.getPlotBlockPositionMultiplier();
-		
-    	final int x = (int)Math.round(centerBlockX / multi);
-    	final int z = (int)Math.round(centerBlockZ / multi);
-    	
-		PlotDatabase.loadPlots(pwi, x, z, (int)Math.round(blockRange / multi));
+		double multi = plotWorld.getPlotBlockPositionMultiplier();
+		PlotDatabase.getPlots(plotWorld, (int)Math.round(centerBlockX / multi), (int)Math.round(centerBlockZ / multi));
 	}
 	
-	public static PlotPlayer getPlotPlayer(Player bukkitPlayer)
+	public static void loadPlots(World world, final int centerBlockX, final int centerBlockZ)
 	{
-		if (bukkitPlayer != null)
+		loadPlots(getPlotWorld(world), centerBlockX, centerBlockZ);
+	}
+	
+	public static PlotPlayer getPlotPlayer(Player player)
+	{
+		if (player != null)
 		{
-			PlotPlayer tmpppi = plotPlayers.get(bukkitPlayer.getName());
-			if (tmpppi == null)
+			PlotPlayer ppi = plotPlayers.get(player.getName());
+			if (ppi == null)
 			{
-				tmpppi = PlotDatabase.getPlotPlayer(bukkitPlayer);
-				plotPlayers.put(bukkitPlayer.getName(), tmpppi);
+				ppi = PlotDatabase.getPlotPlayer(player);
+				plotPlayers.put(player.getName(), ppi);
 			}
-			if (tmpppi != null)
+			if (ppi != null)
 			{
-				tmpppi.setDisplayName(bukkitPlayer.getDisplayName());
-				return tmpppi;
+				ppi.setDisplayName(player.getDisplayName());
+				return ppi;
 			}
 		}
 		return null;
@@ -311,10 +312,8 @@ public class PlotManager {
 		{
 			return null;
 		}
-		
 		Iterator<PlotPlayer> plotPlayersIterator = plotPlayers.values().iterator();
 		PlotPlayer testppi;
-		
 		while (plotPlayersIterator.hasNext())
 		{
 			testppi = plotPlayersIterator.next();
@@ -374,7 +373,7 @@ public class PlotManager {
 		{
 			return;
 		}
-		plot.getPlotWorld().refreshNeighbours(plot);
+		plot.getPlotWorld().notifyNeighbours(plot);
 	}
 	
 	public static void checkPlotExpiration(Plot plot)
@@ -539,9 +538,9 @@ public class PlotManager {
 			return;
 		}
 
-		plot.getPlotWorld().refreshNeighbours(plot);
+		plot.getPlotWorld().notifyNeighbours(plot);
 		
-		for (int i=0; i<8; i++)
+		for (byte i=0; i<8; i++)
 		{
 			if (plot.getNeighbourPlot(i) != null)
 			{
@@ -552,47 +551,47 @@ public class PlotManager {
 			}
 		}
 		
-		if (plot.getNeighbourPlot(1) != null && plot.getNeighbourPlot(1).getOwner().equals(plot.getOwner()))
+		if (plot.getNeighbourPlot((byte)1) != null && plot.getNeighbourPlot((byte)1).getOwner().equals(plot.getOwner()))
 		{
-			if (plot.getNeighbourPlot(7) != null &&
-				plot.getNeighbourPlot(0) != null)
+			if (plot.getNeighbourPlot((byte)7) != null &&
+				plot.getNeighbourPlot((byte)0) != null)
 			{
-				if (plot.getNeighbourPlot(7).getOwner().equals(plot.getOwner()) &&
-					plot.getNeighbourPlot(0).getOwner().equals(plot.getOwner()))
+				if (plot.getNeighbourPlot((byte)7).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot((byte)0).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.getNeighbourPlot(0), plot);
+					fillmiddleroad(plot.getNeighbourPlot((byte)0), plot);
 				}
 			}
 			
-			if (plot.getNeighbourPlot(2) != null &&
-				plot.getNeighbourPlot(3) != null)
+			if (plot.getNeighbourPlot((byte)2) != null &&
+				plot.getNeighbourPlot((byte)3) != null)
 			{
-				if (plot.getNeighbourPlot(2).getOwner().equals(plot.getOwner()) &&
-					plot.getNeighbourPlot(3).getOwner().equals(plot.getOwner()))
+				if (plot.getNeighbourPlot((byte)2).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot((byte)3).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.getNeighbourPlot(2), plot);
+					fillmiddleroad(plot.getNeighbourPlot((byte)2), plot);
 				}
 			}
 		}
-		if (plot.getNeighbourPlot(5) != null && plot.getNeighbourPlot(5).getOwner().equals(plot.getOwner()))
+		if (plot.getNeighbourPlot((byte)5) != null && plot.getNeighbourPlot((byte)5).getOwner().equals(plot.getOwner()))
 		{
-			if (plot.getNeighbourPlot(3) != null &&
-				plot.getNeighbourPlot(4) != null)
+			if (plot.getNeighbourPlot((byte)3) != null &&
+				plot.getNeighbourPlot((byte)4) != null)
 			{
-				if (plot.getNeighbourPlot(3).getOwner().equals(plot.getOwner()) &&
-					plot.getNeighbourPlot(4).getOwner().equals(plot.getOwner()))
+				if (plot.getNeighbourPlot((byte)3).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot((byte)4).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.getNeighbourPlot(4), plot);
+					fillmiddleroad(plot.getNeighbourPlot((byte)4), plot);
 				}
 			}
 			
-			if (plot.getNeighbourPlot(6) != null &&
-				plot.getNeighbourPlot(7) != null)
+			if (plot.getNeighbourPlot((byte)6) != null &&
+				plot.getNeighbourPlot((byte)7) != null)
 			{
-				if (plot.getNeighbourPlot(6).getOwner().equals(plot.getOwner()) &&
-					plot.getNeighbourPlot(7).getOwner().equals(plot.getOwner()))
+				if (plot.getNeighbourPlot((byte)6).getOwner().equals(plot.getOwner()) &&
+					plot.getNeighbourPlot((byte)7).getOwner().equals(plot.getOwner()))
 				{
-					fillmiddleroad(plot.getNeighbourPlot(6), plot);
+					fillmiddleroad(plot.getNeighbourPlot((byte)6), plot);
 				}
 			}
 		}
@@ -1043,21 +1042,17 @@ public class PlotManager {
 		if (plot == null || plot.getMinecraftWorld() == null || bio == null)
 		{
 			return;
-		}
-		
-		if (plot.setBiome(bio))
+		}	
+		plot.setBiome(bio);
+		Location baseLocation = plot.getWorldMinBlockLocation();
+		for (int x = 0; x <= plot.getPlotSize(); x++)
 		{
-			Location baseLocation = plot.getWorldMinBlockLocation();
-	
-			for (int x = 0; x <= plot.getPlotSize(); x++)
+			for (int z = 0; z <= plot.getPlotSize(); z++)
 			{
-				for (int z = 0; z <= plot.getPlotSize(); z++)
-				{
-					plot.getMinecraftWorld().setBiome(baseLocation.getBlockX() + x, baseLocation.getBlockZ() + z, bio);
-				}
+				plot.getMinecraftWorld().setBiome(baseLocation.getBlockX() + x, baseLocation.getBlockZ() + z, bio);
 			}
-			refreshPlotChunks(plot);
 		}
+		refreshPlotChunks(plot);
 	}
 
 	public static void clear(Location loc1, Location loc2)
@@ -1379,7 +1374,7 @@ public class PlotManager {
 		{
 			return false;
 		}
-
+		
 		PlotWorld pwiFrom = plot.getPlotWorld();
 		PlotWorld pwiTo   = targetPlotPosition.getPlotWorld();
 		
@@ -1390,7 +1385,6 @@ public class PlotManager {
 		}
 		
 		removePlotSigns(plot);
-		removeLWCProtections(plot);
 		
 		double multiFrom  = pwiFrom.getPlotBlockPositionMultiplier();
 		double multiTo    = pwiTo.getPlotBlockPositionMultiplier();
@@ -1836,9 +1830,9 @@ public class PlotManager {
 		{
 			Collections.sort(expiredPlots, new ExpiredPlotsComparator());
 			testplot = expiredPlots.get(0);
-			if (testplot.getExpiration() > 0 && testplot.getExpiration() < PlotManager.nextExpiredPlotsCheck)
+			if (testplot.getExpireDate() > 0 && testplot.getExpireDate() < PlotManager.nextExpiredPlotsCheck)
 			{
-				PlotManager.nextExpiredPlotsCheck = testplot.getExpiration();
+				PlotManager.nextExpiredPlotsCheck = testplot.getExpireDate();
 			}
 		}
 	}
@@ -1953,6 +1947,19 @@ public class PlotManager {
 		return PlotMe.getAirSpawnPosition(hl);
 	}
 	
+	public static List<Protection> getLWCProtections(final Plot plot)
+	{
+		if (!PlotMe.usinglwc || plot == null || plot.getMinecraftWorld() == null)
+		{
+			return null;
+		}
+		
+		final Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
+		LWC lwc = com.griefcraft.lwc.LWC.getInstance();
+		List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.getMinecraftWorld().getName(), locations.getLeft().getBlockX(), locations.getRight().getBlockX(), locations.getLeft().getBlockY(), locations.getRight().getBlockY(), locations.getLeft().getBlockZ(), locations.getRight().getBlockZ());
+		return protections;
+	}
+	
 	public static void removeLWCProtections(final Plot plot)
 	{
 		if (!PlotMe.usinglwc || plot == null || plot.getMinecraftWorld() == null)
@@ -1960,14 +1967,11 @@ public class PlotManager {
 			return;
 		}
 
-		final Pair<Location, Location> locations = plot.getWorldMinMaxBlockLocations();
-
 		Bukkit.getScheduler().runTaskAsynchronously(PlotMe.self, new Runnable() 
 		{	
 			public void run() 
 			{
-				LWC lwc = com.griefcraft.lwc.LWC.getInstance();
-				List<Protection> protections = lwc.getPhysicalDatabase().loadProtections(plot.getMinecraftWorld().getName(), locations.getLeft().getBlockX(), locations.getRight().getBlockX(), locations.getLeft().getBlockY(), locations.getRight().getBlockY(), locations.getLeft().getBlockZ(), locations.getRight().getBlockZ());
+				List<Protection> protections = getLWCProtections(plot);
 				if (protections != null && protections.size()>0)
 				{
 					Protection tmpp;

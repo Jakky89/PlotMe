@@ -44,6 +44,7 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.yaml.snakeyaml.Yaml;
 
+import com.sk89q.worldedit.LocalSession;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
 import com.worldcretornica.plotme.Metrics.Graph;
 import com.worldcretornica.plotme.commands.PlotMeCommands;
@@ -94,7 +95,11 @@ public class PlotMe extends JavaPlugin
     public static final Jakky89ItemIdData DEFAULT_PILLAR_H1_BLOCK	= new Jakky89ItemIdData((short)17, (short)4);
     public static final Jakky89ItemIdData DEFAULT_PILLAR_H2_BLOCK	= new Jakky89ItemIdData((short)17, (short)8);
     
-    
+    public static final char RIGHT_OWNER     = 'o';
+    public static final char RIGHT_WORLDEDIT = 'w';
+    public static final char RIGHT_BUILD     = 'b';
+    public static final char RIGHT_CHESTS    = 'c';
+ 
     public static final int DEFAULT_ROAD_HEIGHT = 64;
     public static final Biome DEFAULT_PLOT_BIOME = Biome.PLAINS;
     
@@ -671,19 +676,25 @@ public class PlotMe extends JavaPlugin
         {
             economy = economyProvider.getProvider();
             
-            bankOwner = new PlotPlayer(0, "$Bank$");
+            bankOwner = PlotManager.npcBank;
         }
     }
 	
-	public static void addIgnoreWELimit(Player p)
+	public static void addIgnoreWELimit(Player player)
 	{
-		if (!playersignoringwelimit.contains(p.getName()))
+		playersignoringwelimit.add(player.getName());
+		if (worldedit != null)
 		{
-			playersignoringwelimit.add(p.getName());
-			if (worldedit != null)
+			LocalSession session = PlotMe.worldedit.getSession(player);
+			if (session == null)
+				return;
+			Plot plot = pwi.getPlotAtBlockPosition(player.getLocation());
+			if (plot == null)
 			{
-				PlotWorldEdit.removeMask(p);
+				session.setMask(null);
+				return;
 			}
+			removeMask(p);
 		}
 	}
 	

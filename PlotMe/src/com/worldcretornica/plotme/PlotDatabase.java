@@ -11,6 +11,8 @@ import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -32,16 +34,27 @@ public class PlotDatabase {
 	
     final static String LAYOUT_WORLD_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_worlds` " +
 					"("
-						+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-						+ "`worldname` VARCHAR(64) NOT NULL UNIQUE" +
+						+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,"
+						+ "`worldname` VARCHAR(64) NOT NULL UNIQUE,"
+						+ "`plotsize` UNSIGNED SMALLINT NOT NULL DEFAULT 16"
+						+ "`flags` VARCHAR(16) DEFAULT NULL" +
 					")";
 
 	final static String LAYOUT_PLAYER_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_players` " + 
 		 			"("
-		 	  			+ "`id` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
+		 	  			+ "`id` INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,"
 		 	  			+ "`playername` VARCHAR(32) NOT NULL UNIQUE,"
 		 	  			+ "`displayname` VARCHAR(32) DEFAULT NULL,"
-		 	  			+ "`lastonline` UNSIGNED INTEGER DEFAULT NULL" +
+		 	  			+ "`lastonline` UNSIGNED INTEGER DEFAULT NULL"
+		 	  			+ "`flags` VARCHAR(16) DEFAULT NULL" +
+		 	  		")";
+	
+	final static String LAYOUT_GROUP_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_groups` " + 
+		 			"("
+		 	  			+ "`id` INTEGER NOT NULL PRIMARY KEY AUTO_INCREMENT,"
+		 	  			+ "`name` VARCHAR(32) NOT NULL UNIQUE,"
+		 	  			+ "`lastonline` UNSIGNED INTEGER DEFAULT NULL"
+		 	  			+ "`flags` VARCHAR(16) DEFAULT NULL" +
 		 	  		")";
 	
 	final static String LAYOUT_PLOT_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plots` " +
@@ -50,29 +63,31 @@ public class PlotDatabase {
 		  		  		+ "`world` UNSIGNED INTEGER,"
 		  		  		+ "`xpos` INTEGER,"
 		  		  		+ "`zpos` INTEGER,"
-		  		  		+ "`owner` UNSIGNED INTEGER DEFAULT NULL INDEX,"
+		  		  		+ "`owner` INTEGER DEFAULT NULL INDEX,"
 		  		  		+ "`biome` VARCHAR(16) DEFAULT NULL,"
 		  		  		+ "`expiredate` UNSIGNED INTEGER DEFAULT NULL,"
 				  		+ "`finishdate` UNSIGNED INTEGER DEFAULT NULL,"
 				  		+ "`claimprice` UNSIGNED FLOAT DEFAULT NULL,"
 				  		+ "`auction` UNSIGNED INTEGER DEFAULT NULL "
+				  		+ "`flags` VARCHAR(16) DEFAULT NULL,"
 				  		+ "UNIQUE (world, xpos, zpos)" +
 				  	")";
 	
-	final static String LAYOUT_PLOTRIGHTS_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotrights` " +
-		 	"("
-		  		+ "`plot` UNSIGNED INTEGER NOT NULL PRIMARY KEY AUTO INCREMENT,"
-  		  		+ "`type` UNSIGNED TINYINT(1) NOT NULL," // player/group
-  		  		+ "`name` VARCHAR(16) NOT NULL,"
-  		  		+ "`perms` VARCHAR(16) NOT NULL" +
-		  	")";
-	
+	final static String LAYOUT_FLAGS_TABLE	=	"CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_flags` " +
+				 	"("
+				  		+ "`plot` UNSIGNED INTEGER NOT NULL,"
+		  		  		+ "`type` UNSIGNED VARCHAR(16) NOT NULL,"
+				  		+ "`ftid` INTEGER NOT NULL,"
+		  		  		+ "`flags` VARCHAR(16) DEFAULT NULL,"
+		  		  		+ "PRIMARY KEY(plot, type, ftid)" +
+				  	")";
+
 	final static String LAYOUT_PLOTAUCTION_TABLE = "CREATE TABLE IF NOT EXISTS `" + PlotMe.databasePrefix + "plotme_plotauctions` " +
 					"("
+						+ "`plot` UNSIGNED INTEGER NOT NULL,"
 						+ "`date` UNSIGNED INTEGER NOT NULL,"
 						+ "`auction` UNSIGNED INTEGER NOT NULL,"
-						+ "`plot` UNSIGNED INTEGER NOT NULL,"
-						+ "`player` UNSIGNED INTEGER NOT NULL,"
+						+ "`player` INTEGER NOT NULL,"
 						+ "`amount` UNSIGNED FLOAT NOT NULL,"
 						+ "INDEX(plot, auction)" +
 					")";
@@ -343,8 +358,9 @@ public class PlotDatabase {
 	        	con.setAutoCommit(false);
 	        	st.addBatch(LAYOUT_WORLD_TABLE);
 	        	st.addBatch(LAYOUT_PLAYER_TABLE);
+	        	st.addBatch(LAYOUT_GROUP_TABLE);
 	        	st.addBatch(LAYOUT_PLOT_TABLE);
-	        	st.addBatch(LAYOUT_PLOTRIGHTS_TABLE);
+	        	st.addBatch(LAYOUT_FLAGS_TABLE);
 	        	st.addBatch(LAYOUT_PLOTAUCTION_TABLE);
 	        	st.addBatch(LAYOUT_PLOTCOMMENT_TABLE);
 	        	st.addBatch(LAYOUT_INFO_TABLE);
@@ -380,11 +396,14 @@ public class PlotDatabase {
 	        	ps.setString(1, "LAYOUT_PLAYER_TABLE");
 	        	ps.setString(2, LAYOUT_PLAYER_TABLE);
 	        	ps.execute();
+	        	ps.setString(1, "LAYOUT_GROUP_TABLE");
+	        	ps.setString(2, LAYOUT_GROUP_TABLE);
+	        	ps.execute();
 	        	ps.setString(1, "LAYOUT_PLOT_TABLE");
 	        	ps.setString(2, LAYOUT_PLOT_TABLE);
 	        	ps.execute();
 	        	ps.setString(1, "LAYOUT_PLOTRIGHTS_TABLE");
-	        	ps.setString(2, LAYOUT_PLOTRIGHTS_TABLE);
+	        	ps.setString(2, LAYOUT_FLAGS_TABLE);
 	        	ps.execute();
 	        	ps.setString(1, "LAYOUT_PLOTAUCTION_TABLE");
 	        	ps.setString(2, LAYOUT_PLOTAUCTION_TABLE);
@@ -610,19 +629,6 @@ public class PlotDatabase {
     
     public static PlotPlayer loadPlotPlayer(int plotPlayerId)
     {
-    	if (plotPlayerId < 0)
-    	{
-    		return null;
-    	}
-    	
-    	PlotPlayer tmpPlayer;
-    	
-    	tmpPlayer = PlotManager.getPlotPlayer(plotPlayerId);
-    	if (tmpPlayer != null)
-    	{
-    		return tmpPlayer;
-    	}
-    	
     	con = getConnection();
     	if (con == null)
     	{
@@ -631,7 +637,6 @@ public class PlotDatabase {
 
     	Statement st = null;
    	    ResultSet rs = null;
-   	    
         try {
             st = con.createStatement();
             rs = st.executeQuery("SELECT id, playername, displayname, lastonline FROM `" + PlotMe.databasePrefix + "plotme_players` WHERE id=" + String.valueOf(plotPlayerId) + " LIMIT 1");
@@ -640,7 +645,7 @@ public class PlotDatabase {
             {
                	return new PlotPlayer(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getInt(4));
             }
-        	PlotMe.logger.severe(PlotMe.PREFIX + "Got no result from database while loading plot player with id " + String.valueOf(plotPlayerId) + "!");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Got no result from database for plot player with id " + String.valueOf(plotPlayerId) + "!");
             return null;
         }
         catch (SQLException ex)
@@ -667,94 +672,14 @@ public class PlotDatabase {
         }
         return null;
     }
-    
-    public static PlotPlayer getPlotPlayer(int plotPlayerId)
-    {
-    	if (plotPlayerId < 0)
-    	{
-    		return null;
-    	}
-    	
-    	PlotPlayer tmpPlayer;
-    	
-    	tmpPlayer = PlotManager.getPlotPlayer(plotPlayerId);
-    	if (tmpPlayer != null)
-    	{
-    		return tmpPlayer;
-    	}
-    	
-    	con = getConnection();
-    	if (con == null)
-    	{
-    		return null;
-    	}
 
-    	PreparedStatement st = null;
-   	    ResultSet rs = null;
-   	    
-        try {
-            Integer playerId = -1;
-            st = con.prepareStatement("SELECT playername, displayname, lastonline FROM `" + PlotMe.databasePrefix + "plotme_players` WHERE id=? LIMIT 1");
-            st.setInt(1, plotPlayerId);
-            
-            st.executeQuery();
-            
-            rs = st.getResultSet();
-            
-            if (rs.next())
-            {
-                // error when we found more than one world with that name (should normally never happen)
-                if ( rs.getString(2) != null && ! rs.getString(2).isEmpty())
-                {
-                	return new PlotPlayer(playerId, rs.getString(1), rs.getString(2), rs.getInt(3));
-                }
-                else
-                {
-                	return new PlotPlayer(playerId, rs.getString(1), rs.getInt(2));
-                }
-            }
-            return null;
-        }
-        catch (SQLException ex)
-        {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "EXCEPTION occurred while getting data for player with id \"" + plotPlayerId + "\" from database!");
-        	PlotMe.logger.severe("  " + ex.getMessage());
-        }
-        finally
-        {
-            if (rs != null)
-            {
-            	try
-            	{
-            		rs.close();
-            	} catch (SQLException ex) {}
-            }
-            if (st != null)
-            {
-            	try
-            	{
-            		st.close();
-            	} catch (SQLException ex) {}
-            }
-        }
-        return null;
-    }
-    
-    public static PlotPlayer getPlotPlayer(String playerName, String displayName)
+    public static PlotPlayer getPlotPlayer(String playerName)
     {
     	if (playerName == null || playerName.isEmpty())
     	{
     		return null;
     	}
-    	
-    	PlotPlayer tmpPlayer;
-    	
-    	tmpPlayer = PlotManager.getPlotPlayer(playerName);
-    	if (tmpPlayer != null)
-    	{
-    		return tmpPlayer;
-    	}
-    	
+
     	con = getConnection();
     	if (con == null)
     	{
@@ -763,33 +688,27 @@ public class PlotDatabase {
 
     	PreparedStatement st = null;
    	    ResultSet rs = null;
-   	    
         try {
-
-        	Integer playerId = -1;
+        	int playerId = -1;
+        	String displayName = null;
+        	int lastOnline = 0;
             st = con.prepareStatement("SELECT id, playername, displayname, lastonline FROM `" + PlotMe.databasePrefix + "plotme_players` WHERE playername=? LIMIT 1");
             st.setString(1, playerName);
-            
             st.executeQuery();
             rs = st.getResultSet();
             if (rs.next())
             {
             	playerId = rs.getInt(1);
-            	if (displayName != null)
-            	{
-            		updateStringCell(playerId, "players", "displayname", displayName);
-            	}
-            	else
-            	{
-            		displayName = rs.getString(2);
-            	}
-            	PlotMe.logger.info(PlotMe.PREFIX + "PlotMe player \"" + playerName + "\" has id " + String.valueOf(playerId));
+            	playerName = rs.getString(2);
+           		displayName = rs.getString(3);
+           		lastOnline = rs.getInt(4);
+            	PlotMe.logger.info(PlotMe.PREFIX + "Fetched PlotMe player \"" + playerName + "\" with id " + String.valueOf(playerId));
             }
             else
             {
 	            st = con.prepareStatement("INSERT INTO `" + PlotMe.databasePrefix + "plotme_players` (playername) VALUES (?)", Statement.RETURN_GENERATED_KEYS);
 	            st.setString(1, playerName);
-	            if (st.executeUpdate() != 1) {
+	            if (st.executeUpdate() == 0) {
 	                return null;
 	            }
 	            rs = st.getGeneratedKeys();
@@ -802,25 +721,7 @@ public class PlotDatabase {
 	            	return null;
 	            }
             }
-            if (playerId != null && playerId >= 0)
-            {
-                // error when we found more than one world with that name (should normally never happen)
-                if (rs.next())
-                {
-                	PlotMe.logger.severe(PlotMe.PREFIX + "PlotMe player \"" + playerName + "\" is not unique in database!");
-                	return null;
-                }
-                if (displayName != null && !displayName.isEmpty())
-                {
-                	updateStringCell(playerId, "players", "displayname", displayName);
-                	return new PlotPlayer(playerId, playerName, displayName);
-                }
-                else
-                {
-                	return new PlotPlayer(playerId, playerName);
-                }
-            }
-            return null;
+            return new PlotPlayer(playerId, playerName, displayName, lastOnline);
         }
         catch (SQLException ex)
         {
@@ -849,7 +750,7 @@ public class PlotDatabase {
     
     public static PlotPlayer getPlotPlayer(Player bukkitPlayer)
     {
-    	return getPlotPlayer(bukkitPlayer.getName(), bukkitPlayer.getDisplayName());
+    	return getPlotPlayer(bukkitPlayer.getName());
     }
 
     public static List<Integer> loadPlayerOwnedPlotIds(int ownerId)
@@ -1020,9 +921,8 @@ public class PlotDatabase {
             }
         }
     }
-    
-    
-    public static void loadPlots(PlotWorld plotWorld, final int centerPlotX, final int centerPlotZ, final int plotRange)
+
+    public static void getPlots(PlotWorld plotWorld, int centerPlotX, int centerPlotZ)
     {
     	if (plotWorld == null)
     	{
@@ -1034,11 +934,11 @@ public class PlotDatabase {
     	{
     		return;
     	}
-
-    	int minX = centerPlotX - plotRange;
-    	int minZ = centerPlotZ - plotRange;
-    	int maxX = centerPlotX + plotRange;
-    	int maxZ = centerPlotZ + plotRange;
+    	
+    	int minX = centerPlotX - 2;
+    	int minZ = centerPlotZ - 2;
+    	int maxX = centerPlotX + 2;
+    	int maxZ = centerPlotZ + 2;
     	
     	int id;
     	PlotPosition plotpos;
@@ -1065,18 +965,15 @@ public class PlotDatabase {
 				
 				Biome biome = null;
 				String biomestr =  rs.getString(5);
-				if (rs.wasNull()) {
-					biome = PlotMe.DEFAULT_PLOT_BIOME;
-				} else {
+				if (!rs.wasNull())
 					biome = Biome.valueOf(biomestr);
-				}
 				
 				if (plotWorld.getPlotAtPlotPosition(plotpos) == null)
 				{
 					plot = new Plot(
 						rs.getInt(1),
 						plotpos,
-		    			getPlotPlayer(rs.getInt(4)),
+		    			PlotManager.getPlotPlayer(rs.getInt(4)),
 		    			biome,
 		    			rs.getFloat(6),
 		    			rs.getInt(7),
@@ -1124,7 +1021,7 @@ public class PlotDatabase {
         }
         catch (SQLException ex)
         {
-        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting data for plots at " + String.valueOf(centerPlotX) + "," + String.valueOf(centerPlotZ) + " (range " + String.valueOf(plotRange) + ") from database:");
+        	PlotMe.logger.severe(PlotMe.PREFIX + "Error while getting data for plots at " + String.valueOf(centerPlotX) + "," + String.valueOf(centerPlotZ) + " from database:");
         	PlotMe.logger.severe("  " + ex.getMessage());
         }
         finally
@@ -1144,11 +1041,6 @@ public class PlotDatabase {
             	} catch (SQLException ex) {}
             }
         }
-    }
-    
-    public static void loadPlots(PlotWorld plotWorld, final Location centerBlockLocation, final int range)
-    {
-    	loadPlots(plotWorld, centerBlockLocation.getBlockX(), centerBlockLocation.getBlockZ(), range);
     }
     
     /**

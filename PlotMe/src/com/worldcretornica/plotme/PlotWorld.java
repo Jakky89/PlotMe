@@ -28,7 +28,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 	private int id;
 	
 	private World bukkitWorld;
-
+	
 	public boolean PlotsEnabled;
 	public int PlotSize;
 	public int PlotAutoLimit;
@@ -77,6 +77,8 @@ public class PlotWorld implements Comparable<PlotWorld>
 	public boolean DisableIgnition;
 	public boolean DisableNetherrackIgnition;
 	public boolean DisableObsidianIgnition;
+	
+	private String WorldFlags;
 	
 	private HashSet<Jakky89ItemIdData> ProtectedBlocks;
 	private HashSet<Jakky89ItemIdData> PreventedItems;
@@ -245,7 +247,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		ProtectedBlocks.remove(new Pair<Integer, Byte>(typeId, dataValue));
 	}
 	
-	public void refreshNeighbours(Plot plot)
+	public void notifyNeighbours(Plot plot)
 	{
 		if (plot == null || plot.getPlotWorld() == null || !plot.getPlotWorld().equals(this))
 		{
@@ -277,7 +279,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		plot.setNeighbourPlot((byte)6, getPlotAtPlotPosition( px - 1, pz     ));
 		plot.setNeighbourPlot((byte)7, getPlotAtPlotPosition( px - 1, pz - 1 ));
 		
-		plot.refreshNeighbourPlots();
+		plot.notifyNeighbourPlots();
 	}
 	
 	public boolean registerPlot(Plot plot) {
@@ -296,7 +298,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 		if (plot.getPlotZ() > maxPlotZ)
 			maxPlotZ = plot.getPlotZ();
 		plotPositions.put(plot.getPlotPosition(), plot);
-		plot.refreshNeighbourPlots();
+		plot.notifyNeighbourPlots();
 		return true;
 	}
 
@@ -356,9 +358,9 @@ public class PlotWorld implements Comparable<PlotWorld>
 	}
 
 	
-	public int getPlotPositionVectorDirection(Plot plot, double posX, double posZ)
+	public byte getPlotPositionVectorDirection(Plot plot, double posX, double posZ)
 	{
-		int dir = -1;
+		byte dir = -1;
 		if (plot.getPlotWorld().equals(this))
 		{
 			Location centerLocation = getCenterBlockLocation(plot);
@@ -431,7 +433,7 @@ public class PlotWorld implements Comparable<PlotWorld>
 			{
 				if (plot.hasNeighbourPlots())
 				{
-					int dir = getPlotPositionVectorDirection(plot, posX, posZ);
+					byte dir = getPlotPositionVectorDirection(plot, posX, posZ);
 					if (dir >= 0)
 					{
 						if (plot.getNeighbourPlot(dir).getOwner() != null && plot.getNeighbourPlot(dir).getOwner().equals(plot.getOwner()))

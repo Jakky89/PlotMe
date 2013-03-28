@@ -1,86 +1,63 @@
 package com.worldcretornica.plotme;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.entity.Player;
 
 
-
 public class PlotPlayer implements Comparable<PlotPlayer>
 {
-	
 	private int id;
 	private Player player;
 	private String realname;
 	private String displayname;
 	private Integer lastonline;
-	private Set<Plot> ownplots;
+	private HashSet<Plot> plotswithrights;
 
-	
+
 	public PlotPlayer(int playerId, String playerName)
 	{
 		id = playerId;
 		player = null;
 		realname = playerName;
 		displayname = playerName;
-		ownplots = null;
-		lastonline = null;
-		PlotManager.registerPlotPlayer(this);
+		lastonline = -1;
+		plotswithrights = new HashSet<Plot>();
 	}
-	
-	public PlotPlayer(int playerId, String playerName, int lastOnlineTime)
-	{
-		id = playerId;
-		player = null;
-		realname = playerName;
-		displayname = playerName;
-		ownplots = null;
-		lastonline = lastOnlineTime;
-		PlotManager.registerPlotPlayer(this);
-	}
-	
+		
 	public PlotPlayer(int playerId, String playerName, String displayName, int lastOnlineTime)
 	{
 		id = playerId;
 		player = null;
 		realname = playerName;
 		displayname = displayName;
-		ownplots = null;
 		lastonline = lastOnlineTime;
-		PlotManager.registerPlotPlayer(this);
+		plotswithrights = new HashSet<Plot>();
 	}
 	
-	public PlotPlayer(int playerId, String playerName, String displayName)
+	public boolean hasRight(Plot plot, char right)
 	{
-		id = playerId;
-		player = null;
-		realname = playerName;
-		displayname = displayName;
-		ownplots = null;
-		lastonline = null;
-		PlotManager.registerPlotPlayer(this);
+		if (plot == null)
+		{
+			return false;
+		}
+		return plot.hasFlag(this, right);
 	}
-	
-	public PlotPlayer(int ownerId, Player minecraftPlayer)
-	{
-		id = ownerId;
-		setMinecraftPlayer(minecraftPlayer);
-		ownplots = null;
-		lastonline = null;
-		PlotManager.registerPlotPlayer(this);
-	}
-	
+		
 	public void refreshLastOnlineTime()
 	{
 		int newLastOnline = Math.round(System.currentTimeMillis() / 1000);
-		if (newLastOnline == lastonline)
+		if (newLastOnline != lastonline)
 		{
-			return;
+			lastonline = newLastOnline;
+			PlotDatabase.updateIntegerCell(id, "players", "lastonline", newLastOnline);
 		}
-		lastonline = newLastOnline;
-		PlotDatabase.updateData(id, "players", "lastonline", lastonline);
 	}
 	
 	public void setMinecraftPlayer(Player minecraftPlayer)
@@ -88,7 +65,8 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		player = minecraftPlayer;
 		realname = minecraftPlayer.getName();
 		displayname = minecraftPlayer.getDisplayName();
-		refreshLastOnlineTime();
+		if (minecraftPlayer.isOnline())
+			refreshLastOnlineTime();
 	}
 
 	public int getId()
@@ -103,34 +81,30 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	
 	public String getDisplayName()
 	{
-		return displayname;
+		if (displayname != null)
+		{
+			return displayname;
+		}
+		return getName();
 	}
 	
 	public void setDisplayName(String newDisplayName)
 	{
-		if (!newDisplayName.equals(displayname))
+		if ((newDisplayName == null && displayname != null) || (displayname == null && newDisplayName != null) || !newDisplayName.equals(displayname))
 		{
 			displayname = newDisplayName;
-			PlotDatabase.updateData(id, "players", "displayname", newDisplayName);
+			PlotDatabase.updateStringCell(id, "players", "displayname", newDisplayName);
 		}
 	}
 	
-	public void addOwnPlot(Plot plot)
+	public void addPlotWithRights(Plot plot)
 	{
-		if (ownplots == null)
-		{
-			ownplots = new HashSet<Plot>();
-		}
-		ownplots.add(plot);
+		plotswithrights.add(plot);
 	}
 	
-	public void removeOwnPlot(Plot plot)
+	public void removePlotWithRights(Plot plot)
 	{
-		if (ownplots == null || ownplots.isEmpty())
-		{
-			return;
-		}
-		ownplots.remove(plot);
+		plotswithrights.remove(plot);
 	}
 
 	public Player getPlayer()
@@ -138,32 +112,38 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 		return player;
 	}
 	
-	public int getPlotCount()
+	public List<Plot> getOwnPlots(PlotWorld worldFilter)
 	{
-		if (ownplots == null || ownplots.isEmpty())
+		if (plotswithrights == null || plotswithrights.isEmpty())
 		{
-			return 0;
+			return null;
 		}
-		return ownplots.size();
-	}
-	
-	
-	public int getPlotCount(PlotWorld plotWorld)
-	{
-		if (ownplots == null || ownplots.isEmpty())
-		{
-			return 0;
-		}
-		Iterator<Plot> plotIterator = ownplots.iterator();
-		int cnt = 0;
 		Plot plot;
+		List<Plot> tmpList = new ArrayList<Plot>();
+		Iterator<Plot> plotIterator = plotswithrights.iterator();
 		while (plotIterator.hasNext())
 		{
 			plot = plotIterator.next();
-			if (plot.getPlotWorld().equals(plotWorld))
-			{
+			if (plot.hasFlag(this, 'o') && (worldFilter == null || plot.getPlotWorld().equals(worldFilter)))
+				tmpList.add(plot);
+		}
+		return tmpList;
+	}
+	
+	public int getOwnPlotsCount(PlotWorld worldFilter)
+	{
+		if (plotswithrights == null || plotswithrights.isEmpty())
+		{
+			return 0;
+		}
+		int cnt = 0;
+		Plot plot;
+		Iterator<Plot> plotIterator = plotswithrights.iterator();
+		while (plotIterator.hasNext())
+		{
+			plot = plotIterator.next();
+			if (plot.hasFlag(this, 'o') && (worldFilter == null || plot.getPlotWorld().equals(worldFilter)))
 				cnt++;
-			}
 		}
 		return cnt;
 	}
@@ -192,8 +172,8 @@ public class PlotPlayer implements Comparable<PlotPlayer>
 	}
 	
 	@Override
-	public int compareTo(PlotPlayer po) {
-		return id - po.getId();
+	public int compareTo(PlotPlayer p) {
+		return id - p.getId();
 	}
 	
 	@Override

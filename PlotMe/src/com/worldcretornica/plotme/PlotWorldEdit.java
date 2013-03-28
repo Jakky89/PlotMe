@@ -13,27 +13,23 @@ import com.worldcretornica.plotme.utils.Pair;
 
 public class PlotWorldEdit {
 	
-	public static void setMask(Player player)
-	{
-		setMask(player, player.getLocation());
-	}
-	
 	public static void setMask(Player player, Location location)
 	{
-		LocalSession session = PlotMe.worldedit.getSession(player);
+		PlotWorld pwi = PlotManager.getPlotWorld(location);
+		if (pwi == null)
+			return;
 
-		Plot plot = PlotManager.getPlotAtBlockPosition(location);
+		LocalSession session = PlotMe.worldedit.getSession(player);
+		if (session == null)
+			return;
+
+		Plot plot = pwi.getPlotAtBlockPosition(location);
 		if (plot == null)
-		{
-			session.setMask(null);
-		}
-		
-		if (!plot.getMinecraftWorld().equals(location.getWorld()) || !player.getWorld().equals(plot.getMinecraftWorld()))
 		{
 			session.setMask(null);
 			return;
 		}
-		
+	
 		Pair<Location, Location> locations = plot.getPlotWorld().getMinMaxBlockLocation(plot);
 		if (locations == null)
 		{
@@ -41,7 +37,14 @@ public class PlotWorldEdit {
 			return;
 		}
 	
-		if (plot.isAllowed(player.getName()))
+		PlotPlayer ppi = PlotManager.getPlotPlayer(player);
+		if (ppi == null)
+		{
+			session.setMask(null);
+			return;
+		}
+		
+		if (plot.hasFlag(ppi, 'w'))
 		{
 			Vector pos1 = new Vector(locations.getLeft().getBlockX(), locations.getLeft().getBlockY(), locations.getLeft().getBlockZ());
 			Vector pos2 = new Vector(locations.getRight().getBlockX(), locations.getRight().getBlockY(), locations.getRight().getBlockZ());
@@ -60,9 +63,4 @@ public class PlotWorldEdit {
 		}
 	}
 
-	public static void removeMask(Player player)
-	{
-		LocalSession session = PlotMe.worldedit.getSession(player);
-		session.setMask(null);
-	}	
 }
