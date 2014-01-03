@@ -26,7 +26,6 @@ public class Plot implements Comparable<Plot>
 	public Biome biome;
 	
 	public PlotProperties properties; // Flexible plot properties
-	public Set<String> playersinplot; // Names of players that are currently standing in that plot
 	
 	public long expireddate;
 	public double customprice;
@@ -46,7 +45,6 @@ public class Plot implements Comparable<Plot>
 		id = 0;
 		owner = null;
 		properties = new PlotProperties(this);
-		playersinplot = new HashSet<String>();
 		biome = Biome.PLAINS;
 		setExpire(7);
 		customprice = 0;
@@ -73,7 +71,7 @@ public class Plot implements Comparable<Plot>
 		neighbourplots = new Plot[8];
 	}
 	
-	public int getId()
+	public long getId()
 	{
 		return id;
 	}
@@ -532,18 +530,12 @@ public class Plot implements Comparable<Plot>
 	
 	public void playerEntered(String playerName)
 	{
-		if (playersinplot.add(playerName))
-		{
-			// action when player entered
-		}
+		// action when player entered
 	}
 	
 	public void playerLeft(String playerName)
 	{
-		if (playersinplot.remove(playerName))
-		{
 			// action when player left
-		}
 	}
 
 	public void updatePlotData(String field, Object value)
@@ -573,23 +565,4 @@ public class Plot implements Comparable<Plot>
 	{
 		return this.id-plot2.id;
 	}
-	
-	/*private static Map<String, Double> sortByValues(final Map<String, Double> map) 
-	{
-		Comparator<String> valueComparator = new Comparator<String>() 
-		{
-		    public int compare(String k1, String k2) 
-		    {
-		        int compare = map.get(k2).compareTo(map.get(k1));
-		        if (compare == 0) 
-		        	return 1;
-		        else 
-		        	return compare;
-		    }
-		};
-		
-		Map<String, Double> sortedByValues = new TreeMap<String, Double>(valueComparator);
-		sortedByValues.putAll(map);
-		return sortedByValues;
-	}*/
 }

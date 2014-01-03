@@ -264,7 +264,7 @@ public class PlotMeSqlManager {
     {
 		//PlotMe.logger.info(PlotMe.PREFIX + " Creating database tables when needed ...");
     		
-   		PlotDatabaseUpdater.updateTables();
+   		PlotDatabaseUpdater.updateDatabase();
 		
 		if (PlotMe.usemySQL)
 		{
@@ -317,7 +317,7 @@ public class PlotMeSqlManager {
 		}
     }
     
-    public static void insertPlot(Plot plot)
+    public static boolean insertPlot(Plot plot)
     {
         PreparedStatement ps = null;
         Connection conn;
@@ -326,23 +326,36 @@ public class PlotMeSqlManager {
         {
             conn = getConnection();
 
-            ps = conn.prepareStatement("INSERT INTO plotme_plots (id, world, xpos, zpos, owner, biome, expireddate, finisheddate, customprice, isforsale, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            ps = conn.prepareStatement("INSERT INTO plotme_plots (world, xpos, zpos, owner, biome, expireddate, finisheddate, customprice, isforsale, isprotected, isauctionned) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
             
-            ps.setInt(1, plot.id);
-            ps.setInt(2, plot.plotpos.w.id);
-            ps.setInt(3, plot.plotpos.x);
-            ps.setInt(4, plot.plotpos.z);
-            ps.setInt(5, plot.owner.id);
-            ps.setString(6, plot.biome.toString());
-            ps.setLong(7, plot.expireddate);
-            ps.setLong(8, plot.finisheddate);
-            ps.setDouble(9, plot.customprice);
-            ps.setBoolean(10, plot.isforsale);
-            ps.setBoolean(11, plot.isprotected);
-            ps.setBoolean(12, plot.isauctionned);
+            ps.setInt(1, plot.plotpos.w.id);
+            ps.setInt(2, plot.plotpos.x);
+            ps.setInt(3, plot.plotpos.z);
+            ps.setInt(4, plot.owner.id);
+            ps.setString(5, plot.biome.toString());
+            ps.setLong(6, plot.expireddate);
+            ps.setLong(7, plot.finisheddate);
+            ps.setDouble(8, plot.customprice);
+            ps.setBoolean(9, plot.isforsale);
+            ps.setBoolean(10, plot.isprotected);
+            ps.setBoolean(11, plot.isauctionned);
             
-            ps.executeUpdate();
+            int affectedRows = ps.executeUpdate();
+            if (affectedRows == 0) {
+            	PlotMe.logger.severe("Creating plot failed, no rows affected.");
+            	return false;
+            }
+            
+            ResultSet generatedKeys = ps.getGeneratedKeys();
+            if (generatedKeys.next()) {
+            	plot.id = generatedKeys.getLong(1);
+            } else {
+            	PlotMe.logger.severe("Creating user failed, no generated key obtained.");
+                return false;
+            }
+
             conn.commit();
+            return true;
         } 
         catch (SQLException ex) 
         {
@@ -362,8 +375,10 @@ public class PlotMeSqlManager {
             {
             	PlotMe.logger.severe(PlotMe.PREFIX + " EXCEPTION occurred while closing prepared statement :");
             	PlotMe.logger.severe("  " + ex.getMessage());
+            	return false;
             }
         }
+        return false;
     }
     
     public static void updatePlotData(Plot plot, String colName, Object cellValue)
@@ -379,7 +394,7 @@ public class PlotMeSqlManager {
             ps = conn.prepareStatement("UPDATE plotme_plots SET " + colName + "=? WHERE id=? LIMIT 1");
             
             ps.setObject(1, cellValue);
-            ps.setInt(2, plot.id);
+            ps.setLong(2, plot.id);
             
             ps.executeUpdate();
             conn.commit();
@@ -419,7 +434,7 @@ public class PlotMeSqlManager {
 		    ps = conn.prepareStatement("UPDATE plotme_plots SET properties=? WHERE id=? LIMIT 1");
 		         
 	        // just setting the class name
-		    ps.setInt(1, plot.id);
+		    ps.setLong(1, plot.id);
 	        ps.setObject(2, plot.properties);
 	        ps.executeUpdate();
 	        conn.commit();
@@ -459,7 +474,7 @@ public class PlotMeSqlManager {
 	        
 		    ps = con.prepareStatement("SELECT properties FROM plotme_plots WHERE id=(?) LIMIT 1");
 		    
-		    ps.setInt(1, plot.id);
+		    ps.setLong(1, plot.id);
 		    
 		    ResultSet rs = ps.executeQuery();
 		    if (rs.next())

@@ -23,6 +23,7 @@ import org.bukkit.inventory.InventoryHolder;
 
 import com.griefcraft.lwc.LWC;
 import com.griefcraft.model.Protection;
+import com.worldcretornica.plotme.utils.PlotOwner;
 import com.worldcretornica.plotme.utils.PlotPosition;
 
 public class PlotManager {
@@ -134,13 +135,13 @@ public class PlotManager {
 			return null;
 		}
 		
-		// Get the plotworld instance
+		// Get the plot world instance
 		PlotWorld pwi = getPlotWorld(loc);
 		if (pwi == null) {
 			return null;
 		}
 		
-		// Get the plot position from plotworld instance
+		// Get the plot position from plot world instance
 		return pwi.getPlotAtBlockPosition(loc);
 	}
 	
@@ -157,6 +158,15 @@ public class PlotManager {
 	public static Plot getPlotAtBlockPosition(BlockState block) 
 	{
 		return getPlotAtBlockPosition(block.getLocation());
+	}
+	
+	public static long getPlotId(Location loc) 
+	{
+		Plot plot = getPlotAtBlockPosition(loc);
+		if (plot != null) {
+			return plot.getId();
+		}
+		return (long)(-1);
 	}
 	
 	public static void adjustLinkedPlots(Plot plot)
@@ -431,51 +441,51 @@ public class PlotManager {
 	
 
 	
-	public static Plot createPlot(int id, int pX, int pZ, String world, String owner)
+	public static Plot createPlot(String worldName, int plotX, int plotZ)
 	{
-		if (isPlotAvailable(pX, pZ, world) && id > 0)
+		PlotWorld plotWorld = getPlotWorld(worldName);
+		if (plotWorld != null)
 		{
-			Plot plot = new Plot(owner, getPlotTopLoc(pX, pZ, world), getPlotBottomLoc(pX, pZ, world), id, getMap(world).DaysToExpiration);
-			
-			setOwnerSign(plot);
-			
-			getPlots(world).put(plot);
-			
-			SqlManager.addPlot(plot);
-			return plot;
+			Plot plot = plotWorld.getPlotAtPlotPosition(plotX, plotZ);
+			if (plot == null)
+		    {
+				plot = new Plot();
+				plot.setPlotPosition(plotWorld, plotX, plotZ);
+				plotWorld.registerPlot(plot);
+				PlotMeSqlManager.insertPlot(plot);
+				refreshOwnerSign(plot);
+				return plot;
+		    }
 		}
-		
 		return null;
 	}
 	
-	public static void setOwnerSign(World world, Plot plot)
+	public static void refreshOwnerSign(Plot plot)
 	{	
-		Location pillar = new Location(world, bottomX(plot.id, world) - 1, getMap(world).RoadHeight + 1, bottomZ(plot.id, world) - 1);
+		Location pillar = new Location(plot.plotpos.w.MinecraftWorld, (plot.getPlotX()*plot.plotpos.w.getPlotBlockPositionMultiplier()) - 1, plot.plotpos.w.RoadHeight + 1, (plot.getPlotZ()*plot.plotpos.w.getPlotBlockPositionMultiplier()) - 1);
 						
 		Block bsign = pillar.add(0, 0, -1).getBlock();
-		bsign.setType(Material.AIR);
-		bsign.setTypeIdAndData(Material.WALL_SIGN.getId(), (byte) 2, false);
-		
-		String id = getPlotId(new Location(world, bottomX(plot.id, world), 0, bottomZ(plot.id, world)));
-		
+		bsign.setType(Material.WALL_SIGN);
+	
 		Sign sign = (Sign) bsign.getState();
-		if((PlotMe.caption("SignId") + id).length() > 16)
+		String psid = Long.toString(plot.getId());
+		if ((PlotMe.caption("SignId") + psid).length() > 16)
 		{
-			sign.setLine(0, (PlotMe.caption("SignId") + id).substring(0, 16));
-			if((PlotMe.caption("SignId") + id).length() > 32)
+			sign.setLine(0, (PlotMe.caption("SignId") + psid).substring(0, 16));
+			if ((PlotMe.caption("SignId") + psid).length() > 32)
 			{
-				sign.setLine(1, (PlotMe.caption("SignId") + id).substring(16, 32));
+				sign.setLine(1, (PlotMe.caption("SignId") + psid).substring(16, 32));
 			}
 			else
 			{
-				sign.setLine(1, (PlotMe.caption("SignId") + id).substring(16));
+				sign.setLine(1, (PlotMe.caption("SignId") + psid).substring(16));
 			}
 		}
 		else
 		{
-			sign.setLine(0, PlotMe.caption("SignId") + id);
+			sign.setLine(0, (PlotMe.caption("SignId") + psid));
 		}
-		if((PlotMe.caption("SignOwner") + plot.owner).length() > 16)
+		if ((PlotMe.caption("SignOwner") + plot.owner).length() > 16)
 		{
 			sign.setLine(2, (PlotMe.caption("SignOwner") + plot.owner).substring(0, 16));
 			if((PlotMe.caption("SignOwner") + plot.owner).length() > 32)
@@ -486,7 +496,9 @@ public class PlotManager {
 			{
 				sign.setLine(3, (PlotMe.caption("SignOwner") + plot.owner).substring(16));
 			}
-		}else{
+		}
+		else
+		{
 			sign.setLine(2, PlotMe.caption("SignOwner") + plot.owner);
 			sign.setLine(3, "");
 		}
@@ -497,7 +509,7 @@ public class PlotManager {
 	{
 		removeSellSign(plot);
 		
-		if(plot.forsale || plot.auctionned)
+		if(plot.isforsale || plot.isauctionned)
 		{
 			Location pillar = new Location(world, bottomX(plot.id, world) - 1, getMap(world).RoadHeight + 1, bottomZ(plot.id, world) - 1);
 							
@@ -507,7 +519,7 @@ public class PlotManager {
 			
 			Sign sign = (Sign) bsign.getState();
 			
-			if(plot.forsale)
+			if(plot.isforsale)
 			{
 				sign.setLine(0, PlotMe.caption("SignForSale"));
 				sign.setLine(1, PlotMe.caption("SignPrice"));
@@ -520,9 +532,9 @@ public class PlotManager {
 				sign.update(true);
 			}
 			
-			if(plot.auctionned)
+			if(plot.isauctionned)
 			{				
-				if(plot.forsale)
+				if(plot.isforsale)
 				{
 					bsign = pillar.clone().add(-1, 0, 1).getBlock();
 					bsign.setType(Material.AIR);
@@ -767,8 +779,8 @@ public class PlotManager {
 		String forsalewallid = plot1.plotpos.w.ForSaleWallBlockId;
 		
 		if(plot.protect) wallids.add(plot1.plotpos.w.ProtectedWallBlockId);
-		if(plot.auctionned && !wallids.contains(auctionwallid)) wallids.add(auctionwallid);
-		if(plot.forsale && !wallids.contains(forsalewallid)) wallids.add(forsalewallid);
+		if(plot.isauctionned && !wallids.contains(auctionwallid)) wallids.add(auctionwallid);
+		if(plot.isforsale && !wallids.contains(forsalewallid)) wallids.add(forsalewallid);
 		
 		if(wallids.size() == 0) wallids.add("" + plot1.plotpos.w.WallBlockId + ":" + plot1.plotpos.w.WallBlockValue);
 		
@@ -1289,7 +1301,7 @@ public class PlotManager {
 		HashMap<String, Plot> plots = getPlots(p);
 		if (plots != null)
 		{
-			int plotid = getPlotId(p.getLocation());
+			long plotid = getPlotId(p.getLocation());
 			if (plotid > 0)
 			{
 				return plots.get(plotid);
@@ -1303,7 +1315,7 @@ public class PlotManager {
 		HashMap<String, Plot> plots = getPlots(l);
 		if (plots != null)
 		{
-			int plotid = getPlotId(l);
+			long plotid = getPlotId(l);
 			if (plotid > 0)
 			{
 				return plots.get(plotid);
@@ -1327,7 +1339,7 @@ public class PlotManager {
 		HashMap<String, Plot> plots = getPlots(b);
 		if (plots != null)
 		{
-			int plotid = getPlotId(b.getLocation());
+			long plotid = getPlotId(b.getLocation());
 			if (plotid > 0)
 			{
 				return plots.get(plotid);
